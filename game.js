@@ -17,7 +17,7 @@ const player={x:240,y:0,vx:0,vy:0,face:1,hp:100,alive:true,walk:0};
 const enemies=Array.from({length:7},(_,i)=>({x:690+i*360,y:0,hp:90,alive:true,phase:i*1.3,walk:0}));
 const bullets=[];let ammo=30,kills=0,joy={x:0,y:0},joyId=null;
 function playerHeight(){return Math.min(360,Math.max(255,H*.43))}
-function setGround(){player.y=ground-playerHeight();for(const e of enemies)e.y=ground-playerHeight()*.86}
+function setGround(){player.y=ground-playerHeight();for(const e of enemies)e.y=ground-playerHeight()*.72}
 setGround();addEventListener('resize',setGround);
 const joystick=document.querySelector('#joystick'),stick=document.querySelector('#stick');
 function setJoy(e){const r=joystick.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2),len=Math.hypot(dx,dy),k=Math.min(1,48/(len||1));joy.x=dx*k/48;joy.y=dy*k/48;stick.style.transform=`translate(${joy.x*48}px,${joy.y*48}px)`}
@@ -60,8 +60,8 @@ function frame(ts){const dt=Math.min((ts-last)/1000||0,.032);last=ts;
  for(const e of enemies){if(!e.alive)continue;e.phase+=dt;e.walk+=dt;e.x+=Math.sin(e.phase)*22*dt;if(Math.abs(e.x-player.x)<550)e.x+=Math.sign(player.x-e.x)*34*dt}
  for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];b.x+=b.vx*dt;b.life-=dt;for(const e of enemies){if(e.alive&&Math.abs(b.x-e.x)<42&&Math.abs(b.y-(e.y+playerHeight()*.4))<95){e.hp-=30;b.life=0;if(e.hp<=0){e.alive=false;kills++;document.querySelector('#score').textContent='ELIMINAÇÕES '+kills}break}}if(b.life<=0)bullets.splice(i,1)}
  cam=Math.max(0,Math.min(world.width-W,player.x-W*.38));ctx.clearRect(0,0,W,H);ctx.save();ctx.translate(-cam,0);background();
- for(const e of enemies)if(e.alive){drawFighter(e.x,e.y,e.x<player.x?1:-1,.68,.95,e.walk);rr(e.x-27,e.y-12,54,6,3,'#292929');rr(e.x-27,e.y-12,54*Math.max(0,e.hp/90),6,3,'#df4638')}
+ for(const e of enemies)if(e.alive){drawFighter(e.x,e.y,e.x<player.x?1:-1,.72,.95,e.walk);rr(e.x-27,e.y-12,54,6,3,'#292929');rr(e.x-27,e.y-12,54*Math.max(0,e.hp/90),6,3,'#df4638')}
  for(const b of bullets){ctx.fillStyle='#fff2a3';ctx.shadowColor='#ffb32e';ctx.shadowBlur=16;ctx.beginPath();ctx.ellipse(b.x,b.y,10,4,0,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0}
- drawFighter(player.x,player.y,player.face,.86,1,player.walk);ctx.restore();
+ drawFighter(player.x,player.y,player.face,1,1,player.walk);ctx.restore();
  requestAnimationFrame(frame)}
 document.querySelector('#loading').style.display='none';requestAnimationFrame(frame);
