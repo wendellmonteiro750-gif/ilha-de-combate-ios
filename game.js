@@ -8,7 +8,17 @@ let renderer,scene,camera,clock,playerRig,worldYaw=0,pitch=-.12,ammo=30,kills=0,
 const weapons=[{name:'FUZIL',mag:30,damage:35,rate:.13,spread:.014,reload:1.35},{name:'SMG',mag:40,damage:19,rate:.075,spread:.022,reload:1.5},{name:'PRECISÃO',mag:8,damage:90,rate:.72,spread:.002,reload:1.8}];
 let weaponIndex=0,weaponAmmo=[30,40,8];
 function currentWeapon(){return weapons[weaponIndex]}
-function refreshAmmo(){ammo=weaponAmmo[weaponIndex];ammoEl.textContent='MUNIÇÃO '+ammo;document.querySelector('#ammoLarge').textContent=ammo;document.querySelector('#weaponSwitch').textContent='ARMA: '+currentWeapon().name}
+function refreshAmmo(){ammo=weaponAmmo[weaponIndex];ammoEl.textContent='MUNIÇÃO '+ammo;document.querySelector('#ammoLarge').textContent=ammo;document.querySelector('#weaponSwitch').textContent='ARMA: '+currentWeapon().name;refreshInventory()}
+function refreshInventory(){
+ const panel=document.querySelector('#inventoryPanel');if(!panel)return;
+ document.querySelector('#inventoryWeapons').innerHTML=weapons.map((w,i)=>'<div class="inventory-slot '+(i===weaponIndex?'equipped':'')+'"><b>'+(i+1)+'. '+w.name+'</b><span>'+weaponAmmo[i]+' / '+w.mag+'</span><small>DANO '+w.damage+'</small></div>').join('');
+ document.querySelector('#inventorySupplies').textContent='Kits: '+medkits+'  •  Colete: '+Math.round(armor)+'%  •  Munição atual: '+ammo;
+}
+function toggleInventory(){
+ const panel=document.querySelector('#inventoryPanel');const open=panel.classList.toggle('visible');
+ document.querySelector('#inventoryToggle').textContent=open?'FECHAR MOCHILA':'MOCHILA';
+ refreshInventory();
+}
 function switchWeapon(){if(reloadTimer>0)return;weaponIndex=(weaponIndex+1)%weapons.length;refreshAmmo();statusEl.textContent='EQUIPADO: '+currentWeapon().name}
 
 const playerVelocity=new THREE.Vector3(),cameraLook=new THREE.Vector3();
