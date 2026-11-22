@@ -207,3 +207,14 @@
  .ammo-panel{bottom:154px}
  #hint{max-width:38%;font-size:7px}
 }
+
+/* Sistemas de sobrevivência: zona segura, coleta e kit médico */
+#medkit{border:1px solid #b8e6c4;border-radius:7px;background:linear-gradient(135deg,#245a45,#15382f);color:#fff;font-weight:900;font-size:9px;padding:6px 8px;touch-action:manipulation}
+#medkit:active,.loot-btn:active{transform:scale(.95);filter:brightness(1.25)}
+.loot-btn{position:fixed;z-index:24;right:98px;bottom:145px;border:1px solid #ffe2a0;border-radius:8px;padding:10px 13px;background:linear-gradient(135deg,#f3d58a,#b87936);color:#24180c;font-size:9px;font-weight:1000;letter-spacing:.5px;box-shadow:0 3px 12px #0009;touch-action:manipulation}
+#zoneText{color:#8de5ff;font-weight:900}
+@media(orientation:portrait) and (max-width:699px){
+ .stats{gap:5px;flex-wrap:wrap;max-width:78%}
+ #medkit{font-size:8px;padding:5px 6px}
+ .loot-btn{right:92px;bottom:132px;font-size:8px;padding:9px 10px}
+}
