@@ -68,7 +68,7 @@ async function init(){
  const spots=[[62,18],[-70,36],[18,78],[-42,-88],[98,-52]];
  await Promise.all(spots.map((p,i)=>spawnEnemy(p[0],p[1],i)));
  setupControls();addEventListener('resize',resize);loading.style.display='none';
- document.querySelector('#hint').textContent='Joystick: andar • Arraste a tela: mirar • Botões: pular e atirar';
+ document.querySelector('#hint').textContent='Joystick: andar • Arraste a tela: girar a câmera para todos os lados • Botões: pular e atirar';
  renderer.setAnimationLoop(animate);
 }
 function resize(){if(!renderer)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.6))}
@@ -79,7 +79,7 @@ function setupControls(){
  const end=()=>{joyId=null;keys.side=keys.forward=0;stick.style.transform='translate(0,0)'};joy.addEventListener('pointerup',end);joy.addEventListener('pointercancel',end);
  const look=document.querySelector('#lookArea');look.style.display='block';
  look.addEventListener('pointerdown',e=>{lookId=e.pointerId;lastX=e.clientX;lastY=e.clientY;look.setPointerCapture(lookId)});
- look.addEventListener('pointermove',e=>{if(e.pointerId!==lookId)return;worldYaw-=(e.clientX-lastX)*.006;pitch=THREE.MathUtils.clamp(pitch+(e.clientY-lastY)*.003,-.55,.25);lastX=e.clientX;lastY=e.clientY});
+ look.addEventListener('pointermove',e=>{if(e.pointerId!==lookId)return;worldYaw-=(e.clientX-lastX)*.008;pitch=THREE.MathUtils.clamp(pitch+(e.clientY-lastY)*.006,-.85,.65);lastX=e.clientX;lastY=e.clientY});
  look.addEventListener('pointerup',()=>lookId=null);look.addEventListener('pointercancel',()=>lookId=null);
  document.querySelector('#jump').onclick=()=>{playerRig.jumpV=5.8};
  document.querySelector('#fire').onclick=shoot;
