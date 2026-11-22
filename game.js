@@ -72,15 +72,15 @@ async function init(){
  renderer.setAnimationLoop(animate);
 }
 function resize(){if(!renderer)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.6))}
-const joy=document.querySelector('#joystick'),stick=document.querySelector('#stick');let joyId=null,lookId=null,lastX=0,lastY=0;
+const joy=document.querySelector('#joystick'),stick=document.querySelector('#stick'),lookPad=document.querySelector('#lookPad'),lookStick=document.querySelector('#lookStick');let joyId=null,lookId=null,lookX=0,lookY=0;
 function setJoy(e){const r=joy.getBoundingClientRect(),dx=e.clientX-r.left-r.width/2,dy=e.clientY-r.top-r.height/2,l=Math.hypot(dx,dy),k=Math.min(1,48/(l||1));keys.side=dx*k/48;keys.forward=-dy*k/48;stick.style.transform=`translate(${keys.side*48}px,${-keys.forward*48}px)`}
+function setLook(e){const r=lookPad.getBoundingClientRect(),dx=e.clientX-r.left-r.width/2,dy=e.clientY-r.top-r.height/2,l=Math.hypot(dx,dy),k=Math.min(1,43/(l||1));lookX=dx*k/43;lookY=dy*k/43;lookStick.style.transform=`translate(${lookX*43}px,${lookY*43}px)`}
 function setupControls(){
- joy.addEventListener('pointerdown',e=>{joyId=e.pointerId;joy.setPointerCapture(joyId);setJoy(e)});joy.addEventListener('pointermove',e=>{if(e.pointerId===joyId)setJoy(e)});
- const end=()=>{joyId=null;keys.side=keys.forward=0;stick.style.transform='translate(0,0)'};joy.addEventListener('pointerup',end);joy.addEventListener('pointercancel',end);
- const look=document.querySelector('#lookArea');look.style.display='block';
- look.addEventListener('pointerdown',e=>{e.preventDefault();lookId=e.pointerId;lastX=e.clientX;lastY=e.clientY;look.setPointerCapture(lookId)});
- look.addEventListener('pointermove',e=>{if(e.pointerId!==lookId)return;e.preventDefault();const dx=e.clientX-lastX,dy=e.clientY-lastY;worldYaw-=dx*.010;pitch=THREE.MathUtils.clamp(pitch+dy*.008,-1.05,.85);lastX=e.clientX;lastY=e.clientY});
- const stopLook=e=>{if(e.pointerId===lookId)lookId=null};look.addEventListener('pointerup',stopLook);look.addEventListener('pointercancel',stopLook);
+ joy.addEventListener('pointerdown',e=>{e.preventDefault();joyId=e.pointerId;joy.setPointerCapture(joyId);setJoy(e)});joy.addEventListener('pointermove',e=>{if(e.pointerId===joyId)setJoy(e)});
+ const endJoy=()=>{joyId=null;keys.side=keys.forward=0;stick.style.transform='translate(0,0)'};joy.addEventListener('pointerup',endJoy);joy.addEventListener('pointercancel',endJoy);
+ lookPad.addEventListener('pointerdown',e=>{e.preventDefault();lookId=e.pointerId;lookPad.setPointerCapture(lookId);setLook(e)});
+ lookPad.addEventListener('pointermove',e=>{if(e.pointerId===lookId){e.preventDefault();setLook(e)}});
+ const endLook=e=>{if(e.pointerId===lookId){lookId=null;lookX=lookY=0;lookStick.style.transform='translate(0,0)'}};lookPad.addEventListener('pointerup',endLook);lookPad.addEventListener('pointercancel',endLook);
  document.querySelector('#jump').onclick=()=>{playerRig.jumpV=5.8};
  document.querySelector('#fire').onclick=shoot;
  document.querySelector('#reload').onclick=()=>{statusEl.textContent='RECARREGANDO';setTimeout(()=>{ammo=30;ammoEl.textContent='MUNIÇÃO 30';statusEl.textContent='PRONTO'},900)};
@@ -88,6 +88,7 @@ function setupControls(){
 function shoot(){if(ammo<=0){statusEl.textContent='RECARREGUE';return}ammo--;ammoEl.textContent='MUNIÇÃO '+ammo;const dir=new THREE.Vector3(Math.sin(worldYaw),0,-Math.cos(worldYaw));const origin=playerRig.holder.position.clone().add(new THREE.Vector3(0,1.3,0)).add(dir.clone().multiplyScalar(.8));const mesh=new THREE.Mesh(new THREE.SphereGeometry(.065,8,8),new THREE.MeshBasicMaterial({color:0xffd47b}));mesh.position.copy(origin);scene.add(mesh);bullets.push({mesh,dir,life:1.25})}
 function animate(){
  const dt=Math.min(clock.getDelta(),.04),p=playerRig.holder;
+ worldYaw-=lookX*2.35*dt;pitch=THREE.MathUtils.clamp(pitch+lookY*1.55*dt,-.9,.72);
  const forward=new THREE.Vector3(Math.sin(worldYaw),0,-Math.cos(worldYaw)),right=new THREE.Vector3(Math.cos(worldYaw),0,Math.sin(worldYaw));
  const move=forward.multiplyScalar(keys.forward).add(right.multiplyScalar(keys.side));if(move.lengthSq()>1)move.normalize();
  const targetVelocity=move.clone().multiplyScalar(5.8);playerVelocity.lerp(targetVelocity,1-Math.exp(-9*dt));p.position.addScaledVector(playerVelocity,dt);p.position.x=THREE.MathUtils.clamp(p.position.x,-124,124);p.position.z=THREE.MathUtils.clamp(p.position.z,-124,124);
