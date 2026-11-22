@@ -11,9 +11,16 @@
 </head>
 <body>
 <div id="game"></div>
-<div id="loading">CARREGANDO ILHA DE COMBATE 3D…</div>
+<div id="loading">CARREGANDO ILHA DE COMBATE 3D…</div>\n<div id="lobby" class="lobby-screen">
+ <div class="lobby-vignette"></div><div class="lobby-top"><span class="lobby-mark">IC</span><span>ILHA DE COMBATE <small>BATTLE ROYALE</small></span><span class="lobby-online"><i></i> CAMPO DE TREINO</span></div>
+ <div class="lobby-content"><div class="lobby-kicker">SOBREVIVA. LUTE. VENÇA.</div><h1>ILHA DE<br><em>COMBATE</em></h1><p>Prepare seu equipamento e entre na batalha.</p>
+ <button id="playGame" class="lobby-play"><span>ENTRAR NA PARTIDA</span><b>➜</b></button>
+ <div class="lobby-features"><span>◈ 3D</span><span>◈ 5 OPONENTES</span><span>◈ SOBREVIVÊNCIA</span></div></div>
+ <div class="lobby-footer"><span>PROJETO INDEPENDENTE</span><span>VERSÃO DE TESTE</span></div>
+</div>
+
 <div id="errorPanel"><div><h1>Não foi possível iniciar o jogo</h1><p id="errorMessage">Verifique sua conexão com a internet e tente novamente.</p><button onclick="location.reload()">TENTAR NOVAMENTE</button></div></div>
-<div id="hud">\n <div id="crosshair" aria-hidden="true"><i></i><i></i><i></i><i></i><b></b></div>
+<div id="hud" style="display:none">\n <div id="crosshair" aria-hidden="true"><i></i><i></i><i></i><i></i><b></b></div>
  <div class="hud-top">
   <div class="player-card"><div class="avatar">IC</div><div class="player-info"><b>ILHA DE COMBATE</b><small id="status">● EM COMBATE</small></div></div>
   <div class="match-info"><span><b id="score">0</b><small>ABATES</small></span><span><b id="remainingEnemies">5</b><small>INIMIGOS</small></span></div>
