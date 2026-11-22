@@ -107,9 +107,25 @@ function setJoy(e){const r=joy.getBoundingClientRect(),dx=e.clientX-r.left-r.wid
 function setupControls(){
  joy.addEventListener('pointerdown',e=>{e.preventDefault();joyId=e.pointerId;joy.setPointerCapture(joyId);setJoy(e)});joy.addEventListener('pointermove',e=>{if(e.pointerId===joyId)setJoy(e)});
  const endJoy=()=>{joyId=null;keys.side=keys.forward=0;stick.style.transform='translate(0,0)'};joy.addEventListener('pointerup',endJoy);joy.addEventListener('pointercancel',endJoy);
- renderer.domElement.addEventListener('pointerdown',e=>{if(e.target.closest('#joystick,.actions')||e.clientX<innerWidth*.42)return;e.preventDefault();cameraPointerId=e.pointerId;lastPointerX=e.clientX;lastPointerY=e.clientY;lookDeltaX=lookDeltaY=0;renderer.domElement.setPointerCapture(e.pointerId)});
- renderer.domElement.addEventListener('pointermove',e=>{if(e.pointerId!==cameraPointerId)return;e.preventDefault();const dx=e.clientX-lastPointerX,dy=e.clientY-lastPointerY;lookDeltaX+=dx;lookDeltaY+=dy;lastPointerX=e.clientX;lastPointerY=e.clientY});
- const endCameraDrag=e=>{if(e.pointerId===cameraPointerId)cameraPointerId=null};renderer.domElement.addEventListener('pointerup',endCameraDrag);renderer.domElement.addEventListener('pointercancel',endCameraDrag);
+ // Câmera por gesto contínuo: qualquer arrasto iniciado na metade direita da tela
+ // controla a visão; os botões de ação continuam independentes.
+ const surface=root;
+ surface.addEventListener('pointerdown',e=>{
+  if(e.pointerType==='mouse'&&e.button!==0)return;
+  if(e.target.closest('#joystick,.actions')||e.clientX<innerWidth*.40)return;
+  e.preventDefault();cameraPointerId=e.pointerId;lastPointerX=e.clientX;lastPointerY=e.clientY;
+  surface.setPointerCapture(e.pointerId);
+ });
+ surface.addEventListener('pointermove',e=>{
+  if(e.pointerId!==cameraPointerId)return;
+  e.preventDefault();
+  const dx=e.clientX-lastPointerX,dy=e.clientY-lastPointerY;
+  // A sensibilidade acompanha a densidade da tela para manter o mesmo giro no celular.
+  lookDeltaX+=dx;lookDeltaY+=dy;lastPointerX=e.clientX;lastPointerY=e.clientY;
+ });
+ const endCameraDrag=e=>{if(e.pointerId===cameraPointerId)cameraPointerId=null};
+ surface.addEventListener('pointerup',endCameraDrag);surface.addEventListener('pointercancel',endCameraDrag);
+ surface.addEventListener('lostpointercapture',endCameraDrag);
  document.querySelector('#jump').onclick=()=>{playerRig.jumpV=5.8};
  document.querySelector('#aim').onclick=()=>{aiming=!aiming;document.querySelector('#aim').classList.toggle('active',aiming);document.querySelector('#crosshair')?.classList.toggle('aiming',aiming);statusEl.textContent=aiming?'MIRA PRECISA':'EM COMBATE'};
  const fireButton=document.querySelector('#fire');
@@ -153,7 +169,7 @@ function updateRadar(){
 }
 function animate(){
  const dt=Math.min(clock.getDelta(),.04),p=playerRig.holder;
- worldYaw-=lookDeltaX*.0085;pitch=THREE.MathUtils.clamp(pitch+lookDeltaY*.0075,-.88,.92);lookDeltaX=lookDeltaY=0;
+ worldYaw-=lookDeltaX*.0105;pitch=THREE.MathUtils.clamp(pitch+lookDeltaY*.009,-1.05,1.05);lookDeltaX=lookDeltaY=0;
  const forward=new THREE.Vector3(Math.sin(worldYaw),0,-Math.cos(worldYaw)),right=new THREE.Vector3(Math.cos(worldYaw),0,Math.sin(worldYaw));
  const move=forward.multiplyScalar(keys.forward).add(right.multiplyScalar(keys.side));if(move.lengthSq()>1)move.normalize();
  const targetVelocity=move.clone().multiplyScalar(aiming?2.85:5.4);playerVelocity.lerp(targetVelocity,1-Math.exp(-9*dt));p.position.addScaledVector(playerVelocity,dt);p.position.x=THREE.MathUtils.clamp(p.position.x,-124,124);p.position.z=THREE.MathUtils.clamp(p.position.z,-124,124);
@@ -165,7 +181,7 @@ function animate(){
  fireCooldown=Math.max(0,fireCooldown-dt);
  if(fireHeld&&fireCooldown<=0&&reloadTimer<=0)shoot();
  if(reloadTimer>0){reloadTimer-=dt;if(reloadTimer<=0){reloadTimer=0;ammo=30;ammoEl.textContent='MUNIÇÃO '+ammo;document.querySelector('#ammoLarge').textContent='30';document.querySelector('#reload').classList.remove('active');statusEl.textContent='PRONTO'}}
- recoil=Math.max(0,recoil-dt*.55);const target=p.position.clone().add(new THREE.Vector3(0,1.48,0));const forwardView=new THREE.Vector3(Math.sin(worldYaw),0,-Math.cos(worldYaw));const back=new THREE.Vector3(-forwardView.x,0,-forwardView.z);const shoulder=new THREE.Vector3(Math.cos(worldYaw),0,Math.sin(worldYaw));const cameraDistance=aiming?2.45:4.25;const horizontal=cameraDistance*Math.cos(pitch);const desired=target.clone().add(back.multiplyScalar(horizontal)).add(shoulder.multiplyScalar(aiming?.34:.52)).add(new THREE.Vector3(0,.58+cameraDistance*Math.sin(pitch)+recoil*1.15,0));const smooth=1-Math.exp(-8.5*dt);camera.position.lerp(desired,smooth);const lookTarget=target.clone().add(forwardView.multiplyScalar(aiming?2.0:2.35)).add(new THREE.Vector3(0,Math.sin(pitch)*(aiming?1.25:1.55)+recoil*1.7,0));cameraLook.lerp(lookTarget,smooth);camera.lookAt(cameraLook);const wantedFov=aiming?42:(playerVelocity.length()>4.2?71:68);if(Math.abs(camera.fov-wantedFov)>.1){camera.fov=THREE.MathUtils.lerp(camera.fov,wantedFov,smooth);camera.updateProjectionMatrix();}
+ recoil=Math.max(0,recoil-dt*.55);const target=p.position.clone().add(new THREE.Vector3(0,1.48,0));const forwardView=new THREE.Vector3(Math.sin(worldYaw),0,-Math.cos(worldYaw));const back=new THREE.Vector3(-forwardView.x,0,-forwardView.z);const shoulder=new THREE.Vector3(Math.cos(worldYaw),0,Math.sin(worldYaw));const cameraDistance=aiming?2.15:3.85;const horizontal=cameraDistance*Math.cos(pitch);const desired=target.clone().add(back.multiplyScalar(horizontal)).add(shoulder.multiplyScalar(aiming?.34:.52)).add(new THREE.Vector3(0,.58+cameraDistance*Math.sin(pitch)+recoil*1.15,0));const smooth=1-Math.exp(-13*dt);camera.position.lerp(desired,smooth);const lookTarget=target.clone().add(forwardView.multiplyScalar(aiming?2.0:2.35)).add(new THREE.Vector3(0,Math.sin(pitch)*(aiming?1.25:1.55)+recoil*1.7,0));cameraLook.lerp(lookTarget,smooth);camera.lookAt(cameraLook);const wantedFov=aiming?42:(playerVelocity.length()>4.2?71:68);if(Math.abs(camera.fov-wantedFov)>.1){camera.fov=THREE.MathUtils.lerp(camera.fov,wantedFov,smooth);camera.updateProjectionMatrix();}
  if(hitMarkerTimer>0){hitMarkerTimer-=dt;if(hitMarkerTimer<=0)document.querySelector('#crosshair')?.classList.remove('hit')}updateEffects(dt);radarClock-=dt;if(radarClock<=0){radarClock=.18;updateRadar()}renderer.render(scene,camera);
 }
 init().catch(err=>{console.error(err);loading.style.display='none';errorPanel.style.display='grid';document.querySelector('#errorMessage').textContent='Não foi possível carregar os modelos 3D. Confira a internet e tente novamente.'});
