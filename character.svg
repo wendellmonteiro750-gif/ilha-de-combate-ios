@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 500">
+<defs>
+ <linearGradient id="cloth" x2="0" y2="1"><stop stop-color="#34363d"/><stop offset="1" stop-color="#090b10"/></linearGradient>
+ <linearGradient id="skin" x2="1" y2="1"><stop stop-color="#f0b38c"/><stop offset="1" stop-color="#a85f42"/></linearGradient>
+ <linearGradient id="red" x2="0" y2="1"><stop stop-color="#ff4c52"/><stop offset="1" stop-color="#9e101b"/></linearGradient>
+ <linearGradient id="pants" x2="1" y2="0"><stop stop-color="#252832"/><stop offset=".5" stop-color="#080a0e"/><stop offset="1" stop-color="#343640"/></linearGradient>
+</defs>
+<!-- hair and head -->
+<path d="M73 72 Q48 44 73 27 L65 15 88 23 92 5 108 20 124 4 130 25 151 16 145 43 158 62 145 88 76 91Z" fill="#11131a" stroke="#050609" stroke-width="4"/>
+<path d="M79 48 Q84 20 111 24 Q143 25 147 54 L143 101 Q136 125 111 128 Q84 122 77 98Z" fill="url(#skin)"/>
+<path d="M77 72 Q111 60 148 74 L144 101 Q109 119 81 101Z" fill="#101218"/>
+<path d="M79 77 Q111 64 146 77 L140 105 Q110 127 84 105Z" fill="#090b10" stroke="#41434b" stroke-width="3"/>
+<path d="M92 88 l9 -4 5 8 -9 3Z M120 84 l9 3 -4 8 -8 -3Z" fill="#f3f3ed"/>
+<!-- neck and hood -->
+<path d="M89 119 L132 119 143 151 78 151Z" fill="url(#skin)"/>
+<path d="M69 119 Q48 132 43 164 L57 202 164 202 177 160 Q162 129 137 119 L126 145 84 145Z" fill="#a90e20" stroke="#390810" stroke-width="5"/>
+<path d="M71 142 Q110 159 149 142 L166 183 154 241 65 241 53 183Z" fill="url(#cloth)" stroke="#55545b" stroke-width="4"/>
+<!-- arms -->
+<path d="M58 160 Q39 157 30 185 L13 266 Q8 289 23 299 Q39 304 46 282 L75 202Z" fill="url(#skin)" stroke="#874d3b" stroke-width="3"/>
+<path d="M161 160 Q181 157 190 185 L207 266 Q212 289 197 299 Q181 304 174 282 L145 202Z" fill="url(#skin)" stroke="#874d3b" stroke-width="3"/>
+<path d="M12 265 L45 270 42 298 9 292Z M175 270 L208 265 211 292 178 298Z" fill="#151820" stroke="#e42d3c" stroke-width="5"/>
+<!-- vest -->
+<path d="M72 145 L93 151 110 172 127 151 149 145 163 244 145 278 75 278 57 244Z" fill="url(#cloth)" stroke="#5b5c63" stroke-width="4"/>
+<path d="M88 151 L110 176 132 151 139 263 81 263Z" fill="#171a21"/>
+<path d="M79 170 L139 244" stroke="#0a0c10" stroke-width="13"/><path d="M79 170 L139 244" stroke="#74777f" stroke-width="4"/>
+<path d="M89 181 L105 201 91 212 75 192Z" fill="#d7d8dc"/>
+<path d="M122 196 Q139 183 145 205 L132 229 116 245 120 224 108 218Z" fill="#eceef0"/>
+<path d="M104 232 L116 250 126 240 119 263 104 252Z" fill="#cfd1d4"/>
+<path d="M80 149 L87 161 M139 149 L133 161" stroke="#e72b3c" stroke-width="4"/>
+<!-- belt -->
+<path d="M65 266 L155 266 159 284 61 284Z" fill="#090b10" stroke="#565961" stroke-width="3"/>
+<rect x="99" y="264" width="24" height="19" rx="3" fill="#9ea0a4" stroke="#20232a" stroke-width="3"/>
+<!-- hands / gloves -->
+<path d="M10 291 Q21 284 38 295 L42 318 28 332 10 319Z M181 295 Q198 284 210 291 L210 319 192 332 178 318Z" fill="#11151c" stroke="#555963" stroke-width="3"/>
+<path d="M17 307 L36 312 M185 312 L204 307" stroke="#e52b3b" stroke-width="5"/>
+<!-- pants -->
+<path d="M64 282 L156 282 163 367 144 425 119 425 108 352 99 425 75 425 57 367Z" fill="url(#pants)" stroke="#41444d" stroke-width="4"/>
+<path d="M62 300 L89 306 82 349 56 345Z M132 306 L159 300 166 345 139 349Z" fill="#171a21" stroke="#555963" stroke-width="3"/>
+<path d="M62 300 L70 348 M157 300 L149 348" stroke="#e52a3b" stroke-width="7"/>
+<path d="M79 359 L98 365 91 413 76 414Z M123 365 L143 359 143 414 128 413Z" fill="#171a20"/>
+<path d="M78 377 L90 385 82 400 73 393Z M132 385 L144 377 148 393 138 400Z" fill="#f0f0ec"/>
+<!-- shoes -->
+<path d="M75 416 L100 416 102 458 Q96 477 56 474 L43 464 52 442Z M120 416 L145 416 168 442 178 464 165 474 Q124 477 118 458Z" fill="#10131a" stroke="#555a64" stroke-width="4"/>
+<path d="M47 459 Q76 468 101 458 L103 477 54 482 38 472Z M119 458 Q145 468 174 459 L184 472 168 482 117 477Z" fill="#e9e9e7"/>
+<path d="M58 440 L89 455 M132 455 L162 440" stroke="#ed2638" stroke-width="5"/>
+</svg>
