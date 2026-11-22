@@ -1,5 +1,4 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
 import { Character, Library, catalogFromFiles } from './character.js';
 
 const root=document.querySelector('#game'),loading=document.querySelector('#loading'),statusEl=document.querySelector('#status');
@@ -62,7 +61,7 @@ async function init(){
  scene=new THREE.Scene();clock=new THREE.Clock();buildWorld();camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.1,500);
  loading.textContent='CARREGANDO PERSONAGEM 3D…';
  const catalog=await catalogFromFiles(BASE);catalog.animations=catalog.animations.filter(a=>a.group==='General'||a.group==='Movement Basic');library=new Library(catalog);
- playerRig=await createFighter(false,0);playerRig.holder.position.set(0,0,0);
+ playerRig=await createFighter(false,0);playerRig.holder.position.set(0,0,0);playerRig.holder.rotation.y=Math.PI;
  const spots=[[20,2],[-20,4],[4,24],[-5,-25],[29,-14]];
  await Promise.all(spots.map((p,i)=>spawnEnemy(p[0],p[1],i)));
  setupControls();addEventListener('resize',resize);loading.style.display='none';
@@ -93,7 +92,7 @@ function animate(){
  playerRig.jumpV=(playerRig.jumpV||0)-15*dt;p.position.y=Math.max(0,p.position.y+(playerRig.jumpV||0)*dt);if(p.position.y===0&&playerRig.jumpV<0)playerRig.jumpV=0;
  playerRig.update(dt);
  for(const e of enemies){if(!e.alive)continue;const ep=e.rig.holder,delta=p.position.clone().sub(ep.position);const dist=delta.length();if(dist>2.3){delta.normalize();ep.position.addScaledVector(delta,1.35*dt);ep.rotation.y=Math.atan2(delta.x,delta.z);if(e.anim!=='run'){e.anim='run';play(e.rig,'run')}}else{if(e.anim!=='idle'){e.anim='idle';play(e.rig,'idle')}e.attack+=dt;if(e.attack>1.5){e.attack=0;health=Math.max(0,health-4);healthEl.textContent='VIDA '+health}}e.rig.update(dt)}
- for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];b.mesh.position.addScaledVector(b.dir,38*dt);b.life-=dt;let hit=false;for(const e of enemies){if(e.alive&&b.mesh.distanceToPoint){ }if(e.alive&&b.mesh.position.distanceTo(e.rig.holder.position.clone().add(new THREE.Vector3(0,.9,0)))<1.05){e.hp-=35;hit=true;if(e.hp<=0){e.alive=false;scene.remove(e.rig.holder);e.rig.dispose();kills++;scoreEl.textContent='ELIMINAÇÕES '+kills}break}}if(hit||b.life<=0){scene.remove(b.mesh);bullets.splice(i,1)}}
+ for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];b.mesh.position.addScaledVector(b.dir,38*dt);b.life-=dt;let hit=false;for(const e of enemies){if(e.alive&&b.mesh.position.distanceTo(e.rig.holder.position.clone().add(new THREE.Vector3(0,.9,0)))<1.05){e.hp-=35;hit=true;if(e.hp<=0){e.alive=false;scene.remove(e.rig.holder);e.rig.dispose();kills++;scoreEl.textContent='ELIMINAÇÕES '+kills}break}}if(hit||b.life<=0){scene.remove(b.mesh);bullets.splice(i,1)}}
  const target=p.position.clone().add(new THREE.Vector3(0,1.2,0));const back=new THREE.Vector3(-Math.sin(worldYaw),0,Math.cos(worldYaw));const desired=target.clone().add(back.multiplyScalar(6.3)).add(new THREE.Vector3(0,2.5+pitch*3,0));camera.position.lerp(desired,.14);camera.lookAt(target.clone().add(new THREE.Vector3(0,pitch*2,0)));
  renderer.render(scene,camera);
 }
