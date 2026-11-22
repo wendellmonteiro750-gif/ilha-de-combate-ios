@@ -53,8 +53,9 @@ function makeFighter(url){
    group.add(model);
    fighter.mixer=new THREE.AnimationMixer(model);
    for(const clip of gltf.animations) fighter.actions[clip.name.toLowerCase()]=fighter.mixer.clipAction(clip);
+   fighter.ready=true;
    fighter.play('idle');
-   fighter.ready=true;mixers.push(fighter);
+   mixers.push(fighter);
  }).catch(err=>{console.error('Falha ao carregar soldado 3D',err)});
  fighter.play=(name)=>{
    if(!fighter.ready || fighter.currentAction===name)return;
