@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#101b22">
+<title>Ilha de Combate</title>
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<div id="game"></div>
+<div id="loading">CARREGANDO ILHA DE COMBATE…</div>
+<div id="hud">
+  <div class="topbar"><strong>ILHA DE COMBATE</strong><span id="status">PRONTO</span></div>
+  <div class="stats"><span id="health">VIDA 100</span><span id="ammo">MUNIÇÃO 30</span><span id="score">ELIMINAÇÕES 0</span></div>
+  <div id="crosshair">+</div>
+  <div id="joystick"><div id="stick"></div></div>
+  <div id="lookArea" aria-label="Arraste para olhar"></div>
+  <div class="actions"><button id="jump">PULAR</button><button id="fire">ATIRAR</button><button id="reload">RECARREGAR</button></div>
+  <div id="hint">Use o joystick para andar e arraste o lado direito para olhar.</div>
+</div>
+<script type="module" src="./game.js"></script>
+</body>
+</html>
