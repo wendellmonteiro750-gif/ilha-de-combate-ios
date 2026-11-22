@@ -12,9 +12,9 @@ const BASE='https://raw.githubusercontent.com/NoLimitNexus/game-models/main/';
 function mat(color,roughness=.86,metalness=0){return new THREE.MeshStandardMaterial({color,roughness,metalness})}
 function box(parent,w,h,d,material,x,y,z){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m}
 function addTextureGround(){
- const c=document.createElement('canvas');c.width=c.height=512;const ctx=c.getContext('2d');
+ const c=document.createElement('canvas');c.width=c.height=1024;const ctx=c.getContext('2d');
  ctx.fillStyle='#667d43';ctx.fillRect(0,0,512,512);
- for(let i=0;i<18000;i++){const x=Math.random()*512,y=Math.random()*512,v=65+Math.random()*80;ctx.fillStyle='rgba('+Math.floor(v*.72)+','+Math.floor(v)+','+Math.floor(v*.48)+','+(Math.random()*.22)+')';ctx.fillRect(x,y,1+Math.random()*3,1+Math.random()*3)}
+ for(let i=0;i<52000;i++){const x=Math.random()*512,y=Math.random()*512,v=65+Math.random()*80;ctx.fillStyle='rgba('+Math.floor(v*.72)+','+Math.floor(v)+','+Math.floor(v*.48)+','+(Math.random()*.22)+')';ctx.fillRect(x,y,1+Math.random()*3,1+Math.random()*3)}
  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(28,28);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=renderer.capabilities.getMaxAnisotropy();return t;
 }
 function addPalm(x,z,s=1){
@@ -30,19 +30,40 @@ function addHouse(x,z,rotation=0){
  for(const sx of [-1,1]){box(g,.86,.7,.12,wood,sx*1.55,1.8,2.25);box(g,.7,.55,.035,glass,sx*1.55,1.8,2.31)}
  g.position.set(x,0,z);g.rotation.y=rotation;scene.add(g);
 }
+function addWorldDetail(){
+ // Vegetação em instâncias: mais densidade visual com poucas chamadas de desenho.
+ const dummy=new THREE.Object3D();
+ const grassGeo=new THREE.ConeGeometry(.075,.62,4);
+ const grassMat=new THREE.MeshStandardMaterial({color:0x6d9146,roughness:1});
+ const grass=new THREE.InstancedMesh(grassGeo,grassMat,950);
+ let n=0;for(let i=0;i<950;i++){const a=Math.random()*Math.PI*2,r=8+Math.random()*111,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.hypot(x,z)>120)continue;dummy.position.set(x,.25,z);dummy.rotation.set((Math.random()-.5)*.18,Math.random()*Math.PI,0);const h=.55+Math.random()*.9;dummy.scale.set(.7,h,.7);dummy.updateMatrix();grass.setMatrixAt(n++,dummy.matrix)}grass.count=n;grass.instanceMatrix.needsUpdate=true;scene.add(grass);
+ const bushGeo=new THREE.IcosahedronGeometry(1,1),bushMat=new THREE.MeshStandardMaterial({color:0x315c36,roughness:1});
+ const bushes=new THREE.InstancedMesh(bushGeo,bushMat,145);n=0;
+ for(let i=0;i<145;i++){const a=Math.random()*Math.PI*2,r=12+Math.random()*105;dummy.position.set(Math.cos(a)*r,.55,Math.sin(a)*r);const q=.45+Math.random()*.8;dummy.scale.set(q*.9,q*.65,q);dummy.rotation.set(Math.random()*.3,Math.random()*6,Math.random()*.3);dummy.updateMatrix();bushes.setMatrixAt(n++,dummy.matrix)}bushes.count=n;bushes.instanceMatrix.needsUpdate=true;bushes.castShadow=true;scene.add(bushes);
+ // Pedras maiores na costa para quebrar o horizonte plano.
+ const cliffGeo=new THREE.DodecahedronGeometry(1,1),cliffMat=new THREE.MeshStandardMaterial({color:0x68766a,roughness:1});
+ const cliffs=new THREE.InstancedMesh(cliffGeo,cliffMat,88);
+ for(let i=0;i<88;i++){const a=i/88*Math.PI*2,r=127+Math.random()*8;dummy.position.set(Math.cos(a)*r,1.1,Math.sin(a)*r);const q=2+Math.random()*5;dummy.scale.set(q,q*(.7+Math.random()*.8),q*.8);dummy.rotation.set(Math.random()*.4,Math.random()*6,Math.random()*.4);dummy.updateMatrix();cliffs.setMatrixAt(i,dummy.matrix)}cliffs.instanceMatrix.needsUpdate=true;cliffs.castShadow=true;scene.add(cliffs);
+ // Nuvens volumétricas simples no horizonte.
+ const cloudGeo=new THREE.SphereGeometry(1,10,7),cloudMat=new THREE.MeshBasicMaterial({color:0xf4fbff,transparent:true,opacity:.62,depthWrite:false});
+ const clouds=new THREE.InstancedMesh(cloudGeo,cloudMat,54);
+ for(let i=0;i<54;i++){const a=i/9*Math.PI*2,r=205+(i%4)*18;dummy.position.set(Math.cos(a)*r,38+(i%5)*5,Math.sin(a)*r);dummy.scale.set(9+(i%3)*5,2.5+(i%2),5+(i%4)*2);dummy.rotation.y=a;dummy.updateMatrix();clouds.setMatrixAt(i,dummy.matrix)}clouds.instanceMatrix.needsUpdate=true;scene.add(clouds);
+}
 function buildWorld(){
- scene.background=new THREE.Color(0x9ac9e2);scene.fog=new THREE.Fog(0xa4cbd0,260,620);
- scene.add(new THREE.HemisphereLight(0xe4f4ff,0x526044,1.9));
- const sun=new THREE.DirectionalLight(0xffe6c0,3.2);sun.position.set(-35,65,28);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-150;sun.shadow.camera.right=150;sun.shadow.camera.top=150;sun.shadow.camera.bottom=-150;sun.shadow.bias=-.0002;scene.add(sun);
- const ground=new THREE.Mesh(new THREE.PlaneGeometry(800,800),new THREE.MeshStandardMaterial({map:addTextureGround(),roughness:1}));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
- const beach=new THREE.Mesh(new THREE.RingGeometry(122,140,160),mat(0xd9c18c));beach.rotation.x=-Math.PI/2;beach.position.y=.03;scene.add(beach);
- const waterMat=new THREE.MeshStandardMaterial({color:0x168aa6,roughness:.2,metalness:.12});
- const water=new THREE.Mesh(new THREE.PlaneGeometry(1100,1100),waterMat);water.rotation.x=-Math.PI/2;water.position.y=-.25;scene.add(water);
+ scene.background=new THREE.Color(0x9bcbe4);scene.fog=new THREE.Fog(0xa9cbd0,310,780);
+ scene.add(new THREE.HemisphereLight(0xe8f5ff,0x46583a,2.15));
+ const sun=new THREE.DirectionalLight(0xffedcf,3.5);sun.position.set(-42,78,34);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-165;sun.shadow.camera.right=165;sun.shadow.camera.top=165;sun.shadow.camera.bottom=-165;sun.shadow.bias=-.00018;sun.shadow.normalBias=.025;sun.shadow.radius=3;scene.add(sun);
+ const fill=new THREE.DirectionalLight(0x9bc8e8,.72);fill.position.set(55,28,-48);scene.add(fill);
+ const ground=new THREE.Mesh(new THREE.PlaneGeometry(800,800),new THREE.MeshStandardMaterial({map:addTextureGround(),roughness:.96}));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+ const beach=new THREE.Mesh(new THREE.RingGeometry(119,141,192),new THREE.MeshStandardMaterial({color:0xd9c18c,roughness:.95}));beach.rotation.x=-Math.PI/2;beach.position.y=.035;scene.add(beach);
+ const waterMat=new THREE.MeshStandardMaterial({color:0x168aa6,roughness:.16,metalness:.16});
+ const water=new THREE.Mesh(new THREE.PlaneGeometry(1100,1100,1,1),waterMat);water.rotation.x=-Math.PI/2;water.position.y=-.28;scene.add(water);
  for(let i=0;i<46;i++){const a=i*2.399,r=22+(i%8)*3.3;addPalm(Math.cos(a)*r,Math.sin(a)*r,.75+(i%4)*.1)}
  for(let i=0;i<95;i++){const a=i*2.399,r=52+(i%13)*5.1;addPalm(Math.cos(a)*r,Math.sin(a)*r,.85+(i%5)*.12)}
  addHouse(-12,-12,.2);addHouse(14,-18,-.3);addHouse(22,9,.8);addHouse(-25,15,-.5);
  addHouse(68,35,.4);addHouse(-76,-42,-.7);addHouse(38,-88,.2);addHouse(-92,72,1.1);addHouse(102,5,-.4);
  for(let i=0;i<34;i++){const a=i*2.4,r=9+(i%6)*4;const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.55+(i%4)*.22,1),mat(i%2?0x58644d:0x7b8069));rock.position.set(Math.cos(a)*r,.3,Math.sin(a)*r);rock.scale.y=.65;rock.castShadow=true;rock.receiveShadow=true;scene.add(rock)}
+ addWorldDetail();
 }
 function addRifle(rig){
  const hand=rig.bones.get('handslotr')||rig.bones.get('handslot.r');if(!hand)return;
@@ -90,7 +111,7 @@ function updateEffects(dt){
 async function spawnEnemy(x,z,i){const rig=await createFighter(true,i);rig.holder.position.set(x,0,z);enemies.push({rig,hp:100,alive:true,attack:0,anim:'idle'});return rig}
 async function init(){
  renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
- renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.6));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.1;root.appendChild(renderer.domElement);
+ renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.85));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.1;root.appendChild(renderer.domElement);
  scene=new THREE.Scene();clock=new THREE.Clock();buildWorld();camera=new THREE.PerspectiveCamera(68,innerWidth/innerHeight,.1,900);
  loading.textContent='CARREGANDO PERSONAGEM 3D…';
  const catalog=await catalogFromFiles(BASE);catalog.animations=catalog.animations.filter(a=>a.group==='General'||a.group==='Movement Basic');library=new Library(catalog);
