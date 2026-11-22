@@ -30,15 +30,15 @@ function addHouse(x,z,rotation=0){
  g.position.set(x,0,z);g.rotation.y=rotation;scene.add(g);
 }
 function buildWorld(){
- scene.background=new THREE.Color(0x9ac9e2);scene.fog=new THREE.Fog(0xa4cbd0,85,210);
+ scene.background=new THREE.Color(0x9ac9e2);scene.fog=new THREE.Fog(0xa4cbd0,180,420);
  scene.add(new THREE.HemisphereLight(0xe4f4ff,0x526044,1.9));
  const sun=new THREE.DirectionalLight(0xffe6c0,3.2);sun.position.set(-35,65,28);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-65;sun.shadow.camera.right=65;sun.shadow.camera.top=65;sun.shadow.camera.bottom=-65;sun.shadow.bias=-.0002;scene.add(sun);
- const ground=new THREE.Mesh(new THREE.PlaneGeometry(260,260),new THREE.MeshStandardMaterial({map:addTextureGround(),roughness:1}));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
- const beach=new THREE.Mesh(new THREE.RingGeometry(40,49,128),mat(0xd9c18c));beach.rotation.x=-Math.PI/2;beach.position.y=.03;scene.add(beach);
+ const ground=new THREE.Mesh(new THREE.PlaneGeometry(800,800),new THREE.MeshStandardMaterial({map:addTextureGround(),roughness:1}));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+ const beach=new THREE.Mesh(new THREE.RingGeometry(122,140,160),mat(0xd9c18c));beach.rotation.x=-Math.PI/2;beach.position.y=.03;scene.add(beach);
  const waterMat=new THREE.MeshStandardMaterial({color:0x168aa6,roughness:.2,metalness:.12});
- const water=new THREE.Mesh(new THREE.PlaneGeometry(700,700),waterMat);water.rotation.x=-Math.PI/2;water.position.y=-.25;scene.add(water);
- for(let i=0;i<46;i++){const a=i*2.399,r=22+(i%8)*3.3;addPalm(Math.cos(a)*r,Math.sin(a)*r,.75+(i%4)*.1)}
- addHouse(-12,-12,.2);addHouse(14,-18,-.3);addHouse(22,9,.8);addHouse(-25,15,-.5);
+ const water=new THREE.Mesh(new THREE.PlaneGeometry(1100,1100),waterMat);water.rotation.x=-Math.PI/2;water.position.y=-.25;scene.add(water);
+ for(let i=0;i<46;i++){const a=i*2.399,r=22+(i%8)*3.3;addPalm(Math.cos(a)*r,Math.sin(a)*r,.75+(i%4)*.1)}\n for(let i=0;i<95;i++){const a=i*2.399,r=52+(i%13)*5.1;addPalm(Math.cos(a)*r,Math.sin(a)*r,.85+(i%5)*.12)}
+ addHouse(-12,-12,.2);addHouse(14,-18,-.3);addHouse(22,9,.8);addHouse(-25,15,-.5);\n addHouse(68,35,.4);addHouse(-76,-42,-.7);addHouse(38,-88,.2);addHouse(-92,72,1.1);addHouse(102,5,-.4);
  for(let i=0;i<34;i++){const a=i*2.4,r=9+(i%6)*4;const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.55+(i%4)*.22,1),mat(i%2?0x58644d:0x7b8069));rock.position.set(Math.cos(a)*r,.3,Math.sin(a)*r);rock.scale.y=.65;rock.castShadow=true;rock.receiveShadow=true;scene.add(rock)}
 }
 function addRifle(rig){
@@ -58,11 +58,11 @@ async function spawnEnemy(x,z,i){const rig=await createFighter(true,i);rig.holde
 async function init(){
  renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
  renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.6));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.1;root.appendChild(renderer.domElement);
- scene=new THREE.Scene();clock=new THREE.Clock();buildWorld();camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.1,500);
+ scene=new THREE.Scene();clock=new THREE.Clock();buildWorld();camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.1,900);
  loading.textContent='CARREGANDO PERSONAGEM 3D…';
  const catalog=await catalogFromFiles(BASE);catalog.animations=catalog.animations.filter(a=>a.group==='General'||a.group==='Movement Basic');library=new Library(catalog);
  playerRig=await createFighter(false,0);playerRig.holder.position.set(0,0,0);playerRig.holder.rotation.y=Math.PI;
- const spots=[[20,2],[-20,4],[4,24],[-5,-25],[29,-14]];
+ const spots=[[62,18],[-70,36],[18,78],[-42,-88],[98,-52]];
  await Promise.all(spots.map((p,i)=>spawnEnemy(p[0],p[1],i)));
  setupControls();addEventListener('resize',resize);loading.style.display='none';
  document.querySelector('#hint').textContent='Joystick: andar • Arraste a tela: mirar • Botões: pular e atirar';
@@ -87,7 +87,7 @@ function animate(){
  const dt=Math.min(clock.getDelta(),.04),p=playerRig.holder;
  const forward=new THREE.Vector3(Math.sin(worldYaw),0,-Math.cos(worldYaw)),right=new THREE.Vector3(Math.cos(worldYaw),0,Math.sin(worldYaw));
  const move=forward.multiplyScalar(keys.forward).add(right.multiplyScalar(keys.side));if(move.lengthSq()>1)move.normalize();
- p.position.addScaledVector(move,5.5*dt);p.position.x=THREE.MathUtils.clamp(p.position.x,-43,43);p.position.z=THREE.MathUtils.clamp(p.position.z,-43,43);
+ p.position.addScaledVector(move,5.5*dt);p.position.x=THREE.MathUtils.clamp(p.position.x,-124,124);p.position.z=THREE.MathUtils.clamp(p.position.z,-124,124);
  if(move.length()>.08){p.rotation.y=Math.atan2(move.x,move.z);play(playerRig,Math.abs(keys.forward)+Math.abs(keys.side)>.7?'run':'walk')}else play(playerRig,'idle');
  playerRig.jumpV=(playerRig.jumpV||0)-15*dt;p.position.y=Math.max(0,p.position.y+(playerRig.jumpV||0)*dt);if(p.position.y===0&&playerRig.jumpV<0)playerRig.jumpV=0;
  playerRig.update(dt);
