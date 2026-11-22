@@ -81,3 +81,18 @@
  .fire-btn{width:64px;height:64px}
 }
 \n/* Mira e feedback visual de combate */\n#crosshair{position:fixed;left:50%;top:50%;width:24px;height:24px;transform:translate(-50%,-50%);pointer-events:none;z-index:4;opacity:.9;transition:width .15s,height .15s,opacity .15s}\n#crosshair i{position:absolute;display:block;background:#fff;border:1px solid #263238;border-radius:2px;box-shadow:0 0 3px #000;width:2px;height:7px}\n#crosshair i:nth-child(1){left:11px;top:0}\n#crosshair i:nth-child(2){left:11px;bottom:0}\n#crosshair i:nth-child(3){left:0;top:11px;width:7px;height:2px}\n#crosshair i:nth-child(4){right:0;top:11px;width:7px;height:2px}\n#crosshair b{position:absolute;left:10px;top:10px;width:4px;height:4px;border-radius:50%;background:#ffdf8a;box-shadow:0 0 4px #000}\n#crosshair.aiming{width:14px;height:14px;opacity:1}\n#crosshair.aiming i{background:#ffedb5}\n#crosshair.hit{transform:translate(-50%,-50%) rotate(45deg) scale(1.35)}\n#crosshair.hit i{background:#ff5146}\n.aim-btn{grid-column:1;grid-row:1;width:56px;height:56px;background:radial-gradient(circle at 32% 25%,#9bb5bd,#344d59 72%,#172934)}\n.aim-btn.active{background:radial-gradient(circle at 32% 25%,#d5b86a,#806126 72%,#342719);box-shadow:0 0 0 3px #ffd66b66,0 4px 12px #000b}\n.jump-btn{grid-column:1;grid-row:2}\n.reload-btn{grid-column:1;grid-row:3}\n.fire-btn{grid-column:2;grid-row:1 / span 3;align-self:center}\n.actions{grid-template-rows:56px 56px 56px!important}\n@media (orientation:portrait) and (max-width:699px){.actions{grid-template-rows:56px 56px 56px!important;bottom:18px}.aim-btn{width:54px;height:54px}.jump-btn,.reload-btn{width:54px;height:54px}}\n
+/* Mira central fixa, visível durante toda a partida */
+#crosshair{position:fixed!important;left:50%!important;top:50%!important;width:30px!important;height:30px!important;transform:translate(-50%,-50%)!important;z-index:20!important;pointer-events:none!important;opacity:1!important;display:block!important}
+#crosshair i{position:absolute;display:block;width:2px;height:9px;background:#fff;border:0;box-shadow:0 0 2px #111,0 0 5px #111;border-radius:2px}
+#crosshair i:nth-child(1){left:14px;top:0}
+#crosshair i:nth-child(2){left:14px;bottom:0}
+#crosshair i:nth-child(3){left:0;top:14px;width:9px;height:2px}
+#crosshair i:nth-child(4){right:0;top:14px;width:9px;height:2px}
+#crosshair b{position:absolute;left:13px;top:13px;width:4px;height:4px;border-radius:50%;background:#ffdf75;border:1px solid #202020;box-shadow:0 0 3px #000}
+#crosshair.aiming{width:20px!important;height:20px!important}
+#crosshair.aiming i{background:#ffe49a}
+#crosshair.aiming i:nth-child(1){left:9px}
+#crosshair.aiming i:nth-child(2){left:9px}
+#crosshair.aiming i:nth-child(3){top:9px}
+#crosshair.aiming i:nth-child(4){top:9px}
+#crosshair.aiming b{left:8px;top:8px}
