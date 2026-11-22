@@ -72,13 +72,13 @@ async function init(){
  renderer.setAnimationLoop(animate);
 }
 function resize(){if(!renderer)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.6))}
-const joy=document.querySelector('#joystick'),stick=document.querySelector('#stick');let joyId=null,cameraPointerId=null,lookDeltaX=0,lookDeltaY=0;
+const joy=document.querySelector('#joystick'),stick=document.querySelector('#stick');let joyId=null,cameraPointerId=null,lastPointerX=0,lastPointerY=0,lookDeltaX=0,lookDeltaY=0;
 function setJoy(e){const r=joy.getBoundingClientRect(),dx=e.clientX-r.left-r.width/2,dy=e.clientY-r.top-r.height/2,l=Math.hypot(dx,dy),k=Math.min(1,48/(l||1));keys.side=dx*k/48;keys.forward=-dy*k/48;stick.style.transform=`translate(${keys.side*48}px,${-keys.forward*48}px)`}
 function setupControls(){
  joy.addEventListener('pointerdown',e=>{e.preventDefault();joyId=e.pointerId;joy.setPointerCapture(joyId);setJoy(e)});joy.addEventListener('pointermove',e=>{if(e.pointerId===joyId)setJoy(e)});
  const endJoy=()=>{joyId=null;keys.side=keys.forward=0;stick.style.transform='translate(0,0)'};joy.addEventListener('pointerup',endJoy);joy.addEventListener('pointercancel',endJoy);
- renderer.domElement.addEventListener('pointerdown',e=>{if(e.target.closest('#joystick,.actions'))return;cameraPointerId=e.pointerId;lookDeltaX=lookDeltaY=0;renderer.domElement.setPointerCapture(e.pointerId)});
- renderer.domElement.addEventListener('pointermove',e=>{if(e.pointerId!==cameraPointerId)return;e.preventDefault();lookDeltaX+=e.movementX||0;lookDeltaY+=e.movementY||0});
+ renderer.domElement.addEventListener('pointerdown',e=>{if(e.target.closest('#joystick,.actions'))return;cameraPointerId=e.pointerId;lastPointerX=e.clientX;lastPointerY=e.clientY;lookDeltaX=lookDeltaY=0;renderer.domElement.setPointerCapture(e.pointerId)});
+ renderer.domElement.addEventListener('pointermove',e=>{if(e.pointerId!==cameraPointerId)return;e.preventDefault();lookDeltaX+=e.clientX-lastPointerX;lookDeltaY+=e.clientY-lastPointerY;lastPointerX=e.clientX;lastPointerY=e.clientY});
  const endCameraDrag=e=>{if(e.pointerId===cameraPointerId)cameraPointerId=null};renderer.domElement.addEventListener('pointerup',endCameraDrag);renderer.domElement.addEventListener('pointercancel',endCameraDrag);
  document.querySelector('#jump').onclick=()=>{playerRig.jumpV=5.8};
  document.querySelector('#fire').onclick=shoot;
