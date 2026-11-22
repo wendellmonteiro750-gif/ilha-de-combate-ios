@@ -170,7 +170,14 @@ async function init(){
  playerRig=await createFighter(false,0);playerRig.holder.position.set(0,0,0);playerRig.holder.rotation.y=Math.PI;
  const spots=[[62,18],[-70,36],[18,78],[-42,-88],[98,-52]];
  await Promise.all(spots.map((p,i)=>spawnEnemy(p[0],p[1],i)));
- setupControls();addEventListener('resize',resize);loading.style.display='none';
+ setupControls();addEventListener('resize',resize);
+ document.querySelector('#playGame').addEventListener('click',()=>{
+  const lobby=document.querySelector('#lobby');lobby.classList.add('leaving');
+  document.querySelector('#hud').style.display='block';
+  setTimeout(()=>lobby.remove(),550);
+  statusEl.textContent='EM COMBATE';
+ });
+ loading.style.display='none';
  document.querySelector('#hint').textContent='Joystick: andar • Deslize a tela: olhar ao redor • Botões: pular e atirar';
  renderer.setAnimationLoop(animate);
 }
