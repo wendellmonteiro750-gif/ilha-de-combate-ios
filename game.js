@@ -50,7 +50,7 @@ function addWorldDetail(){
  for(let i=0;i<54;i++){const a=i/9*Math.PI*2,r=205+(i%4)*18;dummy.position.set(Math.cos(a)*r,38+(i%5)*5,Math.sin(a)*r);dummy.scale.set(9+(i%3)*5,2.5+(i%2),5+(i%4)*2);dummy.rotation.y=a;dummy.updateMatrix();clouds.setMatrixAt(i,dummy.matrix)}clouds.instanceMatrix.needsUpdate=true;scene.add(clouds);
 }
 function buildWorld(){
- scene.background=new THREE.Color(0x9bcbe4);scene.fog=new THREE.Fog(0xa9cbd0,310,780);
+ scene.background=new THREE.Color(0x9bcbe4);scene.fog=new THREE.Fog(0xa9cbd0,245,650);
  scene.add(new THREE.HemisphereLight(0xe8f5ff,0x46583a,2.15));
  const sun=new THREE.DirectionalLight(0xffedcf,3.5);sun.position.set(-42,78,34);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-165;sun.shadow.camera.right=165;sun.shadow.camera.top=165;sun.shadow.camera.bottom=-165;sun.shadow.bias=-.00018;sun.shadow.normalBias=.025;sun.shadow.radius=3;scene.add(sun);
  const fill=new THREE.DirectionalLight(0x9bc8e8,.72);fill.position.set(55,28,-48);scene.add(fill);
@@ -163,7 +163,7 @@ function updateEffects(dt){
 async function spawnEnemy(x,z,i){const rig=await createFighter(true,i);rig.holder.position.set(x,0,z);enemies.push({rig,hp:100,alive:true,attack:0,anim:'idle'});return rig}
 async function init(){
  renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
- renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.85));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.1;root.appendChild(renderer.domElement);
+ renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.65));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.18;root.appendChild(renderer.domElement);
  scene=new THREE.Scene();clock=new THREE.Clock();buildWorld();camera=new THREE.PerspectiveCamera(68,innerWidth/innerHeight,.1,900);
  loading.textContent='CARREGANDO PERSONAGEM 3D…';
  const catalog=await catalogFromFiles(BASE);catalog.animations=catalog.animations.filter(a=>a.group==='General'||a.group==='Movement Basic');library=new Library(catalog);
@@ -201,7 +201,7 @@ function setupControls(){
   e.preventDefault();
   const dx=e.clientX-lastPointerX,dy=e.clientY-lastPointerY;
   // A sensibilidade acompanha a densidade da tela para manter o mesmo giro no celular.
-  lookDeltaX+=dx;lookDeltaY+=dy;lastPointerX=e.clientX;lastPointerY=e.clientY;
+  lookDeltaX+=THREE.MathUtils.clamp(dx,-110,110);lookDeltaY+=THREE.MathUtils.clamp(dy,-90,90);lastPointerX=e.clientX;lastPointerY=e.clientY;
  });
  const endCameraDrag=e=>{if(e.pointerId===cameraPointerId)cameraPointerId=null};
  surface.addEventListener('pointerup',endCameraDrag);surface.addEventListener('pointercancel',endCameraDrag);
@@ -227,7 +227,7 @@ function shoot(){
  const spread=(aiming?.0035:.014)+(playerVelocity.length()>.5?.012:0);
  dir.x+=(Math.random()-.5)*spread;dir.y+=(Math.random()-.5)*spread;dir.z+=(Math.random()-.5)*spread;dir.normalize();
  const origin=playerRig.holder.position.clone().add(new THREE.Vector3(0,1.42,0)).add(dir.clone().multiplyScalar(.8));
- muzzleFlash(origin,dir);recoil=Math.min(.24,recoil+(aiming?.035:.065));
+ muzzleFlash(origin,dir);document.querySelector('#crosshair')?.classList.add('firing');setTimeout(()=>document.querySelector('#crosshair')?.classList.remove('firing'),85);recoil=Math.min(.24,recoil+(aiming?.035:.065));
  const mesh=new THREE.Mesh(new THREE.CylinderGeometry(.014,.014,.72,6),new THREE.MeshBasicMaterial({color:0xffdf91,transparent:true,opacity:.95}));
  mesh.position.copy(origin).add(dir.clone().multiplyScalar(.48));mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir);scene.add(mesh);bullets.push({mesh,dir,life:.22});
  statusEl.textContent=ammo===0?'RECARREGUE':(aiming?'MIRA PRECISA':'DISPARANDO');
@@ -249,7 +249,7 @@ function updateRadar(){
 }
 function animate(){
  const dt=Math.min(clock.getDelta(),.04),p=playerRig.holder;
- worldYaw-=lookDeltaX*.0105;pitch=THREE.MathUtils.clamp(pitch+lookDeltaY*.009,-1.05,1.05);lookDeltaX=lookDeltaY=0;
+ worldYaw-=lookDeltaX*.0082;pitch=THREE.MathUtils.clamp(pitch+lookDeltaY*.0078,-1.02,1.02);lookDeltaX=lookDeltaY=0;
  const forward=new THREE.Vector3(Math.sin(worldYaw),0,-Math.cos(worldYaw)),right=new THREE.Vector3(Math.cos(worldYaw),0,Math.sin(worldYaw));
  const move=forward.multiplyScalar(keys.forward).add(right.multiplyScalar(keys.side));if(move.lengthSq()>1)move.normalize();
  const targetVelocity=move.clone().multiplyScalar(aiming?2.85:5.4);playerVelocity.lerp(targetVelocity,1-Math.exp(-9*dt));p.position.addScaledVector(playerVelocity,dt);p.position.x=THREE.MathUtils.clamp(p.position.x,-124,124);p.position.z=THREE.MathUtils.clamp(p.position.z,-124,124);
@@ -261,7 +261,7 @@ function animate(){
  fireCooldown=Math.max(0,fireCooldown-dt);
  if(fireHeld&&fireCooldown<=0&&reloadTimer<=0)shoot();
  if(reloadTimer>0){reloadTimer-=dt;if(reloadTimer<=0){reloadTimer=0;ammo=30;ammoEl.textContent='MUNIÇÃO '+ammo;document.querySelector('#ammoLarge').textContent='30';document.querySelector('#reload').classList.remove('active');statusEl.textContent='PRONTO'}}
- recoil=Math.max(0,recoil-dt*.55);const target=p.position.clone().add(new THREE.Vector3(0,1.48,0));const forwardView=new THREE.Vector3(Math.sin(worldYaw),0,-Math.cos(worldYaw));const back=new THREE.Vector3(-forwardView.x,0,-forwardView.z);const shoulder=new THREE.Vector3(Math.cos(worldYaw),0,Math.sin(worldYaw));const cameraDistance=aiming?2.15:3.85;const horizontal=cameraDistance*Math.cos(pitch);const desired=target.clone().add(back.multiplyScalar(horizontal)).add(shoulder.multiplyScalar(aiming?.34:.52)).add(new THREE.Vector3(0,.58+cameraDistance*Math.sin(pitch)+recoil*1.15,0));const smooth=1-Math.exp(-13*dt);camera.position.lerp(desired,smooth);const lookTarget=target.clone().add(forwardView.multiplyScalar(aiming?2.0:2.35)).add(new THREE.Vector3(0,Math.sin(pitch)*(aiming?1.25:1.55)+recoil*1.7,0));cameraLook.lerp(lookTarget,smooth);camera.lookAt(cameraLook);const wantedFov=aiming?42:(playerVelocity.length()>4.2?71:68);if(Math.abs(camera.fov-wantedFov)>.1){camera.fov=THREE.MathUtils.lerp(camera.fov,wantedFov,smooth);camera.updateProjectionMatrix();}
+ recoil=Math.max(0,recoil-dt*.55);const target=p.position.clone().add(new THREE.Vector3(0,1.48,0));const forwardView=new THREE.Vector3(Math.sin(worldYaw),0,-Math.cos(worldYaw));const back=new THREE.Vector3(-forwardView.x,0,-forwardView.z);const shoulder=new THREE.Vector3(Math.cos(worldYaw),0,Math.sin(worldYaw));const cameraDistance=aiming?2.35:4.15;const horizontal=cameraDistance*Math.cos(pitch);const desired=target.clone().add(back.multiplyScalar(horizontal)).add(shoulder.multiplyScalar(aiming?.28:.46)).add(new THREE.Vector3(0,.58+cameraDistance*Math.sin(pitch)+recoil*1.15,0));const smooth=1-Math.exp(-13*dt);camera.position.lerp(desired,smooth);const lookTarget=target.clone().add(forwardView.multiplyScalar(aiming?2.0:2.35)).add(new THREE.Vector3(0,Math.sin(pitch)*(aiming?1.25:1.55)+recoil*1.7,0));cameraLook.lerp(lookTarget,smooth);camera.lookAt(cameraLook);const wantedFov=aiming?48:(playerVelocity.length()>4.2?72:68);if(Math.abs(camera.fov-wantedFov)>.1){camera.fov=THREE.MathUtils.lerp(camera.fov,wantedFov,smooth);camera.updateProjectionMatrix();}
  if(hitMarkerTimer>0){hitMarkerTimer-=dt;if(hitMarkerTimer<=0)document.querySelector('#crosshair')?.classList.remove('hit')}updateEffects(dt);radarClock-=dt;if(radarClock<=0){radarClock=.18;updateRadar()}renderer.render(scene,camera);
 }
 init().catch(err=>{console.error(err);loading.style.display='none';errorPanel.style.display='grid';document.querySelector('#errorMessage').textContent='Não foi possível carregar os modelos 3D. Confira a internet e tente novamente.'});
