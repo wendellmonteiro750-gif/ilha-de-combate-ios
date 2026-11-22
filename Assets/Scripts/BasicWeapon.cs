@@ -20,9 +20,10 @@ public class BasicWeapon : MonoBehaviour
     private int ammo;
     private float nextShotTime;
     private bool reloading;
+    public int CurrentAmmo => ammo;
+    public int MagazineSize => magazineSize;
     private void Awake() { ammo = magazineSize; onAmmoChanged?.Invoke(ammo, magazineSize); }
 
-    // Connect this public method to the mobile fire button's OnClick or Pointer events.
     public void Fire()
     {
         if (reloading || Time.time < nextShotTime) return;
@@ -40,7 +41,6 @@ public class BasicWeapon : MonoBehaviour
         }
     }
 
-    // Connect this method to the mobile reload button.
     public void Reload()
     {
         if (!reloading && ammo < magazineSize) StartCoroutine(ReloadRoutine());
