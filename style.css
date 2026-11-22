@@ -222,3 +222,17 @@
 #weaponSwitch{border:1px solid #e6d08c;border-radius:7px;background:linear-gradient(135deg,#51452a,#29291f);color:#ffe9a9;font-weight:900;font-size:9px;padding:6px 8px;touch-action:manipulation}
 #weaponSwitch:active{transform:scale(.95);filter:brightness(1.3)}
 @media(orientation:portrait) and (max-width:699px){#weaponSwitch{font-size:8px;padding:5px 6px}}
+
+/* Inventário e mochila de combate */
+#inventoryToggle{border:1px solid #c9d8e0;border-radius:7px;background:linear-gradient(135deg,#344e5a,#182c36);color:#f2f7f5;font-size:9px;font-weight:900;padding:6px 8px;touch-action:manipulation}
+#inventoryPanel{display:none;position:fixed;z-index:40;left:50%;top:50%;transform:translate(-50%,-50%);width:min(88vw,360px);padding:15px;border:1px solid #e7d39a;border-radius:12px;background:linear-gradient(145deg,#172b35f5,#0b171ff7);box-shadow:0 12px 40px #000d;color:#fff;text-shadow:0 1px 2px #000;pointer-events:auto}
+#inventoryPanel.visible{display:block}
+#inventoryPanel header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;color:#f4d38c;font-size:12px;letter-spacing:.7px}
+#inventoryPanel header span{font-size:8px;color:#a9c2c7}
+#inventoryWeapons{display:grid;gap:7px}
+.inventory-slot{display:grid;grid-template-columns:1fr auto;gap:3px 8px;padding:10px;border:1px solid #ffffff35;border-radius:8px;background:#ffffff0d}
+.inventory-slot.equipped{border-color:#f1d083;background:#b58a3a2b}
+.inventory-slot b{font-size:11px}.inventory-slot span{font-size:11px;color:#ffe29a;font-weight:900}.inventory-slot small{grid-column:1/-1;color:#b7c8c9;font-size:8px}
+.inventory-supplies{margin:11px 0;padding:9px;border-radius:7px;background:#0a151dcc;color:#a9f0bd;font-size:10px;font-weight:800}
+#inventoryPanel>small{font-size:8px;color:#c5d0d1}
+@media(orientation:portrait) and (max-width:699px){#inventoryToggle{font-size:8px;padding:5px 6px}#inventoryPanel{width:90vw}}
