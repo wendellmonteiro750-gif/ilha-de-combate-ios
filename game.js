@@ -4,8 +4,9 @@ import { Character, Library, catalogFromFiles } from './character.js';
 const root=document.querySelector('#game'),loading=document.querySelector('#loading'),statusEl=document.querySelector('#status');
 const scoreEl=document.querySelector('#score'),ammoEl=document.querySelector('#ammo'),healthEl=document.querySelector('#health');
 const errorPanel=document.querySelector('#errorPanel');
-let renderer,scene,camera,clock,playerRig,worldYaw=0,pitch=-.12,ammo=30,kills=0,health=100,library;
+let renderer,scene,camera,clock,playerRig,worldYaw=0,pitch=-.12,ammo=30,kills=0,health=100,armor=0,medkits=1,library;
 const playerVelocity=new THREE.Vector3(),cameraLook=new THREE.Vector3();
+let safeRing=null,zoneElapsed=0,zoneDamageClock=0,lootItems=[];
 const keys={forward:0,side:0},bullets=[],enemies=[],effects=[];let dustClock=0,recoil=0,aiming=false,hitMarkerTimer=0,fireHeld=false,fireCooldown=0,reloadTimer=0;
 const BASE='https://raw.githubusercontent.com/NoLimitNexus/game-models/main/';
 
@@ -65,6 +66,56 @@ function buildWorld(){
  for(let i=0;i<34;i++){const a=i*2.4,r=9+(i%6)*4;const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.55+(i%4)*.22,1),mat(i%2?0x58644d:0x7b8069));rock.position.set(Math.cos(a)*r,.3,Math.sin(a)*r);rock.scale.y=.65;rock.castShadow=true;rock.receiveShadow=true;scene.add(rock)}
  addWorldDetail();
  addCombatLandmarks();
+ addSafeZone();addLootDrops();
+}
+function addSafeZone(){
+ const ring=new THREE.Mesh(new THREE.TorusGeometry(1,.012,8,256),new THREE.MeshBasicMaterial({color:0x54dfff,transparent:true,opacity:.82}));
+ ring.rotation.x=-Math.PI/2;ring.position.y=.18;ring.scale.set(120,120,120);scene.add(ring);safeRing=ring;
+}
+function addLootDrops(){
+ const spots=[[12,5],[-32,42],[55,-34],[-70,-12],[78,66]];
+ spots.forEach((p,i)=>{
+  const group=new THREE.Group(),base=mat(0x6d5534,.78),trim=mat(0xe0b85f,.5,.35),glow=new THREE.MeshBasicMaterial({color:0xffd46b,transparent:true,opacity:.18});
+  box(group,1.25,.82,.9,base,0,.42,0);box(group,1.3,.12,.95,trim,0,.82,0);
+  box(group,.13,.9,.98,trim,0,.45,0);box(group,1.3,.08,.08,trim,0,.45,.49);
+  const halo=new THREE.Mesh(new THREE.TorusGeometry(.85,.035,6,24),glow);halo.rotation.x=Math.PI/2;halo.position.y=.08;group.add(halo);
+  group.position.set(p[0],0,p[1]);scene.add(group);
+  lootItems.push({group,type:['medkit','armor','ammo','medkit','armor'][i],taken:false});
+ });
+}
+function refreshVitals(){
+ healthEl.textContent='VIDA '+health;document.querySelector('#healthValue').textContent=health;
+ document.querySelector('#healthFill').style.width=health+'%';
+ document.querySelector('#armorText').textContent='COLETE '+Math.round(armor);
+ document.querySelector('#medkit').textContent='✚ KIT ('+medkits+')';
+}
+function useMedkit(){
+ if(medkits<=0||health>=100)return;
+ medkits--;health=Math.min(100,health+45);refreshVitals();statusEl.textContent='KIT MÉDICO USADO';
+}
+function takeLoot(){
+ if(!playerRig)return;
+ const p=playerRig.holder.position;
+ let nearest=null,best=4;
+ for(const item of lootItems){if(item.taken)continue;const d=Math.hypot(item.group.position.x-p.x,item.group.position.z-p.z);if(d<best){best=d;nearest=item}}
+ if(!nearest)return;
+ nearest.taken=true;scene.remove(nearest.group);
+ if(nearest.type==='medkit')medkits++;
+ else if(nearest.type==='armor')armor=Math.min(100,armor+50);
+ else ammo=Math.min(30,ammo+15);
+ ammoEl.textContent='MUNIÇÃO '+ammo;document.querySelector('#ammoLarge').textContent=ammo;refreshVitals();
+ statusEl.textContent=nearest.type==='medkit'?'KIT ENCONTRADO':nearest.type==='armor'?'COLETE REFORÇADO':'MUNIÇÃO COLETADA';
+}
+function updateSafeZone(dt){
+ zoneElapsed+=dt;
+ const radius=Math.max(24,120-zoneElapsed*.42);
+ if(safeRing){safeRing.scale.set(radius,radius,radius);const pulse=.72+Math.sin(zoneElapsed*3)*.1;safeRing.material.opacity=pulse}
+ document.querySelector('#zoneText').textContent='ZONA '+Math.round(radius)+'m';
+ const p=playerRig.holder.position;
+ if(Math.hypot(p.x,p.z)>radius){zoneDamageClock-=dt;if(zoneDamageClock<=0){zoneDamageClock=1;const raw=7,blocked=Math.min(armor,raw*.5);armor-=blocked;health=Math.max(0,health-(raw-blocked));refreshVitals();statusEl.textContent='FORA DA ZONA SEGURA'}}else zoneDamageClock=0;
+ let closest=Infinity;
+ for(const item of lootItems){if(item.taken)continue;closest=Math.min(closest,Math.hypot(item.group.position.x-p.x,item.group.position.z-p.z))}
+ const lootButton=document.querySelector('#loot');lootButton.style.display=closest<4?'block':'none';
 }
 function addCombatLandmarks(){
  // Posto avançado, caixas de suprimentos e barreiras para dar escala ao mapa.
@@ -212,6 +263,8 @@ function setupControls(){
  fireButton.addEventListener('pointerdown',e=>{e.preventDefault();fireHeld=true;fireButton.setPointerCapture(e.pointerId);shoot()});
  const stopFire=()=>{fireHeld=false};fireButton.addEventListener('pointerup',stopFire);fireButton.addEventListener('pointercancel',stopFire);fireButton.addEventListener('lostpointercapture',stopFire);
  document.querySelector('#reload').onclick=reloadWeapon;
+ document.querySelector('#medkit').onclick=useMedkit;
+ document.querySelector('#loot').onclick=takeLoot;
 }
 function reloadWeapon(){
  if(reloadTimer>0||ammo===30)return;
@@ -256,12 +309,13 @@ function animate(){
  if(playerVelocity.length()>.22){dustClock-=dt;if(dustClock<=0){dustClock=playerVelocity.length()>4.2?.12:.24;const foot=p.position.clone().add(new THREE.Vector3((Math.random()-.5)*.55,.12,(Math.random()-.5)*.55));for(let n=0;n<3;n++)addParticle(foot,0xc6b58a,1.1,.055,.3)}const desiredYaw=Math.atan2(playerVelocity.x,playerVelocity.z);const turn=THREE.MathUtils.euclideanModulo(desiredYaw-p.rotation.y+Math.PI,Math.PI*2)-Math.PI;p.rotation.y+=turn*Math.min(1,10*dt);play(playerRig,playerVelocity.length()>4.2?'run':'walk')}else{if(aiming||fireHeld){const faceYaw=worldYaw+Math.PI;const turn=THREE.MathUtils.euclideanModulo(faceYaw-p.rotation.y+Math.PI,Math.PI*2)-Math.PI;p.rotation.y+=turn*Math.min(1,12*dt)}play(playerRig,'idle');}
  playerRig.jumpV=(playerRig.jumpV||0)-15*dt;p.position.y=Math.max(0,p.position.y+(playerRig.jumpV||0)*dt);if(p.position.y===0&&playerRig.jumpV<0)playerRig.jumpV=0;
  playerRig.update(dt);
- for(const e of enemies){if(!e.alive)continue;const ep=e.rig.holder,delta=p.position.clone().sub(ep.position);const dist=delta.length();if(dist>2.3){delta.normalize();ep.position.addScaledVector(delta,1.35*dt);ep.rotation.y=Math.atan2(delta.x,delta.z);if(e.anim!=='run'){e.anim='run';play(e.rig,'run')}}else{if(e.anim!=='idle'){e.anim='idle';play(e.rig,'idle')}e.attack+=dt;if(e.attack>1.5){e.attack=0;health=Math.max(0,health-4);healthEl.textContent='VIDA '+health;document.querySelector('#healthValue').textContent=health;document.querySelector('#healthFill').style.width=health+'%';statusEl.textContent='SOB ATAQUE';setTimeout(()=>{if(health>0)statusEl.textContent='PRONTO'},450)}}e.rig.update(dt)}
+ for(const e of enemies){if(!e.alive)continue;const ep=e.rig.holder,delta=p.position.clone().sub(ep.position);const dist=delta.length();if(dist>2.3){delta.normalize();ep.position.addScaledVector(delta,1.35*dt);ep.rotation.y=Math.atan2(delta.x,delta.z);if(e.anim!=='run'){e.anim='run';play(e.rig,'run')}}else{if(e.anim!=='idle'){e.anim='idle';play(e.rig,'idle')}e.attack+=dt;if(e.attack>1.5){e.attack=0;const raw=4,blocked=Math.min(armor,raw*.5);armor-=blocked;health=Math.max(0,health-(raw-blocked));refreshVitals();statusEl.textContent='SOB ATAQUE';setTimeout(()=>{if(health>0)statusEl.textContent='PRONTO'},450)}}e.rig.update(dt)}
  for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];b.mesh.position.addScaledVector(b.dir,72*dt);b.life-=dt;let hit=false;for(const e of enemies){if(e.alive&&b.mesh.position.distanceTo(e.rig.holder.position.clone().add(new THREE.Vector3(0,.9,0)))<1.05){e.hp-=35;hitMarkerTimer=.18;document.querySelector('#crosshair')?.classList.add('hit');burst(b.mesh.position,12,0xffa34d,4.8);hit=true;if(e.hp<=0){e.alive=false;burst(e.rig.holder.position.clone().add(new THREE.Vector3(0,1,0)),22,0xffd06b,5);scene.remove(e.rig.holder);e.rig.dispose();kills++;scoreEl.textContent=String(kills);document.querySelector('#remainingEnemies').textContent=String(enemies.filter(x=>x.alive).length)}break}}if(hit||b.life<=0){scene.remove(b.mesh);b.mesh.geometry.dispose();b.mesh.material.dispose();bullets.splice(i,1)}}
  fireCooldown=Math.max(0,fireCooldown-dt);
  if(fireHeld&&fireCooldown<=0&&reloadTimer<=0)shoot();
  if(reloadTimer>0){reloadTimer-=dt;if(reloadTimer<=0){reloadTimer=0;ammo=30;ammoEl.textContent='MUNIÇÃO '+ammo;document.querySelector('#ammoLarge').textContent='30';document.querySelector('#reload').classList.remove('active');statusEl.textContent='PRONTO'}}
  recoil=Math.max(0,recoil-dt*.55);const target=p.position.clone().add(new THREE.Vector3(0,1.48,0));const forwardView=new THREE.Vector3(Math.sin(worldYaw),0,-Math.cos(worldYaw));const back=new THREE.Vector3(-forwardView.x,0,-forwardView.z);const shoulder=new THREE.Vector3(Math.cos(worldYaw),0,Math.sin(worldYaw));const cameraDistance=aiming?2.35:4.15;const horizontal=cameraDistance*Math.cos(pitch);const desired=target.clone().add(back.multiplyScalar(horizontal)).add(shoulder.multiplyScalar(aiming?.28:.46)).add(new THREE.Vector3(0,.58+cameraDistance*Math.sin(pitch)+recoil*1.15,0));const smooth=1-Math.exp(-13*dt);camera.position.lerp(desired,smooth);const lookTarget=target.clone().add(forwardView.multiplyScalar(aiming?2.0:2.35)).add(new THREE.Vector3(0,Math.sin(pitch)*(aiming?1.25:1.55)+recoil*1.7,0));cameraLook.lerp(lookTarget,smooth);camera.lookAt(cameraLook);const wantedFov=aiming?48:(playerVelocity.length()>4.2?72:68);if(Math.abs(camera.fov-wantedFov)>.1){camera.fov=THREE.MathUtils.lerp(camera.fov,wantedFov,smooth);camera.updateProjectionMatrix();}
+ updateSafeZone(dt);
  if(hitMarkerTimer>0){hitMarkerTimer-=dt;if(hitMarkerTimer<=0)document.querySelector('#crosshair')?.classList.remove('hit')}updateEffects(dt);radarClock-=dt;if(radarClock<=0){radarClock=.18;updateRadar()}renderer.render(scene,camera);
 }
 init().catch(err=>{console.error(err);loading.style.display='none';errorPanel.style.display='grid';document.querySelector('#errorMessage').textContent='Não foi possível carregar os modelos 3D. Confira a internet e tente novamente.'});
