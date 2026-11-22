@@ -115,6 +115,21 @@ function setupControls(){
  document.querySelector('#reload').onclick=()=>{statusEl.textContent='RECARREGANDO';setTimeout(()=>{ammo=30;ammoEl.textContent='MUNIÇÃO 30';statusEl.textContent='PRONTO'},900)};
 }
 function shoot(){if(ammo<=0){statusEl.textContent='RECARREGUE';return}ammo--;ammoEl.textContent='MUNIÇÃO '+ammo;const dir=new THREE.Vector3(Math.sin(worldYaw),0,-Math.cos(worldYaw));const origin=playerRig.holder.position.clone().add(new THREE.Vector3(0,1.3,0)).add(dir.clone().multiplyScalar(.85));muzzleFlash(origin,dir);recoil=Math.min(.16,recoil+.075);const mesh=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,.85,6),new THREE.MeshBasicMaterial({color:0xffdf91,transparent:true,opacity:.95}));mesh.position.copy(origin).add(dir.clone().multiplyScalar(.55));mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir);scene.add(mesh);bullets.push({mesh,dir,life:.22})}
+let radarClock=0;
+function updateRadar(){
+ const radar=document.querySelector('#radarDots');if(!radar||!playerRig)return;
+ radar.innerHTML='';
+ for(const enemy of enemies){
+  if(!enemy.alive)continue;
+  const dx=enemy.rig.holder.position.x-playerRig.holder.position.x;
+  const dz=enemy.rig.holder.position.z-playerRig.holder.position.z;
+  const distance=Math.hypot(dx,dz);if(distance>105)continue;
+  const dot=document.createElement('i');dot.className='radar-dot';
+  dot.style.left=(50+THREE.MathUtils.clamp(dx/105*45,-45,45))+'%';
+  dot.style.top=(50+THREE.MathUtils.clamp(dz/105*45,-45,45))+'%';
+  radar.appendChild(dot);
+ }
+}
 function animate(){
  const dt=Math.min(clock.getDelta(),.04),p=playerRig.holder;
  worldYaw-=lookDeltaX*.006;pitch=THREE.MathUtils.clamp(pitch+lookDeltaY*.004,-.9,.72);lookDeltaX=lookDeltaY=0;
@@ -127,6 +142,6 @@ function animate(){
  for(const e of enemies){if(!e.alive)continue;const ep=e.rig.holder,delta=p.position.clone().sub(ep.position);const dist=delta.length();if(dist>2.3){delta.normalize();ep.position.addScaledVector(delta,1.35*dt);ep.rotation.y=Math.atan2(delta.x,delta.z);if(e.anim!=='run'){e.anim='run';play(e.rig,'run')}}else{if(e.anim!=='idle'){e.anim='idle';play(e.rig,'idle')}e.attack+=dt;if(e.attack>1.5){e.attack=0;health=Math.max(0,health-4);healthEl.textContent='VIDA '+health;statusEl.textContent='SOB ATAQUE';setTimeout(()=>{if(health>0)statusEl.textContent='PRONTO'},450)}}e.rig.update(dt)}
  for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];b.mesh.position.addScaledVector(b.dir,72*dt);b.life-=dt;let hit=false;for(const e of enemies){if(e.alive&&b.mesh.position.distanceTo(e.rig.holder.position.clone().add(new THREE.Vector3(0,.9,0)))<1.05){e.hp-=35;burst(b.mesh.position,12,0xffa34d,4.8);hit=true;if(e.hp<=0){e.alive=false;burst(e.rig.holder.position.clone().add(new THREE.Vector3(0,1,0)),22,0xffd06b,5);scene.remove(e.rig.holder);e.rig.dispose();kills++;scoreEl.textContent='ELIMINAÇÕES '+kills}break}}if(hit||b.life<=0){scene.remove(b.mesh);b.mesh.geometry.dispose();b.mesh.material.dispose();bullets.splice(i,1)}}
  const target=p.position.clone().add(new THREE.Vector3(0,1.35,0));const back=new THREE.Vector3(-Math.sin(worldYaw),0,Math.cos(worldYaw));const desired=target.clone().add(back.multiplyScalar(5.4)).add(new THREE.Vector3(0,2.15+pitch*3,0));const smooth=1-Math.exp(-7.5*dt);camera.position.lerp(desired,smooth);cameraLook.lerp(target.clone().add(new THREE.Vector3(0,pitch*2,0)),smooth);camera.lookAt(cameraLook);const wantedFov=playerVelocity.length()>4.2?71:68;if(Math.abs(camera.fov-wantedFov)>.1){camera.fov=THREE.MathUtils.lerp(camera.fov,wantedFov,smooth);camera.updateProjectionMatrix();}
- updateEffects(dt);renderer.render(scene,camera);
+ updateEffects(dt);radarClock-=dt;if(radarClock<=0){radarClock=.18;updateRadar()}renderer.render(scene,camera);
 }
 init().catch(err=>{console.error(err);loading.style.display='none';errorPanel.style.display='grid';document.querySelector('#errorMessage').textContent='Não foi possível carregar os modelos 3D. Confira a internet e tente novamente.'});
