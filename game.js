@@ -93,7 +93,7 @@ function animate(){
  const walking=move.length()>.1;player.userData.legs.forEach((l,i)=>{const swing=walking?Math.sin(clock.elapsedTime*9+i*Math.PI)*.42:0;l.upper.rotation.x=swing;l.lower.rotation.x=Math.max(0,-swing)*.8});
  for(const e of enemies){if(!e.alive)continue;e.phase+=dt;const delta=player.position.clone().sub(e.group.position);const dist=delta.length();if(dist>2.1){delta.normalize();e.group.position.addScaledVector(delta,1.05*dt);e.group.rotation.y=Math.atan2(delta.x,-delta.z)}}
  for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];b.mesh.position.addScaledVector(b.dir,32*dt);b.life-=dt;let hit=false;for(const e of enemies){if(e.alive&&b.mesh.position.distanceTo(e.group.position.clone().add(new THREE.Vector3(0,1,0)))<1.05){e.hp-=35;hit=true;if(e.hp<=0){e.alive=false;scene.remove(e.group);kills++;scoreEl.textContent='ELIMINAÇÕES '+kills}break}}if(hit||b.life<=0){scene.remove(b.mesh);bullets.splice(i,1)}}
- const target=player.position.clone().add(new THREE.Vector3(0,1.15,0));const camDir=new THREE.Vector3(Math.sin(worldYaw+Math.PI),0,Math.cos(worldYaw+Math.PI));const desired=target.clone().add(camDir.multiplyScalar(6.5)).add(new THREE.Vector3(0,2.5+pitch*3,0));camera.position.lerp(desired,.13);camera.lookAt(target.clone().add(new THREE.Vector3(0,pitch*2,0)));
+ const target=player.position.clone().add(new THREE.Vector3(0,1.15,0));const camDir=new THREE.Vector3(-Math.sin(worldYaw),0,Math.cos(worldYaw));const desired=target.clone().add(camDir.multiplyScalar(6.5)).add(new THREE.Vector3(0,2.5+pitch*3,0));camera.position.lerp(desired,.13);camera.lookAt(target.clone().add(new THREE.Vector3(0,pitch*2,0)));
  renderer.render(scene,camera);
 }
 init();
