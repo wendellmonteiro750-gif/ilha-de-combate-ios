@@ -107,6 +107,7 @@ function takeLoot(){
  statusEl.textContent=nearest.type==='medkit'?'KIT ENCONTRADO':nearest.type==='armor'?'COLETE REFORÇADO':'MUNIÇÃO COLETADA';
 }
 function updateSafeZone(dt){
+ if(document.querySelector('#hud').style.display==='none')return;
  zoneElapsed+=dt;
  const radius=Math.max(24,120-zoneElapsed*.42);
  if(safeRing){safeRing.scale.set(radius,radius,radius);const pulse=.72+Math.sin(zoneElapsed*3)*.1;safeRing.material.opacity=pulse}
