@@ -21,6 +21,9 @@
  <div class="actions"><button id="jump">PULAR</button><button id="fire">ATIRAR</button><button id="reload">RECARREGAR</button></div>
  <div id="hint">Carregando cenário 3D…</div>
 </div>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}
+</script>
 <script type="module" src="./game.js"></script>
 <script>
 window.addEventListener('error',e=>{if(e.message){document.querySelector('#loading').style.display='none';document.querySelector('#errorPanel').style.display='grid';document.querySelector('#errorMessage').textContent='Erro ao iniciar: '+e.message}});
