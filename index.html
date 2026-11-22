@@ -6,43 +6,24 @@
 <meta name="theme-color" content="#101b22">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Ilha de Combate</title>
+<title>Ilha de Combate — 3D</title>
 <link rel="stylesheet" href="./style.css">
-<style>
-#errorPanel{display:none;position:fixed;z-index:30;inset:0;background:#101b22;color:#fff;padding:28px 22px;place-content:center;text-align:center;font:16px system-ui}
-#errorPanel h1{font-size:23px;margin:0 0 12px}
-#errorPanel p{line-height:1.5;color:#d5e2e8}
-#errorPanel button{border:0;border-radius:12px;background:#e45b37;color:#fff;font-weight:900;padding:14px 22px;font-size:16px;margin-top:12px}
-</style>
 </head>
 <body>
 <div id="game"></div>
-<div id="loading">CARREGANDO ILHA DE COMBATE…</div>
-<div id="errorPanel"><div><h1>Não foi possível iniciar o jogo</h1><p id="errorMessage">Verifique sua conexão com a internet e tente novamente. O jogo precisa carregar o motor 3D.</p><button onclick="location.reload()">TENTAR NOVAMENTE</button></div></div>
+<div id="loading">CARREGANDO ILHA DE COMBATE 3D…</div>
+<div id="errorPanel"><div><h1>Não foi possível iniciar o jogo</h1><p id="errorMessage">Verifique sua conexão com a internet e tente novamente.</p><button onclick="location.reload()">TENTAR NOVAMENTE</button></div></div>
 <div id="hud">
-  <div class="topbar"><strong>ILHA DE COMBATE</strong><span id="status">PRONTO</span></div>
-  <div class="stats"><span id="health">VIDA 100</span><span id="ammo">MUNIÇÃO 30</span><span id="score">ELIMINAÇÕES 0</span></div>
-  <div id="crosshair">+</div>
-  <div id="joystick"><div id="stick"></div></div>
-  <div id="lookArea" aria-label="Arraste para olhar"></div>
-  <div class="actions"><button id="jump">PULAR</button><button id="fire">ATIRAR</button><button id="reload">RECARREGAR</button></div>
-  <div id="hint">Use o joystick para andar. Toque em PULAR e ATIRAR para jogar em 2D.</div>
+ <div class="topbar"><strong>ILHA DE COMBATE</strong><span id="status">PRONTO</span></div>
+ <div class="stats"><span id="health">VIDA 100</span><span id="ammo">MUNIÇÃO 30</span><span id="score">ELIMINAÇÕES 0</span></div>
+ <div id="joystick"><div id="stick"></div></div>
+ <div id="lookArea" aria-label="Arraste para mirar"></div>
+ <div class="actions"><button id="jump">PULAR</button><button id="fire">ATIRAR</button><button id="reload">RECARREGAR</button></div>
+ <div id="hint">Carregando cenário 3D…</div>
 </div>
-<script>
-(function(){
- const panel=document.getElementById('errorPanel');
- function fail(message){
-   document.getElementById('loading').style.display='none';
-   document.getElementById('errorMessage').textContent=message||'Verifique sua conexão com a internet e tente novamente.';
-   panel.style.display='grid';
- }
- window.addEventListener('error',function(e){
-   if(e.target&&e.target.tagName==='SCRIPT') fail('Falha ao baixar o motor 3D. Confira a internet do iPhone e toque em TENTAR NOVAMENTE.');
-   else if(e.message) fail('Erro ao iniciar o jogo: '+e.message);
- },true);
- window.addEventListener('unhandledrejection',function(e){fail('Falha ao carregar o jogo 3D. Verifique a conexão e tente novamente.');});
-})();
-</script>
 <script type="module" src="./game.js"></script>
-</body>
-</html>
+<script>
+window.addEventListener('error',e=>{if(e.message){document.querySelector('#loading').style.display='none';document.querySelector('#errorPanel').style.display='grid';document.querySelector('#errorMessage').textContent='Erro ao iniciar: '+e.message}});
+window.addEventListener('unhandledrejection',e=>{document.querySelector('#loading').style.display='none';document.querySelector('#errorPanel').style.display='grid';document.querySelector('#errorMessage').textContent='Falha ao carregar os gráficos 3D. Confira a internet e tente novamente.'});
+</script>
+</body></html>
