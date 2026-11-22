@@ -96,3 +96,52 @@
 #crosshair.aiming i:nth-child(3){top:9px}
 #crosshair.aiming i:nth-child(4){top:9px}
 #crosshair.aiming b{left:8px;top:8px}
+
+
+/* Mira padrão fixa no centro da tela, no estilo battle royale */
+#crosshair{
+  position:fixed!important;
+  left:50%!important;
+  top:50%!important;
+  width:28px!important;
+  height:28px!important;
+  margin:0!important;
+  transform:translate(-50%,-50%)!important;
+  transform-origin:center;
+  display:block!important;
+  opacity:1!important;
+  z-index:50!important;
+  pointer-events:none!important;
+}
+#crosshair i{
+  position:absolute;
+  display:block;
+  width:2px;
+  height:8px;
+  background:#fff;
+  border:0;
+  border-radius:1px;
+  box-shadow:0 0 2px #000,0 0 4px #000;
+}
+#crosshair i:nth-child(1){left:13px;top:0}
+#crosshair i:nth-child(2){left:13px;bottom:0}
+#crosshair i:nth-child(3){left:0;top:13px;width:8px;height:2px}
+#crosshair i:nth-child(4){right:0;top:13px;width:8px;height:2px}
+#crosshair b{
+  position:absolute;
+  left:12px;
+  top:12px;
+  width:4px;
+  height:4px;
+  border-radius:50%;
+  background:#fff;
+  border:1px solid #202020;
+  box-shadow:0 0 3px #000;
+}
+#crosshair.aiming{width:20px!important;height:20px!important}
+#crosshair.aiming i{background:#ffe7a3}
+#crosshair.aiming i:nth-child(1),#crosshair.aiming i:nth-child(2){left:9px}
+#crosshair.aiming i:nth-child(3),#crosshair.aiming i:nth-child(4){top:9px}
+#crosshair.aiming b{left:8px;top:8px}
+#crosshair.hit{transform:translate(-50%,-50%) rotate(45deg) scale(1.25)!important}
+#crosshair.hit i{background:#ff5146}
