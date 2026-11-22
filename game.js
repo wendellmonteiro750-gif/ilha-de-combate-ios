@@ -294,9 +294,9 @@ function shoot(){
  if(reloadTimer>0||fireCooldown>0)return;
  if(ammo<=0){statusEl.textContent='RECARREGUE';fireHeld=false;return}
  ammo--;weaponAmmo[weaponIndex]=ammo;ammoEl.textContent='MUNIÇÃO '+ammo;document.querySelector('#ammoLarge').textContent=ammo;refreshInventory();
- fireCooldown=aiming?.105:.13;
+ fireCooldown=currentWeapon().rate*(aiming?.82:1);
  const dir=new THREE.Vector3();camera.getWorldDirection(dir);
- const spread=(aiming?currentWeapon().spread*.25:weapon.spread)+(playerVelocity.length()>.5?weapon.spread*.8:0);
+ const spread=(aiming?currentWeapon().spread*.25:currentWeapon().spread)+(playerVelocity.length()>.5?weapon.spread*.8:0);
  dir.x+=(Math.random()-.5)*spread;dir.y+=(Math.random()-.5)*spread;dir.z+=(Math.random()-.5)*spread;dir.normalize();
  const origin=playerRig.holder.position.clone().add(new THREE.Vector3(0,1.42,0)).add(dir.clone().multiplyScalar(.8));
  muzzleFlash(origin,dir);document.querySelector('#crosshair')?.classList.add('firing');setTimeout(()=>document.querySelector('#crosshair')?.classList.remove('firing'),85);recoil=Math.min(.24,recoil+(aiming?.035:.065));
