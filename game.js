@@ -33,36 +33,46 @@ for(let i=0;i<46;i++){const a=i*2.399,r=13+(i%8)*7;tree(Math.cos(a)*r,Math.sin(a
 function house(x,z,w=6,d=5){box(x,1,z,w,2,d,mat(0xd7c7a4));const r=box(x,2.35,z,w+1,.35,d+1,roof);r.rotation.z=.08;box(x,.65,z-d/2-.02,1.1,1.3,.1,wood)}
 house(-10,-12);house(10,-20,7,6);house(20,5,6,5);house(-22,12,7,6);
 
-// Personagens 3D rigados com texturas e animações reais (modelos CC0).
+// Personagens humanos rigados: soldado com anatomia, mãos, braços, pernas e pés.
 const loader=new GLTFLoader();
 const mixers=[];
+let soldierModelPromise=null;
 function makeFighter(url){
  const group=new THREE.Group();
- const fighter={group,mixer:null,actions:{},ready:false,muzzle:null};
- loader.load(url,(gltf)=>{
+ const fighter={group,mixer:null,actions:{},ready:false,currentAction:''};
+ if(!soldierModelPromise){
+   soldierModelPromise=loader.loadAsync(url).catch(err=>{soldierModelPromise=null;throw err});
+ }
+ soldierModelPromise.then((gltf)=>{
    const model=clone(gltf.scene);
    model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.side=THREE.FrontSide;o.material.needsUpdate=true}}});
    const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3());
    const scale=2.05/Math.max(size.y,.01);model.scale.setScalar(scale);
-   const center=bounds.getCenter(new THREE.Vector3());model.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
+   const center=bounds.getCenter(new THREE.Vector3());
+   model.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
    group.add(model);
    fighter.mixer=new THREE.AnimationMixer(model);
-   for(const clip of gltf.animations){fighter.actions[clip.name.toLowerCase()]=fighter.mixer.clipAction(clip)}
-   const idle=fighter.actions.idle;if(idle)idle.play();
+   for(const clip of gltf.animations) fighter.actions[clip.name.toLowerCase()]=fighter.mixer.clipAction(clip);
+   fighter.play('idle');
    fighter.ready=true;mixers.push(fighter);
- },undefined,(err)=>{console.error('Falha ao carregar personagem 3D',err)});
+ }).catch(err=>{console.error('Falha ao carregar soldado 3D',err)});
+ fighter.play=(name)=>{
+   if(!fighter.ready || fighter.currentAction===name)return;
+   const next=fighter.actions[name]||fighter.actions.idle;
+   if(!next)return;
+   const previous=fighter.actions[fighter.currentAction];
+   if(previous)previous.fadeOut(.15);
+   next.reset().fadeIn(.15).play();
+   fighter.currentAction=name;
+ };
  return fighter;
 }
 const player=new THREE.Group();scene.add(player);
-const hero=makeFighter('https://gobkit.com/freebies/human022/DropZoneParatrooper.glb');
+const hero=makeFighter('https://models.vinish.dev/people/soldier.glb');
 player.add(hero.group);
 player.position.set(0,0,8);
 const enemies=[];
-const enemyModels=[
- 'https://gobkit.com/freebies/human022/BlackOpsOperator.glb',
- 'https://gobkit.com/freebies/human022/FrontlineRifleman.glb',
- 'https://gobkit.com/freebies/human022/GhillieSniper.glb'
-];
+const enemyModels=['https://models.vinish.dev/people/soldier.glb'];
 for(let i=0;i<5;i++){
  const e=new THREE.Group(),fighter=makeFighter(enemyModels[i%enemyModels.length]);
  e.add(fighter.group);e.position.set((i-2)*7,0,-12-(i%2)*8);scene.add(e);
@@ -88,9 +98,7 @@ function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDel
  const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw)),move=forward.multiplyScalar(joy.y).add(right.multiplyScalar(joy.x));
  const moving=move.lengthSq()>.01,speed=joy.y<-.2?3.2:5.8;
  if(moving){move.normalize();player.position.addScaledVector(move,speed*dt);player.rotation.y=Math.atan2(move.x,move.z)}
- const stride=moving?Math.sin(t*12)*.62:0, bob=moving?Math.abs(Math.sin(t*12))*.055:0;
- hero.legL.rotation.x=stride;hero.legR.rotation.x=-stride;hero.armL.rotation.x=-stride*.55;hero.armR.rotation.x=-stride*.55;
- hero.group.position.y=bob;
+ hero.play(moving?(speed>4?'run':'walk'):'idle');
  vy-=16*dt;player.position.y+=vy*dt;if(player.position.y<=0){player.position.y=0;vy=0;onGround=true}
  player.position.x=THREE.MathUtils.clamp(player.position.x,-42,42);player.position.z=THREE.MathUtils.clamp(player.position.z,-42,42);
  const target=new THREE.Vector3(player.position.x+Math.sin(yaw)*5,player.position.y+2.9+pitch*2,player.position.z+Math.cos(yaw)*5);camera.position.lerp(target,1-Math.exp(-8*dt));camera.lookAt(player.position.x,player.position.y+1.45,player.position.z);
