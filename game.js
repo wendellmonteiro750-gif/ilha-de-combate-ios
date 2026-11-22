@@ -280,7 +280,9 @@ function setupControls(){
  fireButton.addEventListener('pointerdown',e=>{e.preventDefault();fireHeld=true;fireButton.setPointerCapture(e.pointerId);shoot()});
  const stopFire=()=>{fireHeld=false};fireButton.addEventListener('pointerup',stopFire);fireButton.addEventListener('pointercancel',stopFire);fireButton.addEventListener('lostpointercapture',stopFire);
  document.querySelector('#reload').onclick=reloadWeapon;
- document.querySelector('#medkit').onclick=useMedkit;\n document.querySelector('#weaponSwitch').onclick=switchWeapon;
+ document.querySelector('#medkit').onclick=useMedkit;
+ document.querySelector('#weaponSwitch').onclick=switchWeapon;
+ document.querySelector('#inventoryToggle').onclick=toggleInventory;
  document.querySelector('#loot').onclick=takeLoot;
 }
 function reloadWeapon(){
