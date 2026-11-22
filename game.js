@@ -64,18 +64,70 @@ function buildWorld(){
  addHouse(68,35,.4);addHouse(-76,-42,-.7);addHouse(38,-88,.2);addHouse(-92,72,1.1);addHouse(102,5,-.4);
  for(let i=0;i<34;i++){const a=i*2.4,r=9+(i%6)*4;const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.55+(i%4)*.22,1),mat(i%2?0x58644d:0x7b8069));rock.position.set(Math.cos(a)*r,.3,Math.sin(a)*r);rock.scale.y=.65;rock.castShadow=true;rock.receiveShadow=true;scene.add(rock)}
  addWorldDetail();
+ addCombatLandmarks();
+}
+function addCombatLandmarks(){
+ // Posto avançado, caixas de suprimentos e barreiras para dar escala ao mapa.
+ const concrete=mat(0x777e79,.94),crate=mat(0x756044,.88),edge=mat(0x3d493f,.9),metal=mat(0x343d40,.56,.55);
+ function supply(x,z){
+  const g=new THREE.Group();box(g,1.35,1.05,1.2,crate,0,.53,0);
+  for(let y=.18;y<1;y+=.22)box(g,1.38,.035,1.23,edge,0,y,0);
+  box(g,.16,.12,1.24,metal,-.48,.53,0);box(g,.16,.12,1.24,metal,.48,.53,0);
+  g.position.set(x,0,z);scene.add(g);
+ }
+ function barrier(x,z,rot=0){const b=new THREE.Group();box(b,3.4,1.05,.55,concrete,0,.52,0);box(b,3.5,.13,.62,mat(0xaaa18a),0,1.04,0);b.position.set(x,0,z);b.rotation.y=rot;scene.add(b)}
+ supply(8,-7);supply(10,-7);supply(-17,11);supply(42,28);
+ barrier(4,-11,.15);barrier(18,-4,-.5);barrier(-20,20,.8);
+ // Torre de observação simples com plataforma, escada e cobertura.
+ const tower=new THREE.Group(),wood=mat(0x594634,.9),roof=mat(0x303b3d,.82);
+ for(const x of [-1.35,1.35])for(const z of [-1.15,1.15]){const leg=new THREE.Mesh(new THREE.BoxGeometry(.16,5.3,.16),wood);leg.position.set(x,2.65,z);leg.castShadow=true;tower.add(leg)}
+ box(tower,3.2,.2,2.8,wood,0,4.25,0);box(tower,3.5,.16,3.1,roof,0,5.55,0);
+ for(const x of [-1.35,1.35])box(tower,.12,1.1,.12,wood,x,4.85,0);
+ tower.position.set(-42,0,-35);scene.add(tower);
 }
 function addRifle(rig){
  const hand=rig.bones.get('handslotr')||rig.bones.get('handslot.r');if(!hand)return;
- const gun=new THREE.Group(),metal=mat(0x20272c,.42,.72),dark=mat(0x101519,.58),stock=mat(0x51402e);
- box(gun,.09,.11,.72,metal,0,0,-.18);box(gun,.07,.09,.36,dark,0,.015,-.66);box(gun,.1,.13,.22,stock,0,-.11,.23);
- box(gun,.045,.045,.48,metal,0,.08,-.32);box(gun,.065,.2,.1,stock,0,-.12,-.05);
- gun.position.set(.02,-.02,.12);gun.rotation.x=-.06;hand.add(gun);
+ const gun=new THREE.Group();
+ const steel=new THREE.MeshStandardMaterial({color:0x303941,roughness:.34,metalness:.82});
+ const dark=new THREE.MeshStandardMaterial({color:0x11171b,roughness:.62,metalness:.28});
+ const polymer=new THREE.MeshStandardMaterial({color:0x343b35,roughness:.78});
+ const tan=new THREE.MeshStandardMaterial({color:0x594632,roughness:.82});
+ // Corpo, coronha, guarda-mão e cano
+ box(gun,.13,.15,.52,steel,0,0,-.12);
+ box(gun,.115,.13,.34,polymer,0,-.015,.31);
+ box(gun,.105,.13,.38,dark,0,.005,-.53);
+ const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.027,.027,.58,12),steel);
+ barrel.rotation.x=Math.PI/2;barrel.position.set(0,.015,-.96);gun.add(barrel);
+ const muzzle=new THREE.Mesh(new THREE.CylinderGeometry(.045,.035,.11,12),dark);
+ muzzle.rotation.x=Math.PI/2;muzzle.position.set(0,.015,-1.27);gun.add(muzzle);
+ // Trilho superior, mira, luneta e alça
+ box(gun,.055,.035,.76,dark,0,.105,-.43);
+ box(gun,.045,.09,.13,steel,0,.17,-.42);
+ const scope=new THREE.Mesh(new THREE.CylinderGeometry(.052,.052,.23,12),dark);
+ scope.rotation.x=Math.PI/2;scope.position.set(0,.19,-.39);gun.add(scope);
+ box(gun,.08,.07,.19,polymer,0,-.13,-.18);
+ // Carregador curvo e empunhadura
+ const mag=box(gun,.09,.28,.16,dark,0,-.22,-.13);mag.rotation.x=-.12;
+ const grip=box(gun,.09,.22,.12,tan,0,-.19,.12);grip.rotation.x=-.2;
+ box(gun,.13,.11,.16,tan,0,-.015,.49);
+ // Detalhes laterais e trilhos
+ for(const side of [-1,1]){box(gun,.018,.045,.29,steel,side*.067,.005,-.5);box(gun,.018,.07,.13,dark,side*.067,-.06,-.13)}
+ gun.scale.setScalar(.92);gun.position.set(.02,-.02,.12);gun.rotation.x=-.06;hand.add(gun);
 }
 async function createFighter(isEnemy=false,index=0){
  const shirt=['#344b42','#6b4934','#394d66','#6a3831','#4a5140','#5a4939'][index%6];
  const rig=await Character.create(library,{parts:{hair:'hair_short',top:'top_long',bottom:'bottom_trousers',boots:'boots_tall',hat:'hat_cap',back:'back_pack'},colors:{skin:isEnemy?'#c28b68':'#d5a078',hair:'#292321',shirt:isEnemy?shirt:'#263e4a',trousers:'#343b43',boots:'#292725',hat:isEnemy?'#46564b':'#344c60',pack:'#554733',linen:'#b5a27f'}});
- rig.setHeight(1.82);addRifle(rig);scene.add(rig.holder);await rig.playRole('idle');return rig;
+ rig.setHeight(1.82);
+ // Capacete e viseira presos ao osso da cabeça, sem alterar o esqueleto das animações.
+ const head=rig.bones.get('head')||rig.bones.get('Head');
+ if(head){
+  const helmet=new THREE.Group(),shell=new THREE.Mesh(new THREE.SphereGeometry(.235,18,14),new THREE.MeshStandardMaterial({color:isEnemy?0x4b554b:0x344b52,roughness:.58,metalness:.12}));
+  shell.scale.set(1.08,.78,1.08);shell.position.y=.055;helmet.add(shell);
+  const brim=new THREE.Mesh(new THREE.BoxGeometry(.34,.045,.29),new THREE.MeshStandardMaterial({color:0x1c292d,roughness:.5}));brim.position.set(0,-.025,-.16);helmet.add(brim);
+  const strap=new THREE.Mesh(new THREE.TorusGeometry(.205,.018,6,20,Math.PI),new THREE.MeshStandardMaterial({color:0x242a29,roughness:.9}));strap.rotation.z=Math.PI;strap.position.y=-.06;helmet.add(strap);
+  head.add(helmet);
+ }
+ addRifle(rig);scene.add(rig.holder);await rig.playRole('idle');return rig;
 }
 function play(rig,role){if(rig&&rig.playing!==role)rig.playRole(role).catch(()=>{})}
 function addParticle(position,color=0xffb34d,speed=3,size=.09,life=.35){
