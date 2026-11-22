@@ -5,6 +5,7 @@ const root=document.querySelector('#game'),loading=document.querySelector('#load
 const scoreEl=document.querySelector('#score'),ammoEl=document.querySelector('#ammo'),healthEl=document.querySelector('#health');
 const errorPanel=document.querySelector('#errorPanel');
 let renderer,scene,camera,clock,playerRig,worldYaw=0,pitch=-.12,ammo=30,kills=0,health=100,library;
+const playerVelocity=new THREE.Vector3(),cameraLook=new THREE.Vector3();
 const keys={forward:0,side:0},bullets=[],enemies=[];
 const BASE='https://raw.githubusercontent.com/NoLimitNexus/game-models/main/';
 
@@ -30,9 +31,9 @@ function addHouse(x,z,rotation=0){
  g.position.set(x,0,z);g.rotation.y=rotation;scene.add(g);
 }
 function buildWorld(){
- scene.background=new THREE.Color(0x9ac9e2);scene.fog=new THREE.Fog(0xa4cbd0,180,420);
+ scene.background=new THREE.Color(0x9ac9e2);scene.fog=new THREE.Fog(0xa4cbd0,260,620);
  scene.add(new THREE.HemisphereLight(0xe4f4ff,0x526044,1.9));
- const sun=new THREE.DirectionalLight(0xffe6c0,3.2);sun.position.set(-35,65,28);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-65;sun.shadow.camera.right=65;sun.shadow.camera.top=65;sun.shadow.camera.bottom=-65;sun.shadow.bias=-.0002;scene.add(sun);
+ const sun=new THREE.DirectionalLight(0xffe6c0,3.2);sun.position.set(-35,65,28);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-150;sun.shadow.camera.right=150;sun.shadow.camera.top=150;sun.shadow.camera.bottom=-150;sun.shadow.bias=-.0002;scene.add(sun);
  const ground=new THREE.Mesh(new THREE.PlaneGeometry(800,800),new THREE.MeshStandardMaterial({map:addTextureGround(),roughness:1}));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
  const beach=new THREE.Mesh(new THREE.RingGeometry(122,140,160),mat(0xd9c18c));beach.rotation.x=-Math.PI/2;beach.position.y=.03;scene.add(beach);
  const waterMat=new THREE.MeshStandardMaterial({color:0x168aa6,roughness:.2,metalness:.12});
@@ -58,7 +59,7 @@ async function spawnEnemy(x,z,i){const rig=await createFighter(true,i);rig.holde
 async function init(){
  renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
  renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.6));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.1;root.appendChild(renderer.domElement);
- scene=new THREE.Scene();clock=new THREE.Clock();buildWorld();camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.1,900);
+ scene=new THREE.Scene();clock=new THREE.Clock();buildWorld();camera=new THREE.PerspectiveCamera(68,innerWidth/innerHeight,.1,900);
  loading.textContent='CARREGANDO PERSONAGEM 3D…';
  const catalog=await catalogFromFiles(BASE);catalog.animations=catalog.animations.filter(a=>a.group==='General'||a.group==='Movement Basic');library=new Library(catalog);
  playerRig=await createFighter(false,0);playerRig.holder.position.set(0,0,0);playerRig.holder.rotation.y=Math.PI;
@@ -87,13 +88,13 @@ function animate(){
  const dt=Math.min(clock.getDelta(),.04),p=playerRig.holder;
  const forward=new THREE.Vector3(Math.sin(worldYaw),0,-Math.cos(worldYaw)),right=new THREE.Vector3(Math.cos(worldYaw),0,Math.sin(worldYaw));
  const move=forward.multiplyScalar(keys.forward).add(right.multiplyScalar(keys.side));if(move.lengthSq()>1)move.normalize();
- p.position.addScaledVector(move,5.5*dt);p.position.x=THREE.MathUtils.clamp(p.position.x,-124,124);p.position.z=THREE.MathUtils.clamp(p.position.z,-124,124);
- if(move.length()>.08){p.rotation.y=Math.atan2(move.x,move.z);play(playerRig,Math.abs(keys.forward)+Math.abs(keys.side)>.7?'run':'walk')}else play(playerRig,'idle');
+ const targetVelocity=move.clone().multiplyScalar(5.8);playerVelocity.lerp(targetVelocity,1-Math.exp(-9*dt));p.position.addScaledVector(playerVelocity,dt);p.position.x=THREE.MathUtils.clamp(p.position.x,-124,124);p.position.z=THREE.MathUtils.clamp(p.position.z,-124,124);
+ if(playerVelocity.length()>.22){const desiredYaw=Math.atan2(playerVelocity.x,playerVelocity.z);const turn=THREE.MathUtils.euclideanModulo(desiredYaw-p.rotation.y+Math.PI,Math.PI*2)-Math.PI;p.rotation.y+=turn*Math.min(1,10*dt);play(playerRig,playerVelocity.length()>4.2?'run':'walk')}else play(playerRig,'idle');
  playerRig.jumpV=(playerRig.jumpV||0)-15*dt;p.position.y=Math.max(0,p.position.y+(playerRig.jumpV||0)*dt);if(p.position.y===0&&playerRig.jumpV<0)playerRig.jumpV=0;
  playerRig.update(dt);
  for(const e of enemies){if(!e.alive)continue;const ep=e.rig.holder,delta=p.position.clone().sub(ep.position);const dist=delta.length();if(dist>2.3){delta.normalize();ep.position.addScaledVector(delta,1.35*dt);ep.rotation.y=Math.atan2(delta.x,delta.z);if(e.anim!=='run'){e.anim='run';play(e.rig,'run')}}else{if(e.anim!=='idle'){e.anim='idle';play(e.rig,'idle')}e.attack+=dt;if(e.attack>1.5){e.attack=0;health=Math.max(0,health-4);healthEl.textContent='VIDA '+health}}e.rig.update(dt)}
  for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];b.mesh.position.addScaledVector(b.dir,38*dt);b.life-=dt;let hit=false;for(const e of enemies){if(e.alive&&b.mesh.position.distanceTo(e.rig.holder.position.clone().add(new THREE.Vector3(0,.9,0)))<1.05){e.hp-=35;hit=true;if(e.hp<=0){e.alive=false;scene.remove(e.rig.holder);e.rig.dispose();kills++;scoreEl.textContent='ELIMINAÇÕES '+kills}break}}if(hit||b.life<=0){scene.remove(b.mesh);bullets.splice(i,1)}}
- const target=p.position.clone().add(new THREE.Vector3(0,1.2,0));const back=new THREE.Vector3(-Math.sin(worldYaw),0,Math.cos(worldYaw));const desired=target.clone().add(back.multiplyScalar(6.3)).add(new THREE.Vector3(0,2.5+pitch*3,0));camera.position.lerp(desired,.14);camera.lookAt(target.clone().add(new THREE.Vector3(0,pitch*2,0)));
+ const target=p.position.clone().add(new THREE.Vector3(0,1.35,0));const back=new THREE.Vector3(-Math.sin(worldYaw),0,Math.cos(worldYaw));const desired=target.clone().add(back.multiplyScalar(5.4)).add(new THREE.Vector3(0,2.15+pitch*3,0));const smooth=1-Math.exp(-7.5*dt);camera.position.lerp(desired,smooth);cameraLook.lerp(target.clone().add(new THREE.Vector3(0,pitch*2,0)),smooth);camera.lookAt(cameraLook);const wantedFov=playerVelocity.length()>4.2?71:68;if(Math.abs(camera.fov-wantedFov)>.1){camera.fov=THREE.MathUtils.lerp(camera.fov,wantedFov,smooth);camera.updateProjectionMatrix();}
  renderer.render(scene,camera);
 }
 init().catch(err=>{console.error(err);loading.style.display='none';errorPanel.style.display='grid';document.querySelector('#errorMessage').textContent='Não foi possível carregar os modelos 3D. Confira a internet e tente novamente.'});
