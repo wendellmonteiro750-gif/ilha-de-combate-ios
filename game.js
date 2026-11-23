@@ -37,12 +37,12 @@ const playerVelocity=new THREE.Vector3(),cameraLook=new THREE.Vector3(),_shotOri
 let safeRing=null,zoneElapsed=0,zoneDamageClock=0,lootItems=[];const worldObstacles=[];
 const keys={forward:0,side:0},bullets=[],enemies=[],effects=[];const bulletGeometry=new THREE.CylinderGeometry(.012,.012,.72,5),bulletMaterial=new THREE.MeshBasicMaterial({color:0xffdf91,transparent:true,opacity:.92});let dustClock=0,recoil=0,aiming=false,aimBlend=0,hitMarkerTimer=0,fireHeld=false,fireCooldown=0,reloadTimer=0,movementMode='stand';
 const BASE='https://raw.githubusercontent.com/NoLimitNexus/game-models/main/';
-const defaultSettings={general:100,red:100,two:100,four:100,awm:100,look:100,autoFire:true,invertY:false,minimap:true,hudScale:100,hudOpacity:100,quality:'low',shadows:false,vibration:false};
+const defaultSettings={general:100,red:100,two:100,four:100,awm:100,look:100,autoFire:true,invertY:false,minimap:true,hudScale:100,hudOpacity:100,quality:'medium',shadows:false,vibration:false};
 let gameSettings={...defaultSettings};
 try{gameSettings={...defaultSettings,...JSON.parse(localStorage.getItem('ic-game-settings')||'{}')}}catch{}
 let hudEditing=false,hudDrag=null;
 function saveGameSettings(){try{localStorage.setItem('ic-game-settings',JSON.stringify(gameSettings));}catch{}}
-function applyGraphicsSettings(){if(!renderer)return;const mobile=innerWidth<700;const q={low:{ratio:mobile?.68:.9,shadows:false},medium:{ratio:mobile?.82:1,shadows:true},high:{ratio:mobile?.95:1.2},ultra:{ratio:mobile?1:1.4}}[gameSettings.quality]||{ratio:mobile?.68:.9,shadows:false};renderer.setPixelRatio(Math.min(devicePixelRatio||1,q.ratio));renderer.shadowMap.enabled=!mobile&&!!gameSettings.shadows&&!!q.shadows;renderer.shadowMap.needsUpdate=true;renderer.setSize(innerWidth,innerHeight);}
+function applyGraphicsSettings(){if(!renderer)return;const mobile=innerWidth<700;const q={low:{ratio:mobile?.76:.9,shadows:false},medium:{ratio:mobile?.9:1,shadows:true},high:{ratio:mobile?.98:1.2},ultra:{ratio:mobile?1.05:1.4}}[gameSettings.quality]||{ratio:mobile?.76:.9,shadows:false};renderer.setPixelRatio(Math.min(devicePixelRatio||1,q.ratio));renderer.shadowMap.enabled=!mobile&&!!gameSettings.shadows&&!!q.shadows;renderer.shadowMap.needsUpdate=true;renderer.setSize(innerWidth,innerHeight);}
 function applyHudSettings(){const hud=document.querySelector('#hud');if(!hud)return;hud.style.setProperty('--hud-scale',gameSettings.hudScale/100);hud.style.setProperty('--hud-opacity',gameSettings.hudOpacity/100);const map=document.querySelector('.minimap');if(map)map.style.display=gameSettings.minimap?'':'none';}
 function initSettings(){
  const panel=document.querySelector('#settingsPanel'),open=()=>{panel.classList.add('open');panel.setAttribute('aria-hidden','false')},close=()=>{panel.classList.remove('open');panel.setAttribute('aria-hidden','true');if(hudEditing)toggleHudEditor(false)};
@@ -258,8 +258,8 @@ function addWorldDetail(){
  for(let i=0;i<54;i++){const a=i/9*Math.PI*2,r=205+(i%4)*18;dummy.position.set(Math.cos(a)*r,38+(i%5)*5,Math.sin(a)*r);dummy.scale.set(9+(i%3)*5,2.5+(i%2),5+(i%4)*2);dummy.rotation.y=a;dummy.updateMatrix();clouds.setMatrixAt(i,dummy.matrix)}clouds.instanceMatrix.needsUpdate=true;scene.add(clouds);
 }
 function buildWorld(){
- scene.background=new THREE.Color(0x849ba2);scene.fog=new THREE.FogExp2(0x9aa9a5,.0019);
- scene.add(new THREE.HemisphereLight(0xd8e0df,0x394338,1.15));
+ scene.background=new THREE.Color(0x849ba2);scene.fog=new THREE.FogExp2(0x9aa9a5,.00155);
+ scene.add(new THREE.HemisphereLight(0xd8e0df,0x394338,1.28));
  const ambient=new THREE.AmbientLight(0xdce2df,.18);scene.add(ambient);
  const sun=new THREE.DirectionalLight(0xffe3c2,2.45);sun.position.set(-42,78,34);sun.castShadow=!!gameSettings.shadows&&gameSettings.quality!=='low';sun.shadow.mapSize.set(innerWidth<700?768:1024,innerWidth<700?768:1024);sun.shadow.camera.left=-165;sun.shadow.camera.right=165;sun.shadow.camera.top=165;sun.shadow.camera.bottom=-165;sun.shadow.bias=-.00018;sun.shadow.normalBias=.025;sun.shadow.radius=innerWidth<700?2:3;sun.shadow.camera.near=1;sun.shadow.camera.far=260;scene.add(sun);
  const fill=new THREE.DirectionalLight(0x9db5c4,.42);fill.position.set(55,28,-48);scene.add(fill);
@@ -467,6 +467,15 @@ function makeHumanoidModel(){
  ellipsoid(head,'nose',0,.035,.099,.025,.035,.028,skin);
  ellipsoid(head,'hair_cap',0,.145,-.012,.116,.067,.108,hair);
  ellipsoid(head,'hair_back',0,.065,-.075,.105,.105,.06,hair);
+ // Boné tático de tecido: copa, aba frontal e costura central.
+ const capMat=new THREE.MeshStandardMaterial({color:0x354a3b,roughness:.96});
+ ellipsoid(head,'cap_crown',0,.19,-.012,.12,.075,.112,capMat);
+ const capBrim=new THREE.Mesh(new THREE.BoxGeometry(.19,.025,.15),capMat);capBrim.position.set(0,.155,.105);capBrim.rotation.x=-.08;capBrim.castShadow=true;head.add(capBrim);
+ // Mochila compacta presa às costas, com alças visíveis sobre os ombros.
+ const packMat=new THREE.MeshStandardMaterial({color:0x343f37,roughness:.98});
+ ellipsoid(spine1,'combat_backpack',0,.025,-.185,.175,.235,.095,packMat);
+ box(spine1,.19,.07,.035,shirtDark,0,-.16,-.205);
+ for(const side of [-1,1]){box(spine2,.045,.31,.035,packMat,side*.145,-.015,-.09);box(spine1,.09,.09,.035,pantsLight,side*.18,-.12,-.16)}
  for(const side of [-1,1]){
   ellipsoid(head,'ear',side*.112,.055,0,.022,.042,.025,skin);
   ellipsoid(head,'eye',side*.043,.083,.091,.012,.012,.008,eyes);
