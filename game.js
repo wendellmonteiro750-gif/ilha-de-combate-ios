@@ -640,7 +640,7 @@ function shoot(){
  const spread=currentWeapon().spread*aimAccuracy*movementPenalty*recoilPenalty*(1-attachmentLevel*.085);
  const cameraRight=new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion);
  const cameraUp=new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion);
- const origin=playerRig.holder.position.clone().add(new THREE.Vector3(0,1.42,0)).add(dir.clone().multiplyScalar(.8));
+ playerRig.weaponMuzzle?.getWorldPosition(_shotOrigin);const origin=playerRig.weaponMuzzle?_shotOrigin.clone():playerRig.holder.position.clone().add(new THREE.Vector3(0,1.42,0)).add(dir.clone().multiplyScalar(.8));
  for(let n=0;n<(currentWeapon().pellets||1);n++){
   const shotDir=dir.clone().addScaledVector(cameraRight,(Math.random()-.5)*spread).addScaledVector(cameraUp,(Math.random()-.5)*spread).normalize();
   if(bullets.length>36)continue;const mesh=new THREE.Mesh(bulletGeometry,bulletMaterial);
