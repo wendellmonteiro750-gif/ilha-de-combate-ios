@@ -361,33 +361,33 @@ function addCombatLandmarks(){
  tower.position.set(-42,0,-35);scene.add(tower);
 }
 function addRifle(rig){
- const hand=rig.bones.get('mixamorigRightHand')||rig.bones.get('RightHand')||rig.bones.get('handslotr')||rig.bones.get('handslot.r');if(!hand)return;
- const gun=new THREE.Group();
- const steel=new THREE.MeshStandardMaterial({color:0x303941,roughness:.34,metalness:.82});
- const dark=new THREE.MeshStandardMaterial({color:0x11171b,roughness:.62,metalness:.28});
- const polymer=new THREE.MeshStandardMaterial({color:0x343b35,roughness:.78});
- const tan=new THREE.MeshStandardMaterial({color:0x594632,roughness:.82});
- // Corpo, coronha, guarda-mão e cano
- box(gun,.13,.15,.52,steel,0,0,-.12);
- box(gun,.115,.13,.34,polymer,0,-.015,.31);
- box(gun,.105,.13,.38,dark,0,.005,-.53);
- const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.027,.027,.58,12),steel);
- barrel.rotation.x=Math.PI/2;barrel.position.set(0,.015,-.96);gun.add(barrel);
- const muzzle=new THREE.Mesh(new THREE.CylinderGeometry(.045,.035,.11,12),dark);
- muzzle.rotation.x=Math.PI/2;muzzle.position.set(0,.015,-1.27);gun.add(muzzle);
- // Trilho superior, mira, luneta e alça
- box(gun,.055,.035,.76,dark,0,.105,-.43);
- box(gun,.045,.09,.13,steel,0,.17,-.42);
- const scope=new THREE.Mesh(new THREE.CylinderGeometry(.052,.052,.23,12),dark);
- scope.rotation.x=Math.PI/2;scope.position.set(0,.19,-.39);gun.add(scope);
- box(gun,.08,.07,.19,polymer,0,-.13,-.18);
- // Carregador curvo e empunhadura
- const mag=box(gun,.09,.28,.16,dark,0,-.22,-.13);mag.rotation.x=-.12;
- const grip=box(gun,.09,.22,.12,tan,0,-.19,.12);grip.rotation.x=-.2;
- box(gun,.13,.11,.16,tan,0,-.015,.49);
- // Detalhes laterais e trilhos
- for(const side of [-1,1]){box(gun,.018,.045,.29,steel,side*.067,.005,-.5);box(gun,.018,.07,.13,dark,side*.067,-.06,-.13)}
- gun.scale.setScalar(.92);gun.position.set(.02,-.02,.12);gun.rotation.x=-.06;hand.add(gun);
+  // Arma presa ao osso da mão direita para acompanhar a pose e a rotação do personagem.
+  const hand=rig.bones.get('mixamorigRightHand')||rig.bones.get('RightHand')||rig.bones.get('handslotr')||rig.bones.get('handslot.r');
+  if(!hand){console.warn('Mão direita não encontrada: arma não montada');return;}
+  const gun=new THREE.Group();gun.name='weapon-hand-mount';
+  const steel=new THREE.MeshStandardMaterial({color:0x303941,roughness:.34,metalness:.82});
+  const dark=new THREE.MeshStandardMaterial({color:0x11171b,roughness:.62,metalness:.28});
+  const polymer=new THREE.MeshStandardMaterial({color:0x343b35,roughness:.78});
+  const tan=new THREE.MeshStandardMaterial({color:0x594632,roughness:.82});
+  const detail=new THREE.MeshStandardMaterial({color:0x77817e,roughness:.42,metalness:.72});
+  const part=(w,h,d,m,x,y,z)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;gun.add(o);return o};
+  // Coronha, caixa, guarda-mão e cano: dimensões compactas para não dominar o corpo.
+  part(.105,.13,.25,polymer,0,-.015,.30);
+  part(.125,.15,.36,steel,0,0,-.015);
+  part(.105,.12,.36,polymer,0,-.015,-.37);
+  const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.021,.024,.43,10),steel);barrel.rotation.x=Math.PI/2;barrel.position.set(0,.012,-.76);gun.add(barrel);
+  const muzzle=new THREE.Mesh(new THREE.CylinderGeometry(.034,.027,.085,10),dark);muzzle.rotation.x=Math.PI/2;muzzle.position.set(0,.012,-.99);gun.add(muzzle);
+  part(.052,.035,.66,dark,0,.105,-.34);
+  part(.045,.075,.11,detail,0,.16,-.31);
+  const optic=new THREE.Group(),tube=new THREE.Mesh(new THREE.CylinderGeometry(.043,.043,.19,12),dark);tube.rotation.x=Math.PI/2;optic.add(tube);
+  const lens=new THREE.Mesh(new THREE.CircleGeometry(.035,12),new THREE.MeshBasicMaterial({color:0x78b9c7}));lens.position.z=-.096;optic.add(lens);optic.position.set(0,.19,-.32);gun.add(optic);
+  part(.075,.22,.12,dark,0,-.17,-.08);
+  const grip=part(.075,.18,.105,tan,0,-.16,.16);grip.rotation.x=-.18;
+  part(.105,.075,.14,tan,0,-.02,.43);
+  part(.075,.16,.075,dark,0,-.15,-.43);
+  for(const side of [-1,1]){part(.014,.035,.24,detail,side*.066,.012,-.42);part(.014,.045,.12,dark,side*.066,-.055,-.08)}
+  gun.scale.setScalar(.68);gun.position.set(.015,-.045,.035);gun.rotation.set(-.08,0,0);hand.add(gun);
+  rig.weaponPivot=gun;
 }
 async function createFighter(isEnemy=false,index=0){
  if(!humanModelPromise)humanModelPromise=new GLTFLoader().loadAsync(HUMAN_MODEL_URL);
@@ -675,7 +675,7 @@ function animate(){
   }
   playerRig.jumpV=(playerRig.jumpV||0)-15*dt;p.position.y=Math.max(0,p.position.y+(playerRig.jumpV||0)*dt);if(p.position.y===0&&playerRig.jumpV<0)playerRig.jumpV=0;
   applyBodyMotion(playerRig,playerVelocity.dot(forward),playerVelocity.dot(right),dt);playerRig.update(dt);
- for(const e of enemies){if(!e.alive)continue;const ep=e.rig.holder,delta=p.position.clone().sub(ep.position);const dist=delta.length();if(dist>2.3){delta.normalize();ep.position.addScaledVector(delta,1.35*dt);ep.rotation.y=Math.atan2(delta.x,delta.z);if(e.anim!=='run'){e.anim='run';play(e.rig,'run')}}else{if(e.anim!=='idle'){e.anim='idle';play(e.rig,'idle')}e.attack+=dt;if(e.attack>1.5){e.attack=0;const raw=4,blocked=Math.min(armor,raw*.5);armor-=blocked;health=Math.max(0,health-(raw-blocked));refreshVitals();statusEl.textContent='SOB ATAQUE';setTimeout(()=>{if(health>0)statusEl.textContent='PRONTO'},450)}}applyBodyMotion(e.rig,dist>2.3?1.35:0,0,dt);e.rig.update(dt)}
+ for(const e of enemies){if(!e.alive)continue;const ep=e.rig.holder,delta=p.position.clone().sub(ep.position);const dist=delta.length();if(dist>2.3){delta.normalize();ep.position.addScaledVector(delta,1.35*dt);ep.rotation.y=Math.atan2(delta.x,delta.z);if(e.anim!=='run'){e.anim='run';play(e.rig,'run')}}else{if(e.anim!=='idle'){e.anim='idle';play(e.rig,'idle')}e.attack+=dt;if(e.attack>1.5){e.attack=0;const raw=4,blocked=Math.min(armor,raw*.5);armor-=blocked;health=Math.max(0,health-(raw-blocked));refreshVitals();statusEl.textContent='SOB ATAQUE';setTimeout(()=>{if(health>0)statusEl.textContent='PRONTO'},450)}}applyBodyMotion(e.rig,dist>2.3?1.35:0,0,dt);e.rig.update(dt);if(e.rig.weaponPivot){e.rig.weaponKick=Math.max(0,(e.rig.weaponKick||0)-dt*.9);e.rig.weaponPivot.rotation.x=-.08-(e.rig.weaponKick||0)}}
  for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];b.mesh.position.addScaledVector(b.dir,72*dt);b.life-=dt;let hit=false;for(const e of enemies){if(e.alive){const base=e.rig.holder.position,head=base.clone().add(new THREE.Vector3(0,1.72,0)),torso=base.clone().add(new THREE.Vector3(0,.96,0));const headHit=b.mesh.position.distanceTo(head)<.42,bodyHit=b.mesh.position.distanceTo(torso)<.72;if(headHit||bodyHit){const falloff=Math.max(.52,1-(b.travelled/Math.max(1,b.range))*.42),dealt=b.damage*falloff*(headHit?2.15:1);e.hp-=dealt;hitMarkerTimer=.18;document.querySelector('#crosshair')?.classList.add('hit');burst(b.mesh.position,headHit?16:10,headHit?0xffe16b:0xffa34d,4.8);statusEl.textContent=headHit?'TIRO NA CABEÇA!':'ACERTO';hit=true;if(e.hp<=0){e.alive=false;burst(e.rig.holder.position.clone().add(new THREE.Vector3(0,1,0)),22,0xffd06b,5);scene.remove(e.rig.holder);e.rig.dispose();kills++;scoreEl.textContent=String(kills);document.querySelector('#remainingEnemies').textContent=String(enemies.filter(x=>x.alive).length)}break}}}b.travelled+=72*dt;if(hit||b.life<=0||b.travelled>=b.range){scene.remove(b.mesh);bullets.splice(i,1)}}
  fireCooldown=Math.max(0,fireCooldown-dt);
  if(burstRemaining>0&&fireCooldown<=0&&reloadTimer<=0){shoot();burstRemaining--;}
