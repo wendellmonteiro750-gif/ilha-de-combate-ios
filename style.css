@@ -37,3 +37,7 @@ h1{font:900 clamp(48px,13vw,62px)/.82 'Barlow Condensed',Impact,sans-serif;lette
 
 #stamina{color:#f0d18b}.stats span{white-space:nowrap}.hit{color:#ffd36a!important;text-shadow:0 0 10px #f90,0 2px 5px #000}
 @media(max-width:390px){.stats{gap:4px}.stats span{padding:7px 6px;font-size:8px}.brand{padding:7px 8px}}
+
+.weapon{right:110px;bottom:max(35px,calc(env(safe-area-inset-bottom) + 35px));width:58px;height:58px;background:linear-gradient(145deg,#657b65,#293b32)}
+.weapon:after{content:"ARMA"}
+@media(max-width:390px){.weapon{right:96px;width:53px;height:53px}}
