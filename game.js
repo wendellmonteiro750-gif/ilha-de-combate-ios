@@ -1,7 +1,9 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
+import { BattleSystems } from './battle-systems.js';
 const $=id=>document.getElementById(id);
 const root=$('game');
+let battleSystems=null;
 let scene,camera,renderer,clock,hero,targets=[],yaw=0,pitch=-.12,moveYaw=0,stickActive=false,moveX=0,moveY=0,velocityX=0,velocityZ=0,run=false,aim=false,shoot=false,pose='stand',velocityY=0,grounded=true,ammo=30,ammoReserve=90,eliminations=0,playerHealth=100,bots=[],playerDownUntil=0,reloading=false,lastShot=0,started=false,cameraRecoil=0,cameraShake=0,stamina=100,worldBlockers=[],cameraRay=new THREE.Raycaster(),cameraDesired=new THREE.Vector3(),cameraCurrentDistance=5.6;
 const mat=(color,roughness=.9)=>new THREE.MeshStandardMaterial({color,roughness});
 function mesh(parent,geo,material,pos){const o=new THREE.Mesh(geo,material);o.position.set(...pos);parent.add(o);o.castShadow=true;o.receiveShadow=true;return o}
@@ -14,28 +16,28 @@ function init(){
  scene.add(new THREE.HemisphereLight(0xeaf5ff,0x46513a,1.85));
  const fill=new THREE.DirectionalLight(0xb9d9ff,.72);fill.position.set(18,14,-24);scene.add(fill);
  const sun=new THREE.DirectionalLight(0xffe5c2,3.0);sun.position.set(-20,32,16);sun.castShadow=true;sun.shadow.mapSize.set(mobileProfile?1024:3072,mobileProfile?1024:3072);sun.shadow.camera.near=1;sun.shadow.camera.far=90;sun.shadow.radius=mobileProfile?2:3;sun.shadow.camera.left=-45;sun.shadow.camera.right=45;sun.shadow.camera.top=45;sun.shadow.camera.bottom=-45;sun.shadow.bias=-0.00018;scene.add(sun);
- buildIsland();createPlayerAnchor();bind();addEventListener('resize',resize);addEventListener('orientationchange',()=>setTimeout(resize,180));if(window.visualViewport)window.visualViewport.addEventListener('resize',resize);clock=new THREE.Clock();animate();
+ buildIsland();createPlayerAnchor();battleSystems=new BattleSystems(THREE,scene,hero,(message)=>{$('message').textContent=message});battleSystems.onHeal=amount=>{playerHealth=Math.min(100,playerHealth+amount);$('health').textContent='VIDA '+playerHealth;$('playerCounter').textContent=playerHealth};battleSystems.onZoneDamage=amount=>{playerHealth=Math.max(0,playerHealth-amount);$('health').textContent='VIDA '+Math.round(playerHealth);$('playerCounter').textContent=Math.round(playerHealth);if(playerHealth<=0)battleSystems.end(false)};battleSystems.getKills=()=>eliminations;bind();addEventListener('resize',resize);addEventListener('orientationchange',()=>setTimeout(resize,180));if(window.visualViewport)window.visualViewport.addEventListener('resize',resize);clock=new THREE.Clock();animate();
 }
 function buildIsland(){
  const waterMat=new THREE.MeshStandardMaterial({color:0x237e9a,roughness:.24,metalness:.12});
- const water=mesh(scene,new THREE.CircleGeometry(100,96),waterMat,[0,-.62,0]);water.rotation.x=-Math.PI/2;
- const landGeo=new THREE.CircleGeometry(43,112);
+ const water=mesh(scene,new THREE.CircleGeometry(145,96),waterMat,[0,-.62,0]);water.rotation.x=-Math.PI/2;
+ const landGeo=new THREE.CircleGeometry(68,112);
  const pos=landGeo.attributes.position,colors=[];
  for(let i=0;i<pos.count;i++){
   const x=pos.getX(i),z=pos.getY(i),r=Math.hypot(x,z);
   const wave=(Math.sin(x*.34)*Math.cos(z*.29)+Math.sin((x+z)*.19))*.11;
   pos.setZ(i,wave+Math.max(0,1-r/43)*.08);
   const patch=(Math.sin(x*1.7+z*.8)*Math.cos(z*1.35-x*.55)+1)*.5;
-  const edge=THREE.MathUtils.smoothstep(r,37.5,42.8);
+  const edge=THREE.MathUtils.smoothstep(r,62,67.8);
   const color=new THREE.Color().setRGB(.16+.07*patch,.34+.13*patch,.12+.045*patch).lerp(new THREE.Color(0x9a9560),edge*.32);
   colors.push(color.r,color.g,color.b);
  }
  landGeo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));landGeo.computeVertexNormals();
  const landMat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:1});
  const land=new THREE.Mesh(landGeo,landMat);land.rotation.x=-Math.PI/2;land.position.y=-.13;land.receiveShadow=true;scene.add(land);
- const beach=mesh(scene,new THREE.RingGeometry(40,43,112),mat(0xd4bd83,1),[0,-.085,0]);beach.rotation.x=-Math.PI/2;
+ const beach=mesh(scene,new THREE.RingGeometry(65,68,112),mat(0xd4bd83,1),[0,-.085,0]);beach.rotation.x=-Math.PI/2;
  const roadMat=new THREE.MeshStandardMaterial({color:0x666b62,roughness:1});
- const road=cube(scene,7,.07,48,roadMat,0,.015,-1);
+ const road=cube(scene,7,.07,76,roadMat,0,.015,-1);
  const roadEdge=mat(0xb5a77f,1);
  for(const side of [-1,1])cube(scene,.13,.035,48,roadEdge,side*3.62,.06,-1);
  house(-10,-8,0xc99b63);house(12,-13,0xb7c2b0);house(-13,15,0xc9825d);
@@ -110,14 +112,7 @@ function updateCombatBots(dt){
  const now=performance.now();
  for(const bot of bots){
   const data=bot.userData;
-  if(!data.alive){
-   if(now>=data.respawnAt){
-    data.alive=true;data.health=data.maxHealth;bot.visible=true;
-    bot.position.set((Math.random()-.5)*25,0,-20-Math.random()*12);
-    data.nextShot=now+2200;
-   }
-   continue;
-  }
+  if(!data.alive)continue;
   const dx=hero.position.x-bot.position.x,dz=hero.position.z-bot.position.z;
   const distance=Math.hypot(dx,dz);
   if(distance>5.8&&distance<23){
@@ -525,7 +520,7 @@ function bind(){
  window.addEventListener('pointerup',endCameraDrag);
  window.addEventListener('pointercancel',endCameraDrag);
  renderer.domElement.addEventListener('lostpointercapture',endCameraDrag);
- $('play').addEventListener('click',()=>{$('lobby').style.display='none';started=true});
+ $('play').addEventListener('click',()=>{$('lobby').style.display='none';started=true;battleSystems?.start()});
  $('weapon').addEventListener('pointerdown',e=>{e.preventDefault();setWeaponMode(!weaponEquipped)});
 }
 function setPose(p){pose=p;$('poseLabel').textContent='POSTURA: '+(p==='stand'?'EM PÉ':p==='crouch'?'AGACHADO':'DEITADO');$('crouch').classList.toggle('active',p==='crouch');$('prone').classList.toggle('active',p==='prone')}
@@ -574,7 +569,8 @@ function showBulletTrail(start,end){
  requestAnimationFrame(animateTracer);
 }
 function fireShot(){
- if(reloading||ammo<=0||performance.now()-lastShot<155){if(ammo<=0&&!reloading)$('message').textContent='SEM MUNIÇÃO — RECARREGUE';return;}
+ const weaponSpec=battleSystems?.weapons[battleSystems.weaponIndex];
+ if(reloading||ammo<=0||performance.now()-lastShot<(weaponSpec?.rate||155)){if(ammo<=0&&!reloading)$('message').textContent='SEM MUNIÇÃO — RECARREGUE';return;}
  lastShot=performance.now();ammo--;stats();cameraRecoil=Math.min(.12,cameraRecoil+.035);cameraShake=Math.min(.08,cameraShake+.018);
  // 1) A câmera escolhe o ponto do mundo que está exatamente no centro da mira.
  // Atualiza a matriz antes do raycast para usar a posição/rotação deste frame.
@@ -604,7 +600,7 @@ function fireShot(){
   const hitRoot=aimHits[0].object;
   const bot=hitRoot.userData.bot;
   if(bot&&bot.userData.alive){
-   const data=bot.userData;data.health=Math.max(0,data.health-34);data.flashUntil=performance.now()+120;
+   const data=bot.userData;data.health=Math.max(0,data.health-(battleSystems?.weapons[battleSystems.weaponIndex].damage||34));data.flashUntil=performance.now()+120;
    if(data.health<=0){data.alive=false;data.respawnAt=performance.now()+6500;bot.visible=false;eliminations++;$('killCount').textContent=eliminations;$('message').textContent='INIMIGO ELIMINADO!';$('message').classList.add('hit');setTimeout(()=>{$('message').classList.remove('hit');if(playerHealth>0)$('message').textContent='COMBATE EM ANDAMENTO'},650)}
    else{$('message').textContent='ACERTO! '+data.health+' HP';}
   }
@@ -644,6 +640,7 @@ function showMuzzleFlash(position,direction){
 }
 function update(dt){
  updateCombatBots(dt);
+ battleSystems?.update(dt,moveX,moveY,bots.filter(b=>b.userData.alive).length);
  const inputMagnitude=Math.min(1,Math.hypot(moveX,moveY));
  const moving=inputMagnitude>.08;
  const crouch=pose==='crouch',prone=pose==='prone';
@@ -686,8 +683,8 @@ function update(dt){
  let blocked=false;
  for(const b of worldBlockers){const dx=nextX-b.x,dz=nextZ-b.z,min=b.r+.42;if(dx*dx+dz*dz<min*min){blocked=true;break}}
  if(!blocked){hero.position.x=nextX;hero.position.z=nextZ}else{velocityX*=.18;velocityZ*=.18}
- hero.position.x=THREE.MathUtils.clamp(hero.position.x,-34,34);
- hero.position.z=THREE.MathUtils.clamp(hero.position.z,-34,34);
+ hero.position.x=THREE.MathUtils.clamp(hero.position.x,-62,62);
+ hero.position.z=THREE.MathUtils.clamp(hero.position.z,-62,62);
  if(!grounded){
   velocityY-=17*dt;
   hero.position.y+=velocityY*dt;
