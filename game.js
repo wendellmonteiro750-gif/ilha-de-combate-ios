@@ -1,6 +1,4 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
-import * as SkeletonUtils from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/utils/SkeletonUtils.js';
 
 const root=document.querySelector('#game'),loading=document.querySelector('#loading'),statusEl=document.querySelector('#status');
 const scoreEl=document.querySelector('#score'),ammoEl=document.querySelector('#ammo'),healthEl=document.querySelector('#health');
@@ -589,9 +587,16 @@ function makeHumanoidModel(){
 }
 // Modelo masculino humano completo, externo, com malha skinned, texturas PBR e esqueleto Biped.
 const HUMAN_MODEL_URL='https://models.codelove.in/models/male-adult-03.glb';
-let humanModelPromise=null;
+let humanModelPromise=null,humanSkeletonUtils=null;
 async function loadHumanModel(){
- if(!humanModelPromise)humanModelPromise=new GLTFLoader().loadAsync(HUMAN_MODEL_URL);
+ if(!humanModelPromise)humanModelPromise=(async()=>{
+  const [{GLTFLoader},utils]=await Promise.all([
+   import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js'),
+   import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/utils/SkeletonUtils.js')
+  ]);
+  humanSkeletonUtils=utils;
+  return new GLTFLoader().loadAsync(HUMAN_MODEL_URL);
+ })();
  return humanModelPromise;
 }
 async function createFighter(isEnemy=false,index=0){
@@ -599,7 +604,7 @@ async function createFighter(isEnemy=false,index=0){
  let model,bones=new Map();
  try{
   const gltf=await loadHumanModel();
-  model=SkeletonUtils.clone(gltf.scene);
+  model=humanSkeletonUtils.clone(gltf.scene);
   model.name='MaleAdult03_SkinnedHuman';
  }catch(loadError){
   humanModelPromise=null;
@@ -958,4 +963,4 @@ function animate(){
  updateSafeZone(dt);
  if(hitMarkerTimer>0){hitMarkerTimer-=dt;if(hitMarkerTimer<=0)document.querySelector('#crosshair')?.classList.remove('hit')}updateEffects(dt);radarClock-=dt;if(radarClock<=0){radarClock=.35;updateRadar()}renderer.render(scene,camera);
 }
-init().catch(err=>{console.error(err);loading.style.display='none';errorPanel.style.display='grid';document.querySelector('#errorMessage').textContent='Não foi possível carregar os modelos 3D. Confira a internet e tente novamente.'});
+init().catch(err=>{console.error('Falha ao iniciar Ilha de Combate:',err);loading.style.display='none';errorPanel.style.display='grid';document.querySelector('#errorMessage').textContent='Falha ao iniciar: '+(err?.message||'erro desconhecido')+'. Atualize a página e tente novamente.'});
