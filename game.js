@@ -342,13 +342,14 @@ function playCharacterClip(name,restart=false){
  activeCharacterClip=name;
 }
 function playProneTransition(name,now){
- // Transições próprias de rastejo da Quaternius UAL1:
- // Crawl_Enter leva o soldado ao chão de peito; Crawl_Exit o levanta.
- const clipName=exactClip(name);
+ // A UAL2 fornece LayToIdle. Reproduzida ao contrário, ela leva
+ // o personagem da posição em pé para deitado; no sentido normal, levanta.
+ const entering=name==='Crawl_Enter';
+ const clipName=exactClip('LayToIdle');
  if(!clipName){
   proneActionMissing=true;
-  console.error('Animação de rastejo não encontrada:',name,'Clipes disponíveis:',[...characterActions.keys()]);
-  $('message').textContent='ANIMAÇÃO DE RASTEJO NÃO CARREGADA';
+  console.error('Transição LayToIdle não encontrada na UAL2. Clipes disponíveis:',[...characterActions.keys()]);
+  $('message').textContent='TRANSIÇÃO DE DEITAR NÃO CARREGADA';
   return false;
  }
  proneActionMissing=false;
@@ -357,15 +358,16 @@ function playProneTransition(name,now){
  if(previous&&previous!==next)previous.fadeOut(.10);
  next.enabled=true;
  next.reset();
- next.time=0;
- next.timeScale=1;
+ next.time=entering?next.getClip().duration:0;
+ next.timeScale=entering?-1:1;
  next.paused=false;
  next.setEffectiveWeight(1);
  next.setLoop(THREE.LoopOnce,1);
  next.clampWhenFinished=true;
  next.fadeIn(.10).play();
  activeCharacterClip=clipName;
- proneTransition=clipName;
+ // Mantém o estado lógico Crawl_Enter/Crawl_Exit para o controlador.
+ proneTransition=name;
  proneTransitionUntil=now+Math.max(.15,next.getClip().duration)*1000;
  return true;
 }
