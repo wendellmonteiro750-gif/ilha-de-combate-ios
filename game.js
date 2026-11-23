@@ -8,7 +8,7 @@ const errorPanel=document.querySelector('#errorPanel');
 let renderer,scene,camera,clock,playerRig,worldYaw=0,pitch=-.12,ammo=30,kills=0,health=100,armor=0,medkits=1;
 const HUMAN_MODEL_URL='https://raw.githubusercontent.com/memoriesrohit/avatar-studio/2fd9ec82fbe1613d40ae38aadcca3f410725f740/models/andre_casual.glb';
 let humanModelPromise=null;
-const HUMAN_ROLE_CLIPS={idle:'Idle',walk:'Walk',run:'Walk',cast:'Boxing',hit:'Argue'};
+const HUMAN_ROLE_CLIPS={idle:'Idle',walk:'Walk',run:'Walk',jump:'Idle',cast:'Boxing',hit:'Argue'};
 const weapons=[
  {name:'FUZIL AR',category:'FUZIL',lengthCm:82,mag:30,damage:34,rate:.105,spread:.012,reload:1.45,modes:['SINGLE','BURST','AUTO'],range:105},
  {name:'SMG',category:'SUBMETRALHADORA',lengthCm:52,mag:40,damage:19,rate:.075,spread:.021,reload:1.35,modes:['SINGLE','AUTO'],range:62},
@@ -458,6 +458,8 @@ function addRifle(rig,index=0){
 async function createFighter(isEnemy=false,index=0){
  if(!humanModelPromise)humanModelPromise=new GLTFLoader().loadAsync(HUMAN_MODEL_URL);
  const source=await humanModelPromise;
+ const nativeRun=source.animations.find(a=>/sprint|running|run|jog/i.test(a.name));if(nativeRun)HUMAN_ROLE_CLIPS.run=nativeRun.name;
+ const nativeJump=source.animations.find(a=>/jump|leap/i.test(a.name));if(nativeJump)HUMAN_ROLE_CLIPS.jump=nativeJump.name;
  const model=SkeletonUtils.clone(source.scene),holder=new THREE.Group();holder.add(model);
  model.updateMatrixWorld(true);
  const bounds=new THREE.Box3().setFromObject(model),height=Math.max(.1,bounds.max.y-bounds.min.y);
@@ -769,10 +771,10 @@ function animate(){
    const desiredYaw=aiming?worldYaw+Math.PI:Math.atan2(playerVelocity.x,playerVelocity.z);
    const turn=THREE.MathUtils.euclideanModulo(desiredYaw-p.rotation.y+Math.PI,Math.PI*2)-Math.PI;
    p.rotation.y+=turn*Math.min(1,(aiming?14:11)*dt);
-   const role=canSprint?'run':'walk';const gaitSpeed=canSprint?1.52:movementMode==='prone'?.48:movementMode==='crouch'?.62:aiming?.76:THREE.MathUtils.clamp(playerVelocity.length()/3.9,.78,1.28);play(playerRig,role,gaitSpeed);
+   const airborne=p.position.y>.04,role=airborne?'jump':canSprint?'run':'walk';const gaitSpeed=airborne?1:canSprint?1.38:movementMode==='prone'?.48:movementMode==='crouch'?.62:aiming?.76:THREE.MathUtils.clamp(playerVelocity.length()/3.9,.78,1.28);play(playerRig,role,gaitSpeed);
   }else{
    const faceYaw=worldYaw+Math.PI,turn=THREE.MathUtils.euclideanModulo(faceYaw-p.rotation.y+Math.PI,Math.PI*2)-Math.PI;
-   p.rotation.y+=turn*Math.min(1,(aiming||fireHeld?12:5)*dt);play(playerRig,'idle');
+   p.rotation.y+=turn*Math.min(1,(aiming||fireHeld?12:5)*dt);play(playerRig,p.position.y>.04?'jump':'idle');
   }
   playerRig.weaponAimBlend=aimBlend;
    playerRig.runBlend=canSprint?1:0;
