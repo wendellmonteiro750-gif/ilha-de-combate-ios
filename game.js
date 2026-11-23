@@ -90,6 +90,53 @@ const CHARACTER_URL='https://cdn.jsdelivr.net/gh/Seyamalam/blood-league-kickoff@
 const ANIMATION_URL='https://cdn.jsdelivr.net/gh/Seyamalam/blood-league-kickoff@main/public/assets/vendor/quaternius/universal-animation-library.glb';
 let characterVisual=null,characterMixer=null,characterActions=new Map(),activeCharacterClip='',characterReady=false;
 let weaponEquipped=true,weaponModel=null,reloadPoseUntil=0,firePoseUntil=0;
+let combatBones={upperarm_l:null,lowerarm_l:null,hand_l:null,upperarm_r:null,lowerarm_r:null,hand_r:null};
+const combatV1=new THREE.Vector3(),combatV2=new THREE.Vector3(),combatQ1=new THREE.Quaternion(),combatQ2=new THREE.Quaternion();
+function getCombatBone(name){let found=null;characterVisual?.traverse(o=>{if(!found&&o.isBone&&o.name===name)found=o});return found}
+function chooseClip(groups,fallback){
+ const names=[...characterActions.keys()];
+ for(const group of groups){const found=names.find(n=>group.every(token=>n.toLowerCase().includes(token)));if(found)return found}
+ return fallback;
+}
+function solveArmIK(upper,lower,hand,targetWorld){
+ if(!upper||!lower||!hand)return;
+ for(let iteration=0;iteration<9;iteration++){
+  for(const joint of [lower,upper]){
+   characterVisual.updateMatrixWorld(true);
+   const jointPos=joint.getWorldPosition(new THREE.Vector3());
+   const handPos=hand.getWorldPosition(new THREE.Vector3());
+   combatV1.copy(handPos).sub(jointPos);
+   combatV2.copy(targetWorld).sub(jointPos);
+   if(combatV1.lengthSq()<1e-8||combatV2.lengthSq()<1e-8)continue;
+   combatV1.normalize();combatV2.normalize();
+   const delta=combatQ1.setFromUnitVectors(combatV1,combatV2);
+   const worldQ=joint.getWorldQuaternion(combatQ2);
+   const desiredWorld=delta.clone().multiply(worldQ);
+   const parentQ=joint.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
+   joint.quaternion.copy(parentQ.multiply(desiredWorld));
+  }
+ }
+ characterVisual.updateMatrixWorld(true);
+}
+function applyCombatWeaponPose(crouch,prone){
+ if(!weaponEquipped||!weaponModel||!characterVisual)return;
+ characterVisual.updateMatrixWorld(true);
+ const height=prone?.50:crouch?1.00:1.27;
+ const forward=aim?.62:.42;
+ const rightTarget=characterVisual.localToWorld(new THREE.Vector3(.24,height,forward));
+ solveArmIK(combatBones.upperarm_r,combatBones.lowerarm_r,combatBones.hand_r,rightTarget);
+ characterVisual.updateMatrixWorld(true);
+ const leftGrip=weaponModel.localToWorld(new THREE.Vector3(0,-.105,-.43));
+ solveArmIK(combatBones.upperarm_l,combatBones.lowerarm_l,combatBones.hand_l,leftGrip);
+ if(combatBones.hand_l){
+  characterVisual.updateMatrixWorld(true);
+  const weaponQ=weaponModel.getWorldQuaternion(new THREE.Quaternion());
+  const parentQ=combatBones.hand_l.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
+  combatBones.hand_l.quaternion.copy(parentQ.multiply(weaponQ));
+ }
+ if(performance.now()<firePoseUntil){weaponModel.rotation.x=.045}
+ else weaponModel.rotation.x=THREE.MathUtils.damp(weaponModel.rotation.x,0,16,clock?.getDelta?.()||.016);
+}
 function createPlayerAnchor(){
  hero=new THREE.Group();hero.position.set(0,0,0);scene.add(hero);
  const loader=new GLTFLoader();
@@ -107,7 +154,8 @@ function createPlayerAnchor(){
   hero.add(characterVisual);
   characterMixer=new THREE.AnimationMixer(characterVisual);
   for(const clip of library.animations)characterActions.set(clip.name,characterMixer.clipAction(clip));
-  const hand=characterVisual.getObjectByName('hand_r');
+  for(const name of Object.keys(combatBones))combatBones[name]=getCombatBone(name);
+  const hand=combatBones.hand_r||characterVisual.getObjectByName('hand_r');
   if(hand)createCombatWeapon(hand);
   characterReady=true;
   playCharacterClip('Idle_Loop',false);
@@ -149,17 +197,27 @@ function playCharacterClip(name,restart=false){
 function animateRig(dt,speed,sprinting,crouch,prone){
  if(!characterReady||!characterMixer)return;
  const now=performance.now(),moving=speed>.22;
- let clip='Idle_Loop';
- if(prone)clip=moving?'Crouch_Fwd_Loop':'Crouch_Idle_Loop';
- else if(crouch)clip=moving?'Crouch_Fwd_Loop':'Crouch_Idle_Loop';
- else if(!grounded)clip='Jump_Loop';
- else if(now<reloadPoseUntil&&weaponEquipped)clip='Pistol_Reload';
- else if(now<firePoseUntil&&weaponEquipped)clip='Pistol_Shoot';
- else if(aim&&weaponEquipped)clip='Pistol_Aim_Neutral';
- else if(moving)clip=sprinting?'Sprint_Loop':speed<2?'Walk_Loop':'Jog_Fwd_Loop';
- else if(weaponEquipped)clip='Pistol_Idle_Loop';
+ const idle=chooseClip([['rifle','idle'],['weapon','idle'],['idle','loop']], 'Idle_Loop');
+ const walk=chooseClip([['rifle','walk'],['weapon','walk'],['walk','loop'],['jog','fwd']], 'Jog_Fwd_Loop');
+ const sprint=chooseClip([['rifle','sprint'],['weapon','sprint'],['sprint','loop']], 'Sprint_Loop');
+ const crouchIdle=chooseClip([['rifle','crouch','idle'],['crouch','idle']],idle);
+ const crouchMove=chooseClip([['rifle','crouch','walk'],['crouch','fwd'],['crouch','walk']],walk);
+ const proneIdle=chooseClip([['prone','idle'],['lying','idle'],['lie','idle']],crouchIdle);
+ const proneMove=chooseClip([['prone','crawl'],['prone','move'],['crawl','loop']],crouchMove);
+ const aimClip=chooseClip([['rifle','aim'],['weapon','aim'],['pistol','aim']],idle);
+ const shootClip=chooseClip([['rifle','shoot'],['weapon','shoot'],['pistol','shoot']],aimClip);
+ const reloadClip=chooseClip([['rifle','reload'],['weapon','reload'],['pistol','reload']],aimClip);
+ let clip=idle;
+ if(prone)clip=moving?proneMove:proneIdle;
+ else if(crouch)clip=moving?crouchMove:crouchIdle;
+ else if(!grounded)clip=chooseClip([['rifle','jump'],['jump','loop']],idle);
+ else if(now<reloadPoseUntil&&weaponEquipped)clip=reloadClip;
+ else if(now<firePoseUntil&&weaponEquipped)clip=shootClip;
+ else if(aim&&weaponEquipped)clip=aimClip;
+ else if(moving)clip=sprinting?sprint:walk;
  if(clip!==activeCharacterClip)playCharacterClip(clip);
  characterMixer.update(dt);
+ applyCombatWeaponPose(crouch,prone);
 }
 function bind(){
  const stick=$('stick'),knob=$('knob');let sid=null,rect=null;
