@@ -59,7 +59,7 @@ function buildHero(){
   rig.arms.push({upper,fore,hand,side});
  }
  // Rifle points along the character's forward axis (-Z).
- weapon=new THREE.Group();weapon.position.set(.2,.48,-.42);rig.body.add(weapon);
+ weapon=new THREE.Group();weapon.position.set(.28,.50,-.28);rig.body.add(weapon);
  cube(weapon,.16,.17,.85,gun,0,0,-.22);cube(weapon,.075,.075,.7,gun,0,.02,-.92);
  cube(weapon,.13,.13,.35,vest,0,0,.38);cube(weapon,.11,.3,.18,gun,0,-.2,-.24);
  cube(weapon,.08,.07,.16,gun,0,.12,-.25);
@@ -121,9 +121,9 @@ function update(dt){
  const downAxis=new THREE.Vector3(0,-1,0);
  rig.arms.forEach(({upper,fore,hand,side})=>{
   const shoulder=new THREE.Vector3(side*.46,.82,0);
-  const grip=side===1
-   ? new THREE.Vector3(.27,.30,-.52)       // trigger hand
-   : new THREE.Vector3(.08,.43,-.72);      // support hand under the fore-end
+  const grip=weapon.position.clone().add(side===1
+   ? new THREE.Vector3(0,-.20,-.18)       // right hand on the trigger grip
+   : new THREE.Vector3(0,-.02,-.40));     // left hand supporting the fore-end
   grip.y+=crouch?-.035:0;
   if(moving){grip.y+=Math.sin(walkT+(side===1?0:Math.PI))*.018}
   const reach=grip.clone().sub(shoulder);
@@ -147,7 +147,7 @@ function update(dt){
  });
  // Small breathing/idle motion and recoil.
  rig.body.position.y+=moving?Math.abs(gait)*.018:Math.sin(walkT*1.7)*.012;
- weapon.position.y=aim?.51:.48;
+ weapon.position.y=aim?.53:.50;
  weapon.rotation.x=THREE.MathUtils.lerp(weapon.rotation.x,aim?-.035:0,1-Math.exp(-dt*12));
  if(shoot)fireShot();
  // Shoulder camera follows the player and tightens when aiming.
