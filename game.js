@@ -15,16 +15,18 @@ async function startGame(){
 // ILHA DE COMBATE — mapa tropical original inspirado na variedade de Bermuda.
 // Escala e densidade controladas para manter o protótipo utilizável em celulares.
 const canvas=document.querySelector('#world');
+const isMobile=matchMedia('(max-width: 700px), (pointer: coarse)').matches;
+// Perfil conservador para iPhone XR e outros celulares: menos geometria e 30 FPS estáveis.
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x9fc7ca);
 scene.fog=new THREE.Fog(0x9fc7ca,145,430);
 const camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.1,650);
-const renderer=new THREE.WebGLRenderer({canvas,antialias:innerWidth>700,powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(devicePixelRatio||1,innerWidth<700?1.15:1.6));
+const renderer=new THREE.WebGLRenderer({canvas,antialias:!isMobile,powerPreference:'low-power',failIfMajorPerformanceCaveat:false});
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,isMobile?1:1.35));
 renderer.setSize(innerWidth,innerHeight);
 renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.08;
+renderer.toneMapping=isMobile?THREE.NoToneMapping:THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.0;
 renderer.shadowMap.enabled=innerWidth>700;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 
@@ -44,7 +46,7 @@ const M={
  trunk:mat(0x62452f),rock:mat(0x77796d),water:new THREE.MeshStandardMaterial({color:0x28788a,roughness:.23,metalness:.16})
 };
 const world=new THREE.Group();scene.add(world);
-const terrainSize=350,segments=120;
+const terrainSize=350,segments=isMobile?64:120;
 function heightAt(x,z){
  const r=Math.hypot(x,z);
  if(r>151)return -5.8;
@@ -197,16 +199,16 @@ const bridge=addBox(world,0,-.15,161,8,.8,42,M.wood);for(let i=0;i<12;i++){addBo
 
 // Floresta tropical em manchas, preservando corredores de passagem e visibilidade.
 let seed=90210;function rand(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}
-for(let i=0;i<185;i++){
+for(let i=0;i<(isMobile?65:185);i++){
  const a=rand()*Math.PI*2,r=38+rand()*96,x=Math.cos(a)*r,z=Math.sin(a)*r;
  // deixa os centros dos bairros e estradas mais livres
  const near=(cx,cz,rad)=>Math.hypot(x-cx,z-cz)<rad;
  if(near(0,0,34)||near(-64,47,18)||near(104,-78,26)||near(92,76,30)||near(-105,-90,26)||near(-92,110,30))continue;
  makeTree(x,z,.68+rand()*.62,rand()>.72);
 }
-for(let i=0;i<34;i++){const a=rand()*Math.PI*2,r=75+rand()*65;makeRock(Math.cos(a)*r,Math.sin(a)*r,.7+rand()*1.2)}
+for(let i=0;i<(isMobile?12:34);i++){const a=rand()*Math.PI*2,r=75+rand()*65;makeRock(Math.cos(a)*r,Math.sin(a)*r,.7+rand()*1.2)}
 // Palmeiras nas praias.
-for(let i=0;i<38;i++){const a=rand()*Math.PI*2,r=133+rand()*9;makeTree(Math.cos(a)*r,Math.sin(a)*r,.7+rand()*.35,true)}
+for(let i=0;i<(isMobile?16:38);i++){const a=rand()*Math.PI*2,r=133+rand()*9;makeTree(Math.cos(a)*r,Math.sin(a)*r,.7+rand()*.35,true)}
 
 // Operador de teste.
 const player=new THREE.Group();scene.add(player);const body=new THREE.Group();player.add(body);
@@ -272,11 +274,15 @@ function drawMap(){
  const px=90+player.position.x*.43,pz=90+player.position.z*.43;mx.fillStyle='#ffdf62';mx.beginPath();mx.arc(px,pz,5,0,Math.PI*2);mx.fill();mx.strokeStyle='#18231e';mx.lineWidth=2;mx.stroke();
 }
 const clock=new THREE.Clock(),camTarget=new THREE.Vector3(),camPos=new THREE.Vector3();
-let mapTick=0;
+let mapTick=0,lastMobileFrame=0;
 let firstFrameDone=false;
 function frame(){
  try{
- requestAnimationFrame(frame);const dt=Math.min(clock.getDelta(),.04);fireCooldown=Math.max(0,fireCooldown-dt);
+ requestAnimationFrame(frame);
+ const now=performance.now();
+ if(isMobile&&now-lastMobileFrame<33)return;
+ lastMobileFrame=now;
+ const dt=Math.min(clock.getDelta(),.04);fireCooldown=Math.max(0,fireCooldown-dt);
  const f=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0)-joyY;
  const s=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0)+joyX;
  const mag=Math.hypot(f,s);let ff=f,ss=s;if(mag>1){ff/=mag;ss/=mag}
@@ -304,7 +310,7 @@ function frame(){
   console.error('Erro no frame 3D:',error);
  }
 }
-addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setPixelRatio(Math.min(devicePixelRatio||1,innerWidth<700?1.15:1.6));renderer.setSize(innerWidth,innerHeight)});
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setPixelRatio(Math.min(devicePixelRatio||1,isMobile?1:1.35));renderer.setSize(innerWidth,innerHeight)});
 frame();
 
  }catch(error){
