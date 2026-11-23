@@ -88,8 +88,8 @@ function house(x,z,color){
 // Personagem humano real Quaternius: malha skinned, esqueleto completo e clips humanoides.
 const CHARACTER_URL='https://cdn.jsdelivr.net/gh/Seyamalam/blood-league-kickoff@main/public/assets/vendor/quaternius/night-striker.glb';
 const ANIMATION_URL='https://cdn.jsdelivr.net/gh/Seyamalam/blood-league-kickoff@main/public/assets/vendor/quaternius/universal-animation-library.glb';
-let characterVisual=null,characterMixer=null,characterActions=new Map(),activeCharacterClip='',characterReady=false,proneBlend=0,characterBaseY=0;
-const characterBaseQuaternion=new THREE.Quaternion(),characterProneQuaternion=new THREE.Quaternion(),characterProneTilt=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),-Math.PI/2);
+let characterVisual=null,characterMixer=null,characterActions=new Map(),activeCharacterClip='',characterReady=false;
+let proneState=false,proneTransition=null,proneTransitionUntil=0;
 let weaponEquipped=true,weaponModel=null,weaponMagazine=null,reloadPoseUntil=0,firePoseUntil=0,weaponBasePosition=new THREE.Vector3(),weaponBaseRotation=new THREE.Euler(),weaponRecoil=0;
 let combatBones={upperarm_l:null,lowerarm_l:null,hand_l:null,upperarm_r:null,lowerarm_r:null,hand_r:null};
 const combatV1=new THREE.Vector3(),combatV2=new THREE.Vector3(),combatQ1=new THREE.Quaternion(),combatQ2=new THREE.Quaternion();
@@ -200,8 +200,6 @@ function createPlayerAnchor(){
   characterVisual=character.scene;
   characterVisual.name='BattleIsland_Quaternius_Human';
   characterVisual.rotation.y=Math.PI;
-  characterBaseQuaternion.copy(characterVisual.quaternion);
-  characterBaseY=characterVisual.position.y;
   characterVisual.scale.setScalar(1);
   characterVisual.traverse(node=>{
    if(node.isMesh){node.castShadow=true;node.receiveShadow=true;
@@ -299,49 +297,61 @@ function playCharacterClip(name,restart=false){
  const next=characterActions.get(name)||characterActions.get('Idle_Loop');
  if(!next)return;
  const previous=characterActions.get(activeCharacterClip);
- if(previous!==next){if(previous)previous.fadeOut(.16);next.reset().fadeIn(.16).play()}
- else if(restart)next.reset().play();
+ if(previous!==next){
+  if(previous)previous.fadeOut(.14);
+  next.setLoop(THREE.LoopRepeat,Infinity);
+  next.clampWhenFinished=false;
+  next.reset().fadeIn(.14).play();
+ }else if(restart)next.reset().play();
  activeCharacterClip=name;
+}
+function playProneTransition(name,now){
+ const clipName=exactClip(name);
+ if(!clipName)return false;
+ const next=characterActions.get(clipName);
+ const previous=characterActions.get(activeCharacterClip);
+ if(previous&&previous!==next)previous.fadeOut(.10);
+ next.reset();
+ next.setLoop(THREE.LoopOnce,1);
+ next.clampWhenFinished=true;
+ next.fadeIn(.10).play();
+ activeCharacterClip=clipName;
+ proneTransition=clipName;
+ proneTransitionUntil=now+Math.max(.15,next.getClip().duration)*1000;
+ return true;
 }
 function animateRig(dt,speed,sprinting,crouch,prone){
  if(!characterReady||!characterMixer)return;
  const now=performance.now(),moving=speed>.22;
- // Estados em pé usam SOMENTE clipes explicitamente nomeados para
- // locomoção ereta. Nunca selecionar Crouch_Idle por busca parcial.
  const idle=exactClip('Idle_Loop','Idle_Standing_Loop')||'Idle_Loop';
  const walk=exactClip('Jog_Fwd_Loop','Walk_Fwd_Loop','Walk_Loop')||idle;
  const sprint=exactClip('Sprint_Loop','Run_Fwd_Loop')||walk;
  const crouchIdle=exactClip('Crouch_Idle_Loop')||idle;
  const crouchMove=exactClip('Crouch_Fwd_Loop','Crouch_Fwd_L_Loop')||walk;
- // Deitado precisa usar animação de chão/crawl de verdade. Nunca cair
- // no Crouch_Idle: esse fallback era a causa do boneco parecer agachado.
- const proneIdle=exactClip('Prone_Idle_Loop','Crawl_Idle_Loop','Crawl_Idle')
-  ||[...characterActions.keys()].find(n=>/(prone|crawl).*(idle)|(idle).*(prone|crawl)/i.test(n))
-  ||idle;
- const proneMove=exactClip('Crawl_Fwd_Loop','Prone_Crawl_Loop','Crawl_Fwd','Crawl_Left_Loop')
-  ||[...characterActions.keys()].find(n=>/(crawl|prone).*(fwd|forward|move|walk)/i.test(n))
-  ||proneIdle;
- // Mirar, atirar e recarregar não mudam a postura das pernas ou do tronco.
+ const proneIdle=exactClip('Crawl_Idle_Loop','Prone_Idle_Loop')||idle;
+ const proneMove=exactClip('Crawl_Fwd_Loop','Prone_Crawl_Loop')||proneIdle;
+
+ // Entrada e saída do chão usam os clipes dedicados da biblioteca UAL.
+ // Crawl_Enter anima a descida; Crawl_Exit anima o retorno a ficar em pé.
+ if(prone!==proneState){
+  proneState=prone;
+  playProneTransition(prone?'Crawl_Enter':'Crawl_Exit',now);
+ }
+ const inTransition=!!proneTransition&&now<proneTransitionUntil;
+ if(!inTransition)proneTransition=null;
+
  let clip=idle;
  if(prone)clip=moving?proneMove:proneIdle;
  else if(crouch)clip=moving?crouchMove:crouchIdle;
  else if(!grounded)clip=exactClip('Jump_Loop','Jump_Start')||idle;
  else if(moving)clip=sprinting?sprint:walk;
- // Prioriza clips de combate caso existam na biblioteca; sem eles, mantém
- // a locomoção original e aplica suporte de mão, recuo e recarga procedural.
- if(!crouch&&!prone&&!moving){
+ if(!crouch&&!prone&&!moving&&!inTransition){
   if(reloading)clip=exactClip('Rifle_Reload_Loop','Rifle_Reload','Reload_Rifle')||clip;
-  else if(performance.now()<firePoseUntil)clip=exactClip('Rifle_Fire_Loop','Rifle_Fire','Fire_Rifle')||clip;
+  else if(now<firePoseUntil)clip=exactClip('Rifle_Fire_Loop','Rifle_Fire','Fire_Rifle')||clip;
   else if(aim)clip=exactClip('Rifle_Aim_Loop','Rifle_Aiming_Loop','Aim_Rifle_Loop')||clip;
  }
- if(clip!==activeCharacterClip)playCharacterClip(clip);
+ if(!inTransition&&clip!==activeCharacterClip)playCharacterClip(clip);
  characterMixer.update(dt);
- // Transição corporal deitado: inclina o esqueleto humano inteiro até ficar
- // paralelo ao chão, com o rosto voltado para baixo. O blend evita a troca brusca.
- proneBlend=THREE.MathUtils.damp(proneBlend,prone?1:0,prone?5.5:7.5,dt);
- characterProneQuaternion.copy(characterProneTilt).multiply(characterBaseQuaternion);
- characterVisual.quaternion.slerpQuaternions(characterBaseQuaternion,characterProneQuaternion,proneBlend);
- characterVisual.position.y=THREE.MathUtils.lerp(characterBaseY,.12,proneBlend);
 }
 function bind(){
  const stick=$('stick'),knob=$('knob');let sid=null,rect=null;
