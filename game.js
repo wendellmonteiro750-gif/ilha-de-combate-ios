@@ -390,21 +390,34 @@ function showBulletTrail(start,end){
 function fireShot(){
  if(reloading||ammo<=0||performance.now()-lastShot<155)return;
  lastShot=performance.now();ammo--;stats();cameraRecoil=Math.min(.12,cameraRecoil+.035);cameraShake=Math.min(.08,cameraShake+.018);
- // O disparo parte do centro da tela, exatamente sob a mira.
- // Assim a direção do tiro acompanha o ponto para onde a câmera está apontando.
+ // Primeiro encontra o ponto exato sob a mira, usando o centro da câmera.
  camera.updateMatrixWorld(true);
- const ray=new THREE.Raycaster();
- ray.setFromCamera(new THREE.Vector2(0,0),camera);
- ray.far=85;
- const hits=ray.intersectObjects(targets,true);
- const endPoint=hits.length?hits[0].point.clone():ray.ray.origin.clone().addScaledVector(ray.ray.direction,55);
+ const aimRay=new THREE.Raycaster();
+ aimRay.setFromCamera(new THREE.Vector2(0,0),camera);
+ aimRay.far=85;
+ const aimHits=aimRay.intersectObjects(targets,true);
+ const aimPoint=aimHits.length
+  ?aimHits[0].point.clone()
+  :aimRay.ray.origin.clone().addScaledVector(aimRay.ray.direction,85);
+ // O projétil agora percorre a trajetória desde a boca do cano até esse ponto.
+ // Assim o rastro e a colisão seguem a mira, em vez de simular um tiro saindo da câmera.
  let muzzlePoint=camera.position.clone();
  if(weaponModel&&weaponModel.visible){
   weaponModel.updateMatrixWorld(true);
   muzzlePoint=weaponModel.localToWorld(new THREE.Vector3(0,.012,-1.14));
  }
+ const shotDirection=aimPoint.clone().sub(muzzlePoint).normalize();
+ const shotRay=new THREE.Raycaster(muzzlePoint,shotDirection,.02,85);
+ const shotHits=shotRay.intersectObjects(targets,true);
+ const endPoint=shotHits.length?shotHits[0].point.clone():aimPoint;
  showBulletTrail(muzzlePoint,endPoint);
- if(hits.length){const target=hits[0].object;target.material=mat(0xe5a43a);$('message').textContent='ALVO ATINGIDO!';$('message').classList.add('hit');setTimeout(()=>{$('message').textContent='ÁREA DE TREINO';$('message').classList.remove('hit');target.material=mat(0xd6d1bd)},500)}
+ if(shotHits.length){
+  const target=shotHits[0].object;
+  target.material=mat(0xe5a43a);
+  $('message').textContent='ALVO ATINGIDO!';
+  $('message').classList.add('hit');
+  setTimeout(()=>{$('message').textContent='ÁREA DE TREINO';$('message').classList.remove('hit');target.material=mat(0xd6d1bd)},500);
+ }
 }
 function update(dt){
  const inputMagnitude=Math.min(1,Math.hypot(moveX,moveY));
