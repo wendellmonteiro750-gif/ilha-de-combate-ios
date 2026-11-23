@@ -12,7 +12,7 @@ function refreshAmmo(){ammo=weaponAmmo[weaponIndex];ammoEl.textContent='MUNIÇÃ
 function refreshInventory(){
  const panel=document.querySelector('#inventoryPanel');if(!panel)return;
  document.querySelector('#inventoryWeapons').innerHTML=weapons.map((w,i)=>'<div class="inventory-slot '+(i===weaponIndex?'equipped':'')+'"><b>'+(i+1)+'. '+w.name+'</b><span>'+weaponAmmo[i]+' / '+w.mag+'</span><small>DANO '+w.damage+'</small></div>').join('');
- document.querySelector('#inventorySupplies').textContent='Kits: '+medkits+'  •  Colete: '+Math.round(armor)+'%  •  Munição atual: '+ammo;
+ document.querySelector('#inventorySupplies').textContent='Kits: '+medkits+'  •  Colete: '+Math.round(armor)+'%  •  Miras: '+scopeLevel+'x  •  Munição atual: '+ammo;
 }
 function toggleInventory(){
  const panel=document.querySelector('#inventoryPanel');const open=panel.classList.toggle('visible');
