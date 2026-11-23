@@ -16,7 +16,7 @@ function init(){
  scene.add(new THREE.HemisphereLight(0xeaf5ff,0x46513a,1.85));
  const fill=new THREE.DirectionalLight(0xb9d9ff,.72);fill.position.set(18,14,-24);scene.add(fill);
  const sun=new THREE.DirectionalLight(0xffe5c2,3.0);sun.position.set(-20,32,16);sun.castShadow=true;sun.shadow.mapSize.set(mobileProfile?1024:3072,mobileProfile?1024:3072);sun.shadow.camera.near=1;sun.shadow.camera.far=90;sun.shadow.radius=mobileProfile?2:3;sun.shadow.camera.left=-45;sun.shadow.camera.right=45;sun.shadow.camera.top=45;sun.shadow.camera.bottom=-45;sun.shadow.bias=-0.00018;scene.add(sun);
- buildIsland();createPlayerAnchor();battleSystems=new BattleSystems(THREE,scene,hero,(message)=>{$('message').textContent=message});battleSystems.onHeal=amount=>{playerHealth=Math.min(100,playerHealth+amount);$('health').textContent='VIDA '+playerHealth;$('playerCounter').textContent=playerHealth};battleSystems.onZoneDamage=amount=>{playerHealth=Math.max(0,playerHealth-amount);$('health').textContent='VIDA '+Math.round(playerHealth);$('playerCounter').textContent=Math.round(playerHealth);if(playerHealth<=0)battleSystems.end(false)};battleSystems.getKills=()=>eliminations;bind();addEventListener('resize',resize);addEventListener('orientationchange',()=>setTimeout(resize,180));if(window.visualViewport)window.visualViewport.addEventListener('resize',resize);clock=new THREE.Clock();animate();
+ buildIsland();createPlayerAnchor();battleSystems=new BattleSystems(THREE,scene,hero,(message)=>{$('message').textContent=message});battleSystems.onHeal=amount=>{playerHealth=Math.min(100,playerHealth+amount);$('health').textContent='VIDA '+playerHealth;$('playerCounter').textContent=playerHealth};battleSystems.onZoneDamage=amount=>{playerHealth=Math.max(0,playerHealth-amount);$('health').textContent='VIDA '+Math.round(playerHealth);$('playerCounter').textContent=Math.round(playerHealth);if(playerHealth<=0)battleSystems.end(false)};battleSystems.getKills=()=>eliminations;battleSystems.onAmmo=amount=>{ammoReserve+=amount;stats()};battleSystems.onWeaponChange=w=>{ammo=w.mag;ammoReserve=Math.max(ammoReserve,w.reserve);stats()};bind();addEventListener('resize',resize);addEventListener('orientationchange',()=>setTimeout(resize,180));if(window.visualViewport)window.visualViewport.addEventListener('resize',resize);clock=new THREE.Clock();animate();
 }
 function buildIsland(){
  const waterMat=new THREE.MeshStandardMaterial({color:0x237e9a,roughness:.24,metalness:.12});
@@ -143,11 +143,7 @@ function updateCombatBots(dt){
    }
   }
  }
- if(playerHealth===0&&playerDownUntil&&now>=playerDownUntil){
-  playerHealth=100;playerDownUntil=0;hero.position.set(0,0,0);
-  $('health').textContent='VIDA 100';$('playerCounter').textContent='100';
-  $('message').textContent='VOCÊ VOLTOU AO COMBATE';
- }
+ if(playerHealth===0&&playerDownUntil&&now>=playerDownUntil){playerDownUntil=0;battleSystems?.end(false);}
  const alive=bots.filter(b=>b.userData.alive).length;
  $('aliveCount').textContent=alive;
  $('killCount').textContent=eliminations;
@@ -495,7 +491,7 @@ function bind(){
  $('jump').addEventListener('pointerdown',e=>{e.preventDefault();if(grounded&&pose!=='prone'){velocityY=6.2;grounded=false}});
  $('crouch').addEventListener('pointerdown',e=>{e.preventDefault();setPose(pose==='crouch'?'stand':'crouch')});
  $('prone').addEventListener('pointerdown',e=>{e.preventDefault();setPose(pose==='prone'?'stand':'prone')});
- $('reload').addEventListener('pointerdown',e=>{e.preventDefault();if(!reloading&&ammo<30&&ammoReserve>0){reloading=true;reloadPoseUntil=performance.now()+1450;$('message').textContent='RECARREGANDO';setTimeout(()=>{const needed=30-ammo,loaded=Math.min(needed,ammoReserve);ammo+=loaded;ammoReserve-=loaded;reloading=false;stats();$('message').textContent='COMBATE EM ANDAMENTO'},1450)}});
+ $('reload').addEventListener('pointerdown',e=>{e.preventDefault();if(!reloading&&ammo<(battleSystems?.weapons[battleSystems.weaponIndex].mag||30)&&ammoReserve>0){reloading=true;reloadPoseUntil=performance.now()+1450;$('message').textContent='RECARREGANDO';setTimeout(()=>{const needed=(battleSystems?.weapons[battleSystems.weaponIndex].mag||30)-ammo,loaded=Math.min(needed,ammoReserve);ammo+=loaded;ammoReserve-=loaded;reloading=false;stats();$('message').textContent='COMBATE EM ANDAMENTO'},1450)}});
  // Controle de câmera por arrasto: inicia na área livre do canvas e
  // acompanha o mesmo dedo pela janela inteira, mesmo se sair do canvas.
  let drag=null;
