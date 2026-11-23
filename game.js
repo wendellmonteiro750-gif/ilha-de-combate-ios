@@ -10,9 +10,9 @@ function capsule(parent,r,len,m,x,y,z){return mesh(parent,new THREE.CapsuleGeome
 function init(){
  scene=new THREE.Scene();scene.background=new THREE.Color(0x91cbd5);scene.fog=new THREE.Fog(0x91cbd5,48,115);
  camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,180);
- renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;root.appendChild(renderer.domElement);
- scene.add(new THREE.HemisphereLight(0xe8f6ff,0x526b3e,2));
- const sun=new THREE.DirectionalLight(0xffe8bc,2.1);sun.position.set(-20,32,16);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);scene.add(sun);
+ renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;root.appendChild(renderer.domElement);
+ scene.add(new THREE.HemisphereLight(0xe8f3ff,0x3e4b35,1.55));
+ const sun=new THREE.DirectionalLight(0xffe5c2,3.0);sun.position.set(-20,32,16);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-45;sun.shadow.camera.right=45;sun.shadow.camera.top=45;sun.shadow.camera.bottom=-45;sun.shadow.bias=-0.00018;scene.add(sun);
  buildIsland();buildHero();loadRealHero();bind();addEventListener('resize',resize);clock=new THREE.Clock();animate();
 }
 function buildIsland(){
@@ -129,7 +129,7 @@ function buildHero(){
 }
 function loadRealHero(){
  const loader=new GLTFLoader();
- const url='https://threejs.org/examples/models/gltf/Soldier.glb';
+ const url='https://grab3d.com/dl/man-base-character-rigged/man-base-character-rigged.glb';
  loader.load(url,gltf=>{
   const model=gltf.scene;
   model.updateMatrixWorld(true);
@@ -138,6 +138,7 @@ function loadRealHero(){
   if(height>0)model.scale.setScalar(1.78/height);
   model.position.set(0,-bounds.min.y*model.scale.y,0);
   model.rotation.y=Math.PI;
+  model.traverse(o=>{if(o.isMesh&&o.material){o.material.roughness=Math.min(o.material.roughness??.8,.92);o.material.metalness=Math.min(o.material.metalness??0,.15)}});
   model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.side=THREE.FrontSide}}});
   hero.add(model);
   realHero=model;
@@ -153,10 +154,10 @@ function loadRealHero(){
    const first=Object.keys(realActions)[0];
    if(first){realActions[first].play();activeRealAction=first}
   }
-  $('message').textContent='PERSONAGEM HUMANOIDE 3D CARREGADO';
+  $('message').textContent='MODELO HUMANO 3D DETALHADO CARREGADO';
  },undefined,error=>{
   console.error('Falha ao carregar personagem GLB:',error);
-  $('message').textContent='Falha ao carregar o modelo humanoide 3D';
+  $('message').textContent='Falha ao carregar o modelo humano 3D';
  });
 }
 function playRealAnimation(name){
