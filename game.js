@@ -452,7 +452,7 @@ function addRifle(rig,index=0){
   }
  }
  const muzzle=new THREE.Object3D();muzzle.position.set(0,.012,spec.kind==='pistol'?-.17-barrelLen*.96:-L*.39-barrelLen*.96);g.add(muzzle);
- g.scale.setScalar(.68);g.position.set(.025,-.065,.075);g.rotation.set(-.12,0,0);hand.add(g);
+ g.scale.setScalar(.78);g.position.set(.105,-.105,-.115);g.rotation.set(-.20,.14,-.10);hand.add(g);
  rig.weaponPivot=g;rig.weaponMuzzle=muzzle;rig.weaponSpec=spec;rig.weaponBasePosition=g.position.clone();rig.weaponBaseRotation=g.rotation.clone();
 }
 async function createFighter(isEnemy=false,index=0){
@@ -525,8 +525,13 @@ async function createFighter(isEnemy=false,index=0){
    for(const [name,x,y,z] of pose){
     const bone=this.bones.get(name);if(!bone)continue;
     const delta=new THREE.Quaternion().setFromEuler(new THREE.Euler(x*this._stanceBlend,y*this._stanceBlend,z*this._stanceBlend,'XYZ'));
-    bone.quaternion.multiply(delta);
-    this._stanceApplied.push({name,inverse:delta.clone().invert()});
+    const armPose=/mixamorig(Left|Right)(Arm|ForeArm|Hand)$/.test(name);
+    const poseBlend=armPose?1:this._stanceBlend;
+    if(poseBlend>0){
+     const applied=new THREE.Quaternion().slerp(delta,poseBlend);
+     bone.quaternion.multiply(applied);
+     this._stanceApplied.push({name,inverse:applied.clone().invert()});
+    }
    }
    // Fecha os dedos ao redor da empunhadura e do guarda-mão.
    for(const [name,bone] of this.bones){
