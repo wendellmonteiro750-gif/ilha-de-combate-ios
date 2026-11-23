@@ -537,7 +537,7 @@ function update(dt){
  const target=hero.position.clone().add(new THREE.Vector3(0,THREE.MathUtils.lerp(crouch?1.48:1.92,.58,proneBlend),0));
  const baseDist=aim?3.15:sprinting?5.15:5.6;
  const dist=THREE.MathUtils.lerp(baseDist,3.85,proneBlend);
- const shoulder=aim?.48:.72;
+ const shoulder=aim?.72:1.18;
  const offset=new THREE.Vector3(Math.sin(yaw)*dist*Math.cos(pitch)+Math.cos(yaw)*shoulder,dist*(.30+Math.sin(-pitch)),Math.cos(yaw)*dist*Math.cos(pitch)-Math.sin(yaw)*shoulder);
  cameraDesired.copy(target).add(offset);
  cameraRay.set(target,offset.clone().normalize());cameraRay.far=dist;
