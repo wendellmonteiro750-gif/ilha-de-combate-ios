@@ -217,10 +217,10 @@ function createPlayerAnchor(){
   });
   hero.add(characterVisual);
   characterMixer=new THREE.AnimationMixer(characterVisual);
-  for(const clip of library.animations)characterActions.set(clip.name,clip);
+  for(const clip of library.animations)characterActions.set(clip.name,characterMixer.clipAction(clip));
   // UAL2 Standard é o pacote oficial complementar da Quaternius. Ele traz
   // IdleToLay e LayToIdle, ausentes na UAL1 Standard que estava no jogo.
-  for(const clip of library2.animations)characterActions.set(clip.name,clip);
+  for(const clip of library2.animations)characterActions.set(clip.name,characterMixer.clipAction(clip));
   if(!characterActions.has('IdleToLay')||!characterActions.has('LayToIdle')){
    console.error('UAL2 carregada sem os clips IdleToLay/LayToIdle',library2.animations.map(c=>c.name));
   }
@@ -331,8 +331,9 @@ function playProneTransition(name,now){
   return false;
  }
  proneActionMissing=false;
- const next=characterMixer.clipAction(characterActions.get(clipName));
+ const next=characterActions.get(clipName);
  const previous=characterActions.get(activeCharacterClip);
+ if(!next)return false;
  if(previous&&previous!==next)previous.fadeOut(.12);
  next.enabled=true;
  next.reset();
