@@ -803,7 +803,16 @@ function setupControls(){
   document.querySelector('#crouch').onclick=()=>setMovementMode(movementMode==='crouch'?'stand':'crouch');
   document.querySelector('#prone').onclick=()=>setMovementMode(movementMode==='prone'?'stand':'prone');
  const sprintButton=document.querySelector('#sprint');
- if(sprintButton){sprintButton.addEventListener('pointerdown',e=>{e.preventDefault();sprintHeld=true;sprintButton.classList.add('active');sprintButton.setPointerCapture(e.pointerId)});const stopSprint=()=>{sprintHeld=false;sprintButton.classList.remove('active')};sprintButton.addEventListener('pointerup',stopSprint);sprintButton.addEventListener('pointercancel',stopSprint);sprintButton.addEventListener('lostpointercapture',stopSprint)}
+ if(sprintButton){
+  sprintButton.setAttribute('aria-pressed','false');
+  sprintButton.addEventListener('click',()=>{
+   sprintHeld=!sprintHeld;
+   sprintButton.classList.toggle('active',sprintHeld);
+   sprintButton.setAttribute('aria-pressed',String(sprintHeld));
+   if(sprintHeld&&movementMode!=='stand')setMovementMode('stand');
+   statusEl.textContent=sprintHeld?'CORRIDA ATIVADA':'EM COMBATE';
+  });
+ }
  const aimButton=document.querySelector('#aim');
  aimButton.setAttribute('aria-pressed','false');
  aimButton.onclick=()=>{aiming=!aiming;aimButton.classList.toggle('active',aiming);aimButton.setAttribute('aria-pressed',String(aiming));document.querySelector('#crosshair')?.classList.toggle('aiming',aiming);statusEl.textContent=aiming?'MIRA PRECISA':'EM COMBATE'};
