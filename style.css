@@ -114,3 +114,63 @@ h1{font:900 clamp(48px,13vw,62px)/.82 'Barlow Condensed',Impact,sans-serif;lette
 .install-hint{margin:12px 0 0!important;padding:9px 10px;border:1px solid #ffffff35;border-radius:8px;background:#ffffff0c;color:#f3d59a!important;font-size:9px!important;font-weight:800;letter-spacing:.45px;line-height:1.45!important}
 @supports (-webkit-touch-callout:none){html,body,#game{height:-webkit-fill-available}#hud{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}button{ -webkit-appearance:none;appearance:none} .control{-webkit-tap-highlight-color:transparent}}
 @media(orientation:landscape) and (max-height:500px){.lobby-card{padding:18px 24px 15px;width:min(82vw,560px)}h1{font-size:42px;margin:12px 0}.lobby-card p{margin:10px 0 14px;font-size:11px}.lobby-card small{margin-top:10px}.install-hint{margin-top:8px!important}#stick{width:108px;height:108px;bottom:18px}.run,.crouch{bottom:116px}.jump,.aim{bottom:22px}.reload{bottom:116px}.prone,.weapon{bottom:18px}.fire{bottom:18px}}
+
+
+/* SIGMAX-inspired tactical HUD pass — mobile-first */
+:root{--hud-ink:#101820;--hud-panel:rgba(15,25,32,.88);--hud-edge:rgba(220,235,240,.72);--hud-cyan:#6fe2ee;--hud-yellow:#f5c64c}
+#hud{font-family:Arial,Helvetica,sans-serif;text-shadow:0 1px 2px #000,0 0 5px #000b}
+.ff-map{border:2px solid #d5e0df;border-radius:1px;box-shadow:0 2px 8px #000b,inset 0 0 0 1px #263c40;background-color:#7caa8a;background-image:linear-gradient(35deg,transparent 44%,#d6d2b5 45% 47%,transparent 48%),linear-gradient(120deg,transparent 37%,#d9d4b7 38% 40%,transparent 41%),repeating-linear-gradient(0deg,transparent 0 19px,#607f6a55 20px 21px),repeating-linear-gradient(90deg,transparent 0 22px,#607f6a55 23px 24px)}
+.ff-map:before{content:"";position:absolute;inset:0;background:linear-gradient(145deg,transparent 30%,#315f4c44 31% 48%,transparent 49%),linear-gradient(25deg,#c4bd8a55 0 12%,transparent 13% 76%,#37694d55 77%);pointer-events:none}
+.ff-map small{z-index:1;background:#17252bc9;padding:2px 4px;bottom:0;left:0;font-size:6px;letter-spacing:1.3px}
+.map-pin{z-index:2;color:#fff;font-size:19px;filter:drop-shadow(0 1px 2px #000)}
+.ff-team{gap:1px}
+.ff-team div{height:18px;background:linear-gradient(90deg,#14242beF,#1b3136b8 78%,transparent);border-left:2px solid #62d9e6;font-size:9px;letter-spacing:.35px}
+.ff-team b{height:18px;width:18px;background:#278c9d!important;font-size:10px}
+.ff-team i{color:#75e4e7;font-size:9px}
+.ff-utility span{background:#14232bdc;border:1px solid #b6c8c9;border-radius:2px;width:27px;height:27px;font-size:14px}
+.ff-top-right{gap:2px}
+.ff-counter{background:linear-gradient(180deg,#263943ed,#101d26ed);border:1px solid #82969d;border-radius:1px;height:25px;min-width:31px;color:#f4cf55;font-size:10px}
+.ff-counter b{font-size:10px}
+.ff-weapon-panel{background:linear-gradient(145deg,#1d3039f2,#0b171ff2);border:1px solid #9aadb1;border-radius:1px;box-shadow:0 2px 8px #0008}
+.ff-current{height:35px}
+.ff-current strong{font-family:'Barlow Condensed',Arial,sans-serif;font-size:22px;letter-spacing:.5px;color:#fff}
+.ff-current span{font-size:10px;color:#a9c0c5}
+.ff-current b{background:#b58d28;color:#fff;padding:3px 7px;border:1px solid #e8cb70}
+.ff-slots span{height:30px;background:#172832;border:1px solid #71868e;color:#d9e4e4}
+.ff-slots span:first-child{border-color:#e6c45c}
+.ff-items span{background:#172832c9;border:1px solid #71868e}
+.ff-tip{background:#14252edb;border:1px solid #8da4aa;border-radius:1px;font-size:8px;letter-spacing:1px}
+.ff-status span{background:#12232bd9;border:1px solid #71868e;border-radius:1px}
+.crosshair{width:22px;height:22px}
+.crosshair:before{height:7px;left:10px;box-shadow:0 14px 0 #fff}
+.crosshair:after{width:7px;top:10px;box-shadow:14px 0 0 #fff}
+#controls .control{border-radius:50%;background:linear-gradient(145deg,#344b55eF,#101f29f2);border:1.5px solid #d4e0df;box-shadow:0 3px 8px #000a,inset 0 1px 2px #ffffff55}
+#controls .control:after{font-size:7px;letter-spacing:.8px;color:#fff}
+#controls .control.active,#controls .control:active{background:linear-gradient(145deg,#e2bd50,#94701c);border-color:#fff4bd}
+#controls .fire{background:linear-gradient(145deg,#e6c34f,#a87919)!important;border:2px solid #fff0a7!important;color:#172027;text-shadow:0 1px #fff6}
+#controls .fire:after{color:#172027;text-shadow:none;font-weight:900}
+#stick{border:1.5px solid #e0eeeea8;background:radial-gradient(circle,#ffffff13 0 35%,#172b36a8 70%);box-shadow:inset 0 0 0 8px #ffffff0b,0 4px 14px #0008}
+#knob{background:linear-gradient(145deg,#edf4ef,#9eafb0);border:2px solid #fff;box-shadow:0 3px 9px #000a}
+@media(orientation:portrait){
+ .ff-map{left:8px;top:7px;width:108px;height:75px}
+ .ff-team{left:8px;top:86px;width:108px}
+ .ff-utility{left:122px;top:7px}
+ .ff-top-right{right:7px;top:7px}
+ .ff-weapon-panel{right:7px;top:36px;width:126px}
+ .ff-tip{top:112px;max-width:calc(100vw - 140px);overflow:hidden;text-overflow:ellipsis}
+ .ff-status{left:7px;bottom:5px}
+ #stick{left:12px;bottom:43px}
+ .run{right:73px;bottom:184px}.crouch{right:8px;bottom:184px}
+ .jump{right:73px;bottom:116px}.aim{right:8px;bottom:116px}
+ .reload{right:140px;bottom:184px}
+ .fire{right:76px;bottom:30px}
+ .prone{right:8px;bottom:30px}
+ .weapon{right:145px;bottom:39px}
+}
+@media(max-height:520px) and (orientation:landscape){
+ .ff-map{width:116px;height:72px}.ff-team{top:76px}.ff-team div{height:15px}
+ .ff-weapon-panel{top:31px}.ff-items{top:112px}
+ #stick{width:100px;height:100px;bottom:12px}
+ .run{bottom:104px}.crouch{bottom:104px}.reload{bottom:104px}
+ .jump{bottom:12px}.aim{bottom:12px}.prone{bottom:10px}.weapon{bottom:10px}.fire{bottom:78px}
+}
