@@ -168,9 +168,24 @@ function setBoneWorldRotation(bone,worldRotation){
  const parentRotation=bone.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
  bone.quaternion.copy(parentRotation.multiply(worldRotation));
 }
-function applyCombatWeaponPose(){
- // Postura militar removida: não força IK, cotovelos ou rotação dos punhos.
- // As animações originais do personagem controlam os braços naturalmente.
+function applyCombatWeaponPose(crouch=false,prone=false,dt=0){
+ // Rifle ancorado no espaço do tronco; as duas mãos são resolvidas até
+ // pontos de contato reais no punho e no guarda-mão. Assim a arma não
+ // fica solta à frente do corpo nem depende de uma pose militar fixa.
+ if(!weaponEquipped||!weaponModel||!characterVisual)return;
+ const rightUpper=combatBones.upperarm_r,rightLower=combatBones.lowerarm_r,rightHand=combatBones.hand_r;
+ const leftUpper=combatBones.upperarm_l,leftLower=combatBones.lowerarm_l,leftHand=combatBones.hand_l;
+ if(!rightUpper||!rightLower||!rightHand||!leftUpper||!leftLower||!leftHand)return;
+ characterVisual.updateMatrixWorld(true);
+ weaponModel.updateMatrixWorld(true);
+ // O ponto do punho fica dentro da empunhadura; a mão esquerda apoia
+ // a parte dianteira do guarda-mão. Os pontos acompanham a arma escalada.
+ const rightGrip=weaponModel.localToWorld(new THREE.Vector3(0,-.105,.075));
+ const leftGrip=weaponModel.localToWorld(new THREE.Vector3(0,.005,-.53));
+ // Recalcula depois do mixer em cada frame: a animação continua controlando
+ // pernas e tronco, enquanto os braços terminam com as mãos na arma.
+ solveArmIK(rightUpper,rightLower,rightHand,rightGrip);
+ solveArmIK(leftUpper,leftLower,leftHand,leftGrip);
 }
 
 function createPlayerAnchor(){
@@ -297,6 +312,7 @@ function animateRig(dt,speed,sprinting,crouch,prone){
  else if(moving)clip=sprinting?sprint:walk;
  if(clip!==activeCharacterClip)playCharacterClip(clip);
  characterMixer.update(dt);
+ applyCombatWeaponPose(crouch,prone,dt);
 }
 function bind(){
  const stick=$('stick'),knob=$('knob');let sid=null,rect=null;
