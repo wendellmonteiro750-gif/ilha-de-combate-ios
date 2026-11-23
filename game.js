@@ -370,25 +370,29 @@ function update(dt){
  const inputMagnitude=Math.min(1,Math.hypot(moveX,moveY));
  const moving=inputMagnitude>.08;
  const crouch=pose==='crouch',prone=pose==='prone';
- const sprinting=run&&!crouch&&!prone&&moving&&stamina>1;
+ // Corrida automática ao empurrar o joystick totalmente para frente,
+ // com botão de corrida como alternativa. Mirando, o sprint é bloqueado.
+ const fullForward=moveY<-.88&&Math.abs(moveX)<.48&&inputMagnitude>.9;
+ const sprinting=(run||fullForward)&&!aim&&!crouch&&!prone&&moving&&stamina>1;
  if(sprinting)stamina=Math.max(0,stamina-22*dt);else stamina=Math.min(100,stamina+14*dt);
  $('stamina').textContent='FÔLEGO '+Math.round(stamina);
- const speed=prone?.62:crouch?1.75:sprinting?6.1:3.15;
+ const speed=prone?.58:crouch?1.55:aim?2.35:sprinting?6.25:3.25;
  const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
  const right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
  const inputDir=forward.clone().multiplyScalar(-moveY).add(right.multiplyScalar(moveX));
  if(inputDir.length()>1)inputDir.normalize();
- // Locomoção 360 graus: o corpo acompanha suavemente a direção do
- // joystick; ao mirar, mantém o tronco orientado para a direção da câmera
- // para permitir deslocamento lateral e para trás sem girar a mira.
+ // Controle 360° relativo à câmera. O modelo Quaternius tem uma
+ // correção local de 180°; compensamos isso ao orientar o grupo do herói.
+ // Em mira, o tronco fica voltado para a câmera e pode deslocar-se de lado
+ // ou para trás sem perder a direção da mira.
  if(inputMagnitude>.08){
-  const facing=aim?Math.PI-yaw:Math.atan2(inputDir.x,inputDir.z);
+  const facing=aim?yaw:Math.atan2(inputDir.x,inputDir.z)-Math.PI;
   const turn=THREE.MathUtils.euclideanModulo(facing-hero.rotation.y+Math.PI,Math.PI*2)-Math.PI;
-  hero.rotation.y+=turn*(1-Math.exp(-dt*(aim?11:9)));
+  hero.rotation.y+=turn*(1-Math.exp(-dt*(aim?15:12)));
  }
  const targetVX=inputDir.x*speed*inputMagnitude;
  const targetVZ=inputDir.z*speed*inputMagnitude;
- const accel=moving?(sprinting?10:13):18;
+ const accel=moving?(sprinting?12:aim?16:14):20;
  velocityX=THREE.MathUtils.damp(velocityX,targetVX,accel,dt);
  velocityZ=THREE.MathUtils.damp(velocityZ,targetVZ,accel,dt);
  const nextX=hero.position.x+velocityX*dt,nextZ=hero.position.z+velocityZ*dt;
