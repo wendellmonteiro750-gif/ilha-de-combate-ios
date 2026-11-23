@@ -1,18 +1,23 @@
-# Ilha de Combate
+# Ilha de Combate — Novo Projeto
 
-Projeto original de battle royale 3D para iOS.
+Este repositório foi reiniciado como um protótipo independente de Battle Royale 3D para navegador e iPhone.
 
 ## Estado atual
-Este repositório inicia o planejamento técnico. Ainda não contém um jogo compilado, cenas 3D, modelos, animações ou multiplayer.
+- Cena 3D nova em Three.js.
+- Ilha de treino com praia, água, estrada, vegetação e construções.
+- Operador procedural local, sem dependência de modelo externo.
+- Câmera em terceira pessoa, controles por teclado e joystick/touch.
+- Alvos de treino e disparo inicial por raycast.
+- Interface mobile básica.
 
-## Plano inicial
-- Protótipo offline em Unity 3D.
-- Câmera em terceira pessoa e controles de toque.
-- Combate, armas, inventário e mapa em etapas posteriores.
-- Bots e multiplayer online somente após o protótipo básico.
+## Executar
+Abra `index.html` por um servidor estático ou GitHub Pages. O Three.js é carregado pelo CDN jsDelivr.
 
-## Requisitos de desenvolvimento
-A edição e compilação do projeto Unity para iOS exigem Unity Editor e uma ferramenta de build compatível com iOS (normalmente Xcode em um Mac ou serviço remoto de build). Um iPhone sozinho não executa o Unity Editor.
+## Próximas fases
+1. Validar controles e desempenho em iPhone.
+2. Evoluir modelo humano, rig e animações.
+3. Criar armas, recarga, impactos, áudio e inimigos com IA.
+4. Desenvolver mapa em setores, loot e zona segura.
+5. Otimizar renderização e colisões.
 
-## Aviso
-Este é um projeto original. Não inclui nem reproduz assets ou conteúdo proprietário de outros jogos.
+Este é o começo técnico do novo projeto, não uma versão final de Battle Royale.
