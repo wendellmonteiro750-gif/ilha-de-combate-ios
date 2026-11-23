@@ -147,36 +147,11 @@ function setBoneWorldRotation(bone,worldRotation){
  const parentRotation=bone.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
  bone.quaternion.copy(parentRotation.multiply(worldRotation));
 }
-function applyCombatWeaponPose(crouch,prone,dt){
- if(!weaponEquipped||!weaponModel||!characterVisual)return;
- // Military ready stance: stock tucked toward the right shoulder, firing hand
- // on the pistol grip and support hand extended beneath the handguard.
- const height=prone?.52:crouch?.99:1.22;
- const forward=prone?.70:aim?.56:.43;
- weaponModel.position.set(.10,height,forward);
- // O cano aponta no eixo local -Z. Como o corpo está virado em Y=PI,
- // a arma também gira PI: as rotações se compensam e o cano fica no -Z mundial.
- weaponModel.rotation.set(prone?-.10:-.035,0,0);
- if(performance.now()<firePoseUntil)weaponModel.rotation.x=THREE.MathUtils.damp(weaponModel.rotation.x,.015,22,dt);
- characterVisual.updateMatrixWorld(true);
- weaponModel.updateMatrixWorld(true);
- // Wrist targets sit inside the grip volumes, not at the center of the rifle.
- // Centro do punho da empunhadura, dentro do grip traseiro.
- const rightGrip=weaponModel.localToWorld(new THREE.Vector3(.015,-.145,.075));
- solveArmIK(combatBones.upperarm_r,combatBones.lowerarm_r,combatBones.hand_r,rightGrip);
- characterVisual.updateMatrixWorld(true);
- weaponModel.updateMatrixWorld(true);
- // A mão esquerda apoia o handguard, à frente do carregador.
- const leftGrip=weaponModel.localToWorld(new THREE.Vector3(-.015,-.005,-.53));
- solveArmIK(combatBones.upperarm_l,combatBones.lowerarm_l,combatBones.hand_l,leftGrip);
- characterVisual.updateMatrixWorld(true);
- const rifleRotation=weaponModel.getWorldQuaternion(new THREE.Quaternion());
- // Slight wrist cant differentiates the firing hand from the support hand.
- const rightRotation=rifleRotation.clone().multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0,0,-.12)));
- const leftRotation=rifleRotation.clone().multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0,0,.08)));
- setBoneWorldRotation(combatBones.hand_r,rightRotation);
- setBoneWorldRotation(combatBones.hand_l,leftRotation);
+function applyCombatWeaponPose(){
+ // Postura militar removida: não força IK, cotovelos ou rotação dos punhos.
+ // As animações originais do personagem controlam os braços naturalmente.
 }
+
 function createPlayerAnchor(){
  hero=new THREE.Group();hero.position.set(0,0,0);scene.add(hero);
  const loader=new GLTFLoader();
