@@ -2,7 +2,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
 import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
 const $=id=>document.getElementById(id);
 const root=$('game');
-let scene,camera,renderer,clock,hero,targets=[],yaw=0,pitch=-.12,moveYaw=0,stickActive=false,moveX=0,moveY=0,velocityX=0,velocityZ=0,run=false,aim=false,shoot=false,pose='stand',velocityY=0,grounded=true,ammo=30,reloading=false,lastShot=0,started=false,cameraRecoil=0,cameraShake=0,stamina=100,worldBlockers=[],cameraRay=new THREE.Raycaster(),cameraDesired=new THREE.Vector3(),cameraCurrentDistance=5.6;
+let scene,camera,renderer,clock,hero,targets=[],yaw=0,pitch=-.12,moveYaw=0,stickActive=false,moveX=0,moveY=0,velocityX=0,velocityZ=0,run=false,aim=false,shoot=false,pose='stand',velocityY=0,grounded=true,ammo=30,ammoReserve=90,eliminations=0,playerHealth=100,bots=[],playerDownUntil=0,reloading=false,lastShot=0,started=false,cameraRecoil=0,cameraShake=0,stamina=100,worldBlockers=[],cameraRay=new THREE.Raycaster(),cameraDesired=new THREE.Vector3(),cameraCurrentDistance=5.6;
 const mat=(color,roughness=.9)=>new THREE.MeshStandardMaterial({color,roughness});
 function mesh(parent,geo,material,pos){const o=new THREE.Mesh(geo,material);o.position.set(...pos);parent.add(o);o.castShadow=true;o.receiveShadow=true;return o}
 function cube(parent,w,h,d,m,x,y,z){return mesh(parent,new THREE.BoxGeometry(w,h,d),m,[x,y,z])}
@@ -41,7 +41,7 @@ function buildIsland(){
  house(-10,-8,0xc99b63);house(12,-13,0xb7c2b0);house(-13,15,0xc9825d);
  addGrass();
  buildForest();
- for(let i=0;i<5;i++){const g=new THREE.Group();g.position.set(-4+i*2,-.02,-25);scene.add(g);cube(g,.85,1.65,.16,mat(0xd6d1bd),0,.85,0);cube(g,.35,.35,.2,mat(0xc84735),0,1.05,.12);targets.push(g)}
+ for(let i=0;i<5;i++)createCombatBot(-8+i*4,-24-(i%2)*3,i);
  for(let i=0;i<16;i++){const a=i/16*Math.PI*2,x=Math.cos(a)*38,z=Math.sin(a)*38;const rock=mesh(scene,new THREE.DodecahedronGeometry(1.5,0),mat(0x788078),[x,.45,z]);rock.scale.y=.7}
 }
 function tree(x,z,s){const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);mesh(g,new THREE.CylinderGeometry(.18*s,.27*s,2*s,9),mat(0x65452d,1),[0,s,0]);const green=mat(0x245b35,1),light=mat(0x367b43,1);mesh(g,new THREE.SphereGeometry(1.18*s,12,10),green,[0,2.35*s,0]);mesh(g,new THREE.SphereGeometry(.86*s,12,10),light,[.48*s,2.72*s,.08]);mesh(g,new THREE.SphereGeometry(.72*s,12,10),green,[-.48*s,2.68*s,-.08]);}
@@ -85,7 +85,79 @@ function house(x,z,color){
  for(const side of [-1,1])cube(g,.12,3.05,.12,trim,side*2.92,1.55,2.52);
  worldBlockers.push({x,z,r:3.8});
 }
-// Personagem humano real Quaternius: malha skinned, esqueleto completo e clips humanoides.
+function createCombatBot(x,z,index){
+ const bot=new THREE.Group();
+ bot.name='Bot_Combate_'+(index+1);
+ bot.position.set(x,0,z);
+ bot.userData={health:100,maxHealth:100,alive:true,nextShot:performance.now()+1800+index*450,respawnAt:0,phase:index*.9,flashUntil:0};
+ const uniform=[0x657b55,0x8a6b4c,0x536b78,0x76615c,0x596c65][index%5];
+ const cloth=mat(uniform,.86),armor=mat(0x303b3a,.72),skin=mat(0xb88c6a,.88),helmet=mat(0x39483b,.72),dark=mat(0x151b1b,.68);
+ capsule(bot,.25,.66,cloth,0,1.18,0);
+ mesh(bot,new THREE.SphereGeometry(.19,12,10),skin,[0,1.83,0]);
+ mesh(bot,new THREE.SphereGeometry(.215,12,8),helmet,[0,1.96,0]);
+ cube(bot,.48,.34,.28,armor,0,1.34,.015);
+ const armL=capsule(bot,.085,.52,cloth,-.34,1.28,-.015);armL.rotation.z=-.48;
+ const armR=capsule(bot,.085,.52,cloth,.34,1.28,-.015);armR.rotation.z=.48;
+ const legL=capsule(bot,.105,.62,dark,-.14,.48,0);legL.rotation.z=-.04;
+ const legR=capsule(bot,.105,.62,dark,.14,.48,0);legR.rotation.z=.04;
+ cube(bot,.11,.10,.48,armor,.02,1.20,-.32);
+ cube(bot,.10,.09,.28,dark,.02,1.20,-.61);
+ cube(bot,.08,.14,.13,armor,.02,1.08,-.22);
+ bot.traverse(node=>{if(node.isMesh){node.castShadow=true;node.receiveShadow=true;node.userData.bot=bot}});
+ scene.add(bot);bots.push(bot);targets.push(bot);
+}
+function updateCombatBots(dt){
+ const now=performance.now();
+ for(const bot of bots){
+  const data=bot.userData;
+  if(!data.alive){
+   if(now>=data.respawnAt){
+    data.alive=true;data.health=data.maxHealth;bot.visible=true;
+    bot.position.set((Math.random()-.5)*25,0,-20-Math.random()*12);
+    data.nextShot=now+2200;
+   }
+   continue;
+  }
+  const dx=hero.position.x-bot.position.x,dz=hero.position.z-bot.position.z;
+  const distance=Math.hypot(dx,dz);
+  if(distance>5.8&&distance<23){
+   const pace=distance>10?1.05:.55;
+   bot.position.x+=dx/distance*pace*dt;
+   bot.position.z+=dz/distance*pace*dt;
+  }else if(distance<=5.8){
+   const sideX=-dz/Math.max(distance,.01),sideZ=dx/Math.max(distance,.01);
+   bot.position.x+=sideX*Math.sin(now*.001+data.phase)*.38*dt;
+   bot.position.z+=sideZ*Math.sin(now*.001+data.phase)*.38*dt;
+  }
+  bot.rotation.y=Math.atan2(-dx,-dz);
+  const sway=Math.sin(now*.004+data.phase)*.025;
+  bot.children[0].position.y=1.18+Math.abs(sway);
+  if(now<data.flashUntil){
+   bot.traverse(node=>{if(node.isMesh&&node.material&&node.material.emissive)node.material.emissive.setHex(0x552211)});
+  }else{
+   bot.traverse(node=>{if(node.isMesh&&node.material&&node.material.emissive)node.material.emissive.setHex(0x000000)});
+  }
+  if(distance<16&&distance>3&&now>=data.nextShot&&playerHealth>0){
+   playerHealth=Math.max(0,playerHealth-4);
+   data.nextShot=now+2100+Math.random()*650;
+   $('health').textContent='VIDA '+playerHealth;
+   $('playerCounter').textContent=playerHealth;
+   if(playerHealth===0){
+    playerDownUntil=now+2600;
+    $('message').textContent='VOCÊ FOI ELIMINADO';
+   }
+  }
+ }
+ if(playerHealth===0&&playerDownUntil&&now>=playerDownUntil){
+  playerHealth=100;playerDownUntil=0;hero.position.set(0,0,0);
+  $('health').textContent='VIDA 100';$('playerCounter').textContent='100';
+  $('message').textContent='VOCÊ VOLTOU AO COMBATE';
+ }
+ const alive=bots.filter(b=>b.userData.alive).length;
+ $('aliveCount').textContent=alive;
+ $('killCount').textContent=eliminations;
+}
+ // Personagem humano real Quaternius: malha skinned, esqueleto completo e clips humanoides.
 const CHARACTER_URL='https://cdn.jsdelivr.net/gh/Seyamalam/blood-league-kickoff@main/public/assets/vendor/quaternius/night-striker.glb';
 const ANIMATION_URL='https://cdn.jsdelivr.net/gh/Seyamalam/blood-league-kickoff@main/public/assets/vendor/quaternius/universal-animation-library.glb';
 const ANIMATION2_URL=new URL('./assets/UAL2_Standard.glb',import.meta.url).href;
@@ -409,7 +481,7 @@ function bind(){
  $('jump').addEventListener('pointerdown',e=>{e.preventDefault();if(grounded&&pose!=='prone'){velocityY=6.2;grounded=false}});
  $('crouch').addEventListener('pointerdown',e=>{e.preventDefault();setPose(pose==='crouch'?'stand':'crouch')});
  $('prone').addEventListener('pointerdown',e=>{e.preventDefault();setPose(pose==='prone'?'stand':'prone')});
- $('reload').addEventListener('pointerdown',e=>{e.preventDefault();if(!reloading&&ammo<30){reloading=true;reloadPoseUntil=performance.now()+1450;$('message').textContent='RECARREGANDO';setTimeout(()=>{ammo=30;reloading=false;stats();$('message').textContent='ÁREA DE TREINO'},1450)}});
+ $('reload').addEventListener('pointerdown',e=>{e.preventDefault();if(!reloading&&ammo<30&&ammoReserve>0){reloading=true;reloadPoseUntil=performance.now()+1450;$('message').textContent='RECARREGANDO';setTimeout(()=>{const needed=30-ammo,loaded=Math.min(needed,ammoReserve);ammo+=loaded;ammoReserve-=loaded;reloading=false;stats();$('message').textContent='COMBATE EM ANDAMENTO'},1450)}});
  // Controle de câmera por arrasto: inicia na área livre do canvas e
  // acompanha o mesmo dedo pela janela inteira, mesmo se sair do canvas.
  let drag=null;
@@ -438,7 +510,7 @@ function bind(){
  $('weapon').addEventListener('pointerdown',e=>{e.preventDefault();setWeaponMode(!weaponEquipped)});
 }
 function setPose(p){pose=p;$('poseLabel').textContent='POSTURA: '+(p==='stand'?'EM PÉ':p==='crouch'?'AGACHADO':'DEITADO');$('crouch').classList.toggle('active',p==='crouch');$('prone').classList.toggle('active',p==='prone')}
-function stats(){$('ammo').textContent=ammo+' / 90'}
+function stats(){$('ammo').textContent=ammo+' / '+ammoReserve}
 function showBulletTrail(start,end){
  // Projétil luminoso animado: sai do cano e percorre o mesmo ponto
  // encontrado pelo raio central da mira. A cauda acompanha a ponta do tiro.
@@ -483,7 +555,7 @@ function showBulletTrail(start,end){
  requestAnimationFrame(animateTracer);
 }
 function fireShot(){
- if(reloading||ammo<=0||performance.now()-lastShot<155)return;
+ if(reloading||ammo<=0||performance.now()-lastShot<155){if(ammo<=0&&!reloading)$('message').textContent='SEM MUNIÇÃO — RECARREGUE';return;}
  lastShot=performance.now();ammo--;stats();cameraRecoil=Math.min(.12,cameraRecoil+.035);cameraShake=Math.min(.08,cameraShake+.018);
  // 1) A câmera escolhe o ponto do mundo que está exatamente no centro da mira.
  // Atualiza a matriz antes do raycast para usar a posição/rotação deste frame.
@@ -511,6 +583,12 @@ function fireShot(){
  showMuzzleFlash(muzzlePoint,shotDirection);
  if(aimHits.length){
   const hitRoot=aimHits[0].object;
+  const bot=hitRoot.userData.bot;
+  if(bot&&bot.userData.alive){
+   const data=bot.userData;data.health=Math.max(0,data.health-34);data.flashUntil=performance.now()+120;
+   if(data.health<=0){data.alive=false;data.respawnAt=performance.now()+6500;bot.visible=false;eliminations++;$('killCount').textContent=eliminations;$('message').textContent='INIMIGO ELIMINADO!';$('message').classList.add('hit');setTimeout(()=>{$('message').classList.remove('hit');if(playerHealth>0)$('message').textContent='COMBATE EM ANDAMENTO'},650)}
+   else{$('message').textContent='ACERTO! '+data.health+' HP';}
+  }
   const originalMaterials=[];
   hitRoot.traverse(node=>{
    if(node.isMesh){
@@ -546,6 +624,7 @@ function showMuzzleFlash(position,direction){
  requestAnimationFrame(animateFlash);
 }
 function update(dt){
+ updateCombatBots(dt);
  const inputMagnitude=Math.min(1,Math.hypot(moveX,moveY));
  const moving=inputMagnitude>.08;
  const crouch=pose==='crouch',prone=pose==='prone';
