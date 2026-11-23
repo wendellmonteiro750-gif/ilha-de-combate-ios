@@ -378,28 +378,11 @@ function animateRig(dt,speed,sprinting,crouch,prone){
  const sprint=exactClip('Sprint_Loop','Run_Fwd_Loop')||walk;
  const crouchIdle=exactClip('Crouch_Idle_Loop')||idle;
  const crouchMove=exactClip('Crouch_Fwd_Loop','Crouch_Fwd_L_Loop')||walk;
-
- // Entrada e saída em posição de tiro de barriga para baixo.
- if(prone!==proneState){
-  proneState=prone;
-  playProneTransition(prone?'Crawl_Enter':'Crawl_Exit',now);
- }
- const transitionActive=!!proneTransition&&now<proneTransitionUntil;
- if(proneTransition==='Crawl_Enter'&&proneState){
-  if(transitionActive){characterMixer.update(dt);return;}
-  proneTransition=null;
-  const proneIdle=exactClip('Crawl_Idle_Loop');
-  if(proneIdle)playCharacterClip(proneIdle,true);
-  else {characterMixer.update(dt);return;}
- }
- if(proneTransition==='Crawl_Exit'&&!proneState){
-  if(transitionActive){characterMixer.update(dt);return;}
-  proneTransition=null;
-  playCharacterClip(idle,true);
- }
- if(proneState){
-  const proneIdle=exactClip('Crawl_Idle_Loop');
-  if(proneIdle&&activeCharacterClip!==proneIdle)playCharacterClip(proneIdle,true);
+ // A pose de barriga para baixo é aplicada proceduralmente no corpo inteiro
+ // no update principal. Não depende de Crawl_Enter/LayToIdle, que não são
+ // compatíveis/garantidos para este rig e causavam o personagem de costas.
+ if(prone){
+  if(activeCharacterClip!==idle)playCharacterClip(idle,true);
   characterMixer.update(dt);
   return;
  }
@@ -407,7 +390,7 @@ function animateRig(dt,speed,sprinting,crouch,prone){
  if(crouch)clip=moving?crouchMove:crouchIdle;
  else if(!grounded)clip=exactClip('Jump_Loop','Jump_Start')||idle;
  else if(moving)clip=sprinting?sprint:walk;
- if(!crouch&&!moving&&!transitionActive){
+ if(!crouch&&!moving){
   if(reloading)clip=exactClip('Rifle_Reload_Loop','Rifle_Reload','Reload_Rifle')||clip;
   else if(now<firePoseUntil)clip=exactClip('Rifle_Fire_Loop','Rifle_Fire','Fire_Rifle')||clip;
   else if(aim)clip=exactClip('Rifle_Aim_Loop','Rifle_Aiming_Loop','Aim_Rifle_Loop')||clip;
@@ -614,6 +597,12 @@ function update(dt){
  }
  const horizontalSpeed=Math.hypot(velocityX,velocityZ);
  animateRig(dt,horizontalSpeed,sprinting,crouch,prone);
+ // Rotação corporal procedural em torno da base dos pés: -90° coloca
+ // frente/peito voltados ao chão. Suavização evita teleporte da malha.
+ if(characterVisual){
+  const targetProneTilt=prone?-Math.PI/2:0;
+  characterVisual.rotation.x=THREE.MathUtils.damp(characterVisual.rotation.x,targetProneTilt,prone?10:12,dt);
+ }
  const target=new THREE.Vector3(hero.position.x,hero.position.y+(prone?.48:crouch?1.20:1.58),hero.position.z);
  const baseDist=(aim?3.15:sprinting?5.15:5.6)*.55; // câmera 45% mais próxima do personagem
  const shoulder=(aim?1.45:1.80)*.55; // aumenta o espaço lateral entre o soldado e a mira branca
