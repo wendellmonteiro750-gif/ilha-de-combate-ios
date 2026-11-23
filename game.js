@@ -460,8 +460,17 @@ function addRifle(rig,index=0){
 async function createFighter(isEnemy=false,index=0){
  if(!humanModelPromise)humanModelPromise=new GLTFLoader().loadAsync(HUMAN_MODEL_URL);
  const source=await humanModelPromise;
- const nativeRun=source.animations.find(a=>/sprint|running|run|jog/i.test(a.name));if(nativeRun)HUMAN_ROLE_CLIPS.run=nativeRun.name;
- const nativeJump=source.animations.find(a=>/jump|leap/i.test(a.name));if(nativeJump)HUMAN_ROLE_CLIPS.jump=nativeJump.name;
+ // Descobre os nomes reais dos clips do GLB; não presume nomes como "Idle" e "Walk".
+ const clips=source.animations||[];
+ const findClip=pattern=>clips.find(a=>pattern.test(a.name));
+ const idleClip=findClip(/idle|stand|breath/i)||clips[0];
+ const walkClip=findClip(/walk|walking|locomotion/i)||idleClip;
+ const runClip=findClip(/sprint|running|run|jog/i)||walkClip;
+ const jumpClip=findClip(/jump|leap|fall/i)||walkClip||idleClip;
+ if(idleClip)HUMAN_ROLE_CLIPS.idle=idleClip.name;
+ if(walkClip)HUMAN_ROLE_CLIPS.walk=walkClip.name;
+ if(runClip)HUMAN_ROLE_CLIPS.run=runClip.name;
+ if(jumpClip)HUMAN_ROLE_CLIPS.jump=jumpClip.name;
  const model=SkeletonUtils.clone(source.scene),holder=new THREE.Group();holder.add(model);
  model.updateMatrixWorld(true);
  const bounds=new THREE.Box3().setFromObject(model),height=Math.max(.1,bounds.max.y-bounds.min.y);
@@ -478,6 +487,30 @@ async function createFighter(isEnemy=false,index=0){
    }
   }
  });
+ // Normaliza os nomes dos ossos para rigs Mixamo com prefixos diferentes.
+ const boneAliases={
+  mixamorigHips:/hips|pelvis/,
+  mixamorigSpine:/spine$/,
+  mixamorigSpine1:/spine1|spine_01/,
+  mixamorigSpine2:/spine2|spine_02/,
+  mixamorigHead:/head$/,
+  mixamorigLeftUpLeg:/(left.*upleg|upleg.*left)/,
+  mixamorigRightUpLeg:/(right.*upleg|upleg.*right)/,
+  mixamorigLeftLeg:/(left.*leg$|left.*knee)/,
+  mixamorigRightLeg:/(right.*leg$|right.*knee)/,
+  mixamorigLeftArm:/(left.*arm$|left.*upperarm)/,
+  mixamorigRightArm:/(right.*arm$|right.*upperarm)/,
+  mixamorigLeftForeArm:/(left.*forearm|left.*lowerarm)/,
+  mixamorigRightForeArm:/(right.*forearm|right.*lowerarm)/,
+  mixamorigLeftHand:/left.*hand$/,
+  mixamorigRightHand:/right.*hand$/
+ };
+ const normalizedBones=[...bones.entries()].map(([name,bone])=>[name.toLowerCase().replace(/[^a-z0-9]/g,''),bone]);
+ for(const [alias,pattern] of Object.entries(boneAliases)){
+  if(bones.has(alias))continue;
+  const found=normalizedBones.find(([name])=>pattern.test(name));
+  if(found)bones.set(alias,found[1]);
+ }
  const mixer=new THREE.AnimationMixer(model),actions=new Map();
  for(const sourceClip of source.animations){const clip=sourceClip.clone();for(const track of clip.tracks){if(/Hips.*position/i.test(track.name)){for(let k=0;k<track.values.length;k+=3){track.values[k]=0;track.values[k+2]=0;}}}actions.set(clip.name,mixer.clipAction(clip));}
  let current=null,playing='';
@@ -486,7 +519,8 @@ async function createFighter(isEnemy=false,index=0){
   lib:{role(role){return {clip:HUMAN_ROLE_CLIPS[role]||'Idle',loop:true}}},
   get playing(){return playing},
   playRole(role,opts={}){
-   const clip=HUMAN_ROLE_CLIPS[role]||'Idle',next=actions.get(clip)||actions.get('Idle');
+   const clip=HUMAN_ROLE_CLIPS[role]||HUMAN_ROLE_CLIPS.idle;
+   const next=actions.get(clip)||actions.get(HUMAN_ROLE_CLIPS.idle)||actions.values().next().value;
    if(!next)return Promise.resolve(false);
    const speed=opts.speed||1;
    if(current===next){next.timeScale=speed;return Promise.resolve(true)}
