@@ -169,7 +169,7 @@ function house(x,z,color){
  const w=9,d=8,h=3.6,t=.25;
  cube(g,w,.16,d,mat(0x756b57,1),0,.08,0);
  const wallPart=(len,px,pz,axis)=>{const part=axis==='x'?cube(g,len,h,t,wall,px,h/2,pz):cube(g,t,h,len,wall,px,h/2,pz);part.castShadow=true;part.userData.cameraObstacle=true;cameraBlockerMeshes.push(part);const n=Math.ceil(len/.8);for(let i=0;i<=n;i++){const p=-len/2+len*i/n;worldBlockers.push(axis==='x'?{x:x+px+p,z:z+pz,r:.36}:{x:x+px,z:z+pz+p,r:.36})}};
- wallPart(w,0,-d/2,'x');wallPart(w,0,d/2,'x');wallPart(d,-w/2,0,'z');wallPart(d,w/2,0,'z');
+ wallPart(w,0,-d/2,'x');wallPart((w-2.2)/2,-(w+2.2)/4,d/2,'x');wallPart((w-2.2)/2,(w+2.2)/4,d/2,'x');wallPart(d,-w/2,0,'z');wallPart(d,w/2,0,'z');
  // Split front facade to leave a proper entrance.
  cube(g,2.2,2.2,.22,wall,-3.4,1.1,d/2);
  cube(g,2.2,2.2,.22,wall,3.4,1.1,d/2);
