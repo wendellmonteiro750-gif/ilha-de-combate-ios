@@ -1,7 +1,7 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 const $=id=>document.getElementById(id);
 const root=$('game');
-let scene,camera,renderer,clock,hero,rig={},weapon,targets=[],yaw=0,pitch=-.12,moveX=0,moveY=0,run=false,aim=false,shoot=false,pose='stand',velocityY=0,grounded=true,walkT=0,ammo=30,reloading=false,lastShot=0,started=false;
+let scene,camera,renderer,clock,hero,rig={},weapon,targets=[],yaw=0,pitch=-.12,moveX=0,moveY=0,run=false,aim=false,shoot=false,pose='stand',proneBlend=0,velocityY=0,grounded=true,walkT=0,ammo=30,reloading=false,lastShot=0,started=false;
 const mat=(color,roughness=.9)=>new THREE.MeshStandardMaterial({color,roughness});
 function mesh(parent,geo,material,pos){const o=new THREE.Mesh(geo,material);o.position.set(...pos);parent.add(o);o.castShadow=true;o.receiveShadow=true;return o}
 function cube(parent,w,h,d,m,x,y,z){return mesh(parent,new THREE.BoxGeometry(w,h,d),m,[x,y,z])}
@@ -116,6 +116,7 @@ function fireShot(){if(reloading||ammo<=0||performance.now()-lastShot<160)return
 function update(dt){
  const moving=Math.abs(moveX)+Math.abs(moveY)>.08;
  const crouch=pose==='crouch',prone=pose==='prone';
+ proneBlend=THREE.MathUtils.damp(proneBlend,prone?1:0,7.5,dt);
  const speed=prone?.52:crouch?1.55:run?6.8:3.35;
  // Movement is camera-relative, while the upper body can remain oriented toward aim.
  const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
@@ -135,26 +136,36 @@ function update(dt){
  const strafe=THREE.MathUtils.clamp(moveX,-1,1);
  const movingBlend=moving?1:0,runBlend=run&&!crouch&&!prone&&moving?1:0;
  // Smooth transitions between standing, crouched and prone silhouettes.
- rig.body.position.y=THREE.MathUtils.lerp(rig.body.position.y,prone?.28:crouch?.72:1.03,1-Math.exp(-dt*9));
- rig.body.rotation.x=THREE.MathUtils.lerp(rig.body.rotation.x,prone?-Math.PI/2:aim?-.09:0,1-Math.exp(-dt*10));
+ // Deitar em sequência: abaixa o centro de gravidade, leva o peito ao chão
+ // e estende o corpo gradualmente, em vez de apenas girar a câmera.
+ const proneHeight=THREE.MathUtils.lerp(1.03,.34,proneBlend);
+ const lowHeight=THREE.MathUtils.lerp(crouch?.72:1.03,proneHeight,proneBlend);
+ rig.body.position.y=THREE.MathUtils.lerp(rig.body.position.y,lowHeight,1-Math.exp(-dt*11));
+ const pronePitch=-1.12*proneBlend;
+ rig.body.rotation.x=THREE.MathUtils.lerp(rig.body.rotation.x,pronePitch+(1-proneBlend)*(aim?-.09:0),1-Math.exp(-dt*9));
  rig.body.rotation.z=THREE.MathUtils.lerp(rig.body.rotation.z,aim?-.035*strafe:-.10*strafe,1-Math.exp(-dt*8));
  rig.head.rotation.x=THREE.MathUtils.lerp(rig.head.rotation.x,prone?.08:aim?-.10: moving?-.025:Math.sin(walkT*1.7)*.012,1-Math.exp(-dt*8));
  rig.head.rotation.y=THREE.MathUtils.lerp(rig.head.rotation.y,aim?0:strafe*.035,1-Math.exp(-dt*7));
  // Alternating stride, knee bend and planted-foot motion.
  rig.legs.forEach(({upper,knee,side})=>{
   const phase=side===1?gait:opposite;
+  const crawl= moving ? Math.sin(walkT*1.35+(side===1?0:Math.PI)) : Math.sin(walkT*.65+(side===1?0:Math.PI))*.08;
   const swing=moving?phase*(.48+runBlend*.32):Math.sin(walkT*.5)*.018;
-  upper.rotation.x=THREE.MathUtils.lerp(upper.rotation.x,prone?0:crouch?swing*.28:swing,1-Math.exp(-dt*12));
-  knee.rotation.x=THREE.MathUtils.lerp(knee.rotation.x,prone?0:crouch?.45+Math.max(0,-phase)*.18:moving?Math.max(0,-phase)*(.55+runBlend*.55):.025,1-Math.exp(-dt*12));
+  const proneLeg=side===1?-.12+crawl*.30:-.12-crawl*.30;
+  const proneKnee=.42+Math.max(0,crawl)*.22;
+  upper.rotation.x=THREE.MathUtils.lerp(upper.rotation.x,THREE.MathUtils.lerp(crouch?swing*.28:swing,proneLeg,proneBlend),1-Math.exp(-dt*12));
+  knee.rotation.x=THREE.MathUtils.lerp(knee.rotation.x,THREE.MathUtils.lerp(crouch?.45+Math.max(0,-phase)*.18:moving?Math.max(0,-phase)*(.55+runBlend*.55):.025,proneKnee,proneBlend),1-Math.exp(-dt*12));
  });
  // Two-bone procedural IK: each palm is placed at a real grip point on the rifle.
  const downAxis=new THREE.Vector3(0,-1,0);
  rig.arms.forEach(({upper,fore,hand,side})=>{
-  const shoulder=new THREE.Vector3(side*.46,.82,0);
+  const shoulder=new THREE.Vector3(side*THREE.MathUtils.lerp(.46,.42,proneBlend),THREE.MathUtils.lerp(.82,.69,proneBlend),THREE.MathUtils.lerp(0,.02,proneBlend));
   const grip=weapon.position.clone().add(side===1
    ? new THREE.Vector3(0,-.20,-.18)       // right hand on the trigger grip
    : new THREE.Vector3(0,-.02,-.40));     // left hand supporting the fore-end
   grip.y+=crouch?-.035:0;
+  // Cotovelos mais baixos e abertos no apoio deitado, mantendo as mãos nos punhos.
+  grip.y+=proneBlend*.035;
   if(moving){grip.y+=Math.sin(walkT+(side===1?0:Math.PI))*.018}
   const reach=grip.clone().sub(shoulder);
   const distance=THREE.MathUtils.clamp(reach.length(),.08,.995);
@@ -165,6 +176,7 @@ function update(dt){
   let bend=new THREE.Vector3().crossVectors(direction,new THREE.Vector3(0,0,1));
   if(bend.lengthSq()<.001)bend.set(1,0,0);
   bend.normalize().multiplyScalar(side===1?1:-1);
+  bend.lerp(new THREE.Vector3(side*.85,-.10,.48),proneBlend).normalize();
   const elbow=shoulder.clone().addScaledVector(direction,along).addScaledVector(bend,height);
   const upperDir=elbow.clone().sub(shoulder).normalize();
   const foreDir=grip.clone().sub(elbow).normalize();
@@ -178,13 +190,16 @@ function update(dt){
  // Small breathing/idle motion and recoil.
  rig.body.position.y+=moving?Math.abs(gait)*.018:Math.sin(walkT*1.7)*.012;
  weapon.position.y=aim?.55:moving?.51:.50;
+ // Compensa a inclinação do tronco para o cano continuar apontado à frente,
+ // paralelo ao chão durante a posição deitada.
+ weapon.rotation.x=THREE.MathUtils.lerp(weapon.rotation.x,proneBlend*1.12+(1-proneBlend)*(aim?-.035:0),1-Math.exp(-dt*10));
  // Inclina le spalle e accompagna il fucile durante la mira e il movimento.
  rig.pelvis.rotation.y=THREE.MathUtils.lerp(rig.pelvis.rotation.y,aim?-.025*strafe:0,1-Math.exp(-dt*7));
  weapon.rotation.x=THREE.MathUtils.lerp(weapon.rotation.x,aim?-.035:0,1-Math.exp(-dt*12));
  if(shoot)fireShot();
  // Shoulder camera follows the player and tightens when aiming.
- const target=hero.position.clone().add(new THREE.Vector3(0,prone?1.0:crouch?1.55:2.02,0));
- const dist=aim?3.45:5.65;
+ const target=hero.position.clone().add(new THREE.Vector3(0,THREE.MathUtils.lerp(crouch?1.55:2.02,.62,proneBlend),0));
+ const dist=THREE.MathUtils.lerp(aim?3.45:5.65,4.15,proneBlend);
  const offset=new THREE.Vector3(Math.sin(yaw)*dist*Math.cos(pitch),dist*(.32+Math.sin(-pitch)),Math.cos(yaw)*dist*Math.cos(pitch));
  camera.position.lerp(target.clone().add(offset),1-Math.exp(-dt*8));
  camera.lookAt(target);
