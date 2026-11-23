@@ -342,16 +342,14 @@ function playCharacterClip(name,restart=false){
  activeCharacterClip=name;
 }
 function playProneTransition(name,now){
- // Usa a transição oficial da UAL2. IdleToLay é a opção direta;
- // se o pacote trouxer apenas LayToIdle, reproduzimos esse clip ao contrário.
+ // UAL1 tem clips próprios de rastejo em posição ventral.
+ // Não usar LayToIdle da UAL2: esse movimento termina de costas.
  const entering=name==='Crawl_Enter';
- const directEntry=entering?exactClip('IdleToLay'):null;
- const reverseEntry=entering?exactClip('LayToIdle'):null;
- const clipName=directEntry||reverseEntry||exactClip('LayToIdle');
+ const clipName=exactClip(entering?'Crawl_Enter':'Crawl_Exit');
  if(!clipName){
   proneActionMissing=true;
-  console.error('Nenhuma transição de deitar disponível. Clipes UAL2:',[...characterActions.keys()].filter(n=>/lay|prone|crawl/i.test(n)));
-  $('message').textContent='TRANSIÇÃO DE DEITAR NÃO CARREGADA';
+  console.error('Clip de transição ventral ausente:',name,'Clips de rastejo:',[...characterActions.keys()].filter(n=>/crawl/i.test(n)));
+  $('message').textContent='ANIMAÇÃO VENTRAL NÃO CARREGADA';
   return false;
  }
  proneActionMissing=false;
@@ -360,11 +358,7 @@ function playProneTransition(name,now){
  if(previous&&previous!==next)previous.fadeOut(.08);
  next.stop();
  next.reset();
- // IdleToLay e LayToIdle têm sentido natural; só invertemos LayToIdle
- // quando ele é usado como alternativa para entrar no chão.
- const reverse=entering&&!directEntry;
- next.time=reverse?next.getClip().duration:0;
- next.timeScale=reverse?-1:1;
+ next.timeScale=1;
  next.enabled=true;
  next.paused=false;
  next.setEffectiveWeight(1);
@@ -393,11 +387,10 @@ function animateRig(dt,speed,sprinting,crouch,prone){
  const transitionActive=!!proneTransition&&now<proneTransitionUntil;
  if(proneTransition==='Crawl_Enter'&&proneState){
   if(transitionActive){characterMixer.update(dt);return;}
-  // A ação de entrada termina com clampWhenFinished no último frame,
-  // que é a própria pose de barriga no chão. Mantemos esse frame parado.
   proneTransition=null;
-  characterMixer.update(dt);
-  return;
+  const proneIdle=exactClip('Crawl_Idle_Loop');
+  if(proneIdle)playCharacterClip(proneIdle,true);
+  else {characterMixer.update(dt);return;}
  }
  if(proneTransition==='Crawl_Exit'&&!proneState){
   if(transitionActive){characterMixer.update(dt);return;}
@@ -405,8 +398,8 @@ function animateRig(dt,speed,sprinting,crouch,prone){
   playCharacterClip(idle,true);
  }
  if(proneState){
-  // Não procura Crawl_Idle_Loop: a UAL2 não garante esse clip.
-  // Mantém a pose final da transição oficial, sem voltar para em pé.
+  const proneIdle=exactClip('Crawl_Idle_Loop');
+  if(proneIdle&&activeCharacterClip!==proneIdle)playCharacterClip(proneIdle,true);
   characterMixer.update(dt);
   return;
  }
