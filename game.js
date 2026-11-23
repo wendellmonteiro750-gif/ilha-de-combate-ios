@@ -421,7 +421,7 @@ function update(dt){
  const strafe=THREE.MathUtils.clamp(moveX,-1,1);
  const movingBlend=THREE.MathUtils.smoothstep(horizontalSpeed,.04,.8);
  runBlend=THREE.MathUtils.damp(runBlend,sprinting&&horizontalSpeed>.12?1:0,7,dt);
- const jumpBlend=grounded?0:THREE.MathUtils.clamp(Math.abs(velocityY)/6.2,0,1);
+ const jumpBlend=grounded?0:1;
  landingBlend=THREE.MathUtils.damp(landingBlend,0,5.5,dt);
  breathPhase+=dt*(moving?1.2:1.0);
  // Smooth transitions between standing, crouched and prone silhouettes.
