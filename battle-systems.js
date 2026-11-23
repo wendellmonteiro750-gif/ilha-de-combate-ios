@@ -1,7 +1,7 @@
 // Battle royale systems for Battle Island (offline prototype).
 export class BattleSystems {
-  constructor(THREE, scene, hero, onStatus=()=>{}) {
-    this.T=THREE; this.scene=scene; this.hero=hero; this.onStatus=onStatus;
+  constructor(THREE, scene, hero, onStatus=()=>{}, blockers=[]) {
+    this.T=THREE; this.scene=scene; this.hero=hero; this.onStatus=onStatus; this.blockers=blockers;
     this.phase='lobby'; this.items=[]; this.inventory={medkit:1, ammo:90, vest:0, helmet:0, backpack:0};
     this.weapons=[
       {name:'RIFLE AR',damage:34,rate:155,mag:30,reserve:90},
@@ -45,6 +45,19 @@ export class BattleSystems {
   syncZone(){this.zoneGroup.position.set(this.zoneCenter.x,0,this.zoneCenter.z);this.zoneGroup.scale.setScalar(this.zoneRadius);}
   makeMap(){
     const T=this.T, mat=(c)=>new T.MeshStandardMaterial({color:c,roughness:.9});
+    const pattern=(base,detail,kind)=>{
+      const canvas=document.createElement('canvas');canvas.width=128;canvas.height=128;
+      const ctx=canvas.getContext('2d');ctx.fillStyle=base;ctx.fillRect(0,0,128,128);
+      for(let i=0;i<420;i++){const x=Math.random()*128,y=Math.random()*128,a=.035+Math.random()*.12;ctx.fillStyle=detail;ctx.globalAlpha=a;ctx.fillRect(x,y,1+Math.random()*4,1+Math.random()*3)}
+      ctx.globalAlpha=.28;
+      if(kind==='wood'){for(let y=0;y<128;y+=16){ctx.fillStyle=detail;ctx.fillRect(0,y,128,1);for(let x=(y%32?18:4);x<128;x+=42){ctx.fillRect(x,y,1,16)}}}
+      if(kind==='concrete'){for(let y=12;y<128;y+=32){ctx.fillRect(0,y,128,1);for(let x=0;x<128;x+=32)ctx.fillRect(x+(y%64?12:0),y-16,1,16)}}
+      ctx.globalAlpha=1;const tex=new T.CanvasTexture(canvas);tex.colorSpace=T.SRGBColorSpace;tex.wrapS=tex.wrapT=T.RepeatWrapping;tex.repeat.set(2,2);tex.anisotropy=2;return tex;
+    };
+    const plaster=pattern('#b5a48a','#5d5347','concrete'),wood=pattern('#806044','#34271d','wood'),roofTex=pattern('#55504a','#aaa095','concrete');
+    const wallMaterial=(color)=>new T.MeshStandardMaterial({color,map:plaster,roughness:.96});
+    const floorMaterial=new T.MeshStandardMaterial({color:0xffffff,map:wood,roughness:.9});
+    const roofMaterial=new T.MeshStandardMaterial({color:0xffffff,map:roofTex,roughness:.94});
     // Three compact settlements with accessible-looking low buildings and perimeter roads.
     const sites=[[-58,-48],[58,-48],[-58,48],[58,48],[0,-82],[0,82],[-84,0],[84,0]];
     sites.forEach(([x,z],i)=>{
@@ -52,16 +65,16 @@ export class BattleSystems {
       for(let j=0;j<6;j++){
         const ox=(j%3)*10-10,oz=Math.floor(j/3)*10-5;
         const w=8.2,h=3.5,d=7.6;
-        const wallMat=mat([0xb7a17d,0x9eaa9d,0xb78b69][(i+j)%3]);
+        const wallMat=wallMaterial([0xffffff,0xe0e4d8,0xc9a887][(i+j)%3]);
         const door=1.45;
         const walls=[
           [w,h,.22,ox,h/2,oz-d/2],[.22,h,d,ox-w/2,h/2,oz],[.22,h,d,ox+w/2,h/2,oz],
           [(w-door)/2,h,.22,ox-(w+door)/4,h/2,oz+d/2],
           [(w-door)/2,h,.22,ox+(w+door)/4,h/2,oz+d/2]
         ];
-        walls.forEach(([ww,hh,dd,px,py,pz])=>{const part=new T.Mesh(new T.BoxGeometry(ww,hh,dd),wallMat);part.position.set(px,py,pz);part.castShadow=true;group.add(part)});
-        const floor=new T.Mesh(new T.BoxGeometry(w,.16,d),mat(0x796b55));floor.position.set(ox,.02,oz);group.add(floor);
-        const roof=new T.Mesh(new T.BoxGeometry(w+.5,.28,d+.5),mat([0x58483d,0x3f4b4d,0x6a5140][(i+j)%3]));roof.position.set(ox,h+.15,oz);group.add(roof);
+        walls.forEach(([ww,hh,dd,px,py,pz])=>{const part=new T.Mesh(new T.BoxGeometry(ww,hh,dd),wallMat);part.position.set(px,py,pz);part.castShadow=true;group.add(part);this.blockers.push({x:x+px,z:z+pz,w:ww,d:dd})});
+        const floor=new T.Mesh(new T.BoxGeometry(w,.16,d),floorMaterial);floor.position.set(ox,.02,oz);group.add(floor);
+        const roof=new T.Mesh(new T.BoxGeometry(w+.5,.28,d+.5),roofMaterial);roof.position.set(ox,h+.15,oz);group.add(roof);
         const lintel=new T.Mesh(new T.BoxGeometry(door,.22,.28),mat(0x594536));lintel.position.set(ox,h-.11,oz+d/2);group.add(lintel);
         const window=new T.Mesh(new T.BoxGeometry(1.25,1.05,.08),new T.MeshStandardMaterial({color:0x668d91,roughness:.22,metalness:.12}));window.position.set(ox-2.25,2.15,oz+d/2+.05);group.add(window);
         const table=new T.Mesh(new T.BoxGeometry(1.6,.16,.9),mat(0x65452e));table.position.set(ox+1.3,.95,oz-.8);group.add(table);
@@ -70,7 +83,7 @@ export class BattleSystems {
       }
     });
     const roadMat=mat(0x696c60);
-    for(const [x,z,w,d] of [[0,-31,5,38],[0,31,5,38],[-29,0,38,5],[29,0,38,5],[0,0,5,48]]){
+    for(const [x,z,w,d] of [[0,0,7,180],[-72,0,5,150],[72,0,5,150],[0,-72,150,5],[0,72,150,5],[-35,-35,70,5],[35,35,70,5]]){
       const road=new T.Mesh(new T.BoxGeometry(w,.05,d),roadMat);road.position.set(x,.015,z);this.scene.add(road);
     }
   }
