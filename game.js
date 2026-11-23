@@ -502,16 +502,18 @@ async function createFighter(isEnemy=false,index=0){
   update(dt){
    for(const item of this._ikRestore)item.bone.quaternion.copy(item.quaternion);
    this._ikRestore.length=0;
-   for(const item of this._stanceApplied)this.bones.get(item.name)?.quaternion.multiply(item.inverse);
+   for(let i=this._stanceApplied.length-1;i>=0;i--){const item=this._stanceApplied[i];this.bones.get(item.name)?.quaternion.multiply(item.inverse)}
    this._stanceApplied.length=0;
    mixer.update(dt);
    const locomotion=THREE.MathUtils.clamp(this.locomotionBlend||0,0,1);
    this.gaitPhase=(this.gaitPhase||0)+dt*(this.sprintBlend?13.5:8.5)*(.25+locomotion*.75);
    const gait=Math.sin(this.gaitPhase),opposite=Math.sin(this.gaitPhase+Math.PI);
+   const stepLift=Math.max(0,Math.cos(this.gaitPhase)),oppositeLift=Math.max(0,Math.cos(this.gaitPhase+Math.PI));
+   this.root.position.y=this.baseRootY+Math.abs(Math.sin(this.gaitPhase*2))*locomotion*(this.sprintBlend?.035:.018);
    const crouchFactor=this.stanceMode==='crouch'?.42:this.stanceMode==='prone'?.08:1;
    // A animação do GLB já movimenta as pernas; a camada procedural só corrige a passada para evitar duplicação exagerada.
-   const gaitAmount=locomotion*crouchFactor*(this.sprintBlend?.27:.19);
-   for(const [name,angle] of [['mixamorigLeftUpLeg',gait*.48],['mixamorigRightUpLeg',opposite*.48],['mixamorigLeftLeg',Math.max(0,-gait)*.62],['mixamorigRightLeg',Math.max(0,-opposite)*.62]]){
+   const gaitAmount=locomotion*crouchFactor*(this.sprintBlend?.42:.30);
+   for(const [name,angle] of [['mixamorigLeftUpLeg',gait*(this.sprintBlend?.78:.62)],['mixamorigRightUpLeg',opposite*(this.sprintBlend?.78:.62)],['mixamorigLeftLeg',Math.max(0,-gait)*(this.sprintBlend?1.05:.82)+stepLift*.10],['mixamorigRightLeg',Math.max(0,-opposite)*(this.sprintBlend?1.05:.82)+oppositeLift*.10]]){
     const bone=this.bones.get(name);if(!bone||gaitAmount<.001)continue;
     const delta=new THREE.Quaternion().setFromEuler(new THREE.Euler(angle*gaitAmount,0,0,'XYZ'));
     bone.quaternion.multiply(delta);this._stanceApplied.push({name,inverse:delta.clone().invert()});
