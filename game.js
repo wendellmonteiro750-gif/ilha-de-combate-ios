@@ -272,7 +272,7 @@ function addSettlementDetails(){
  for(const [cx,cz] of [[-12,-12],[22,9],[68,35],[-76,-42],[42,54]]){
   for(let i=0;i<8;i++){
    const x=cx-8+i*2.3;
-   box(scene, .12,1.05,.12,wood,x,.52,cz-8);
+   box(scene, .12,1.05,.12,wood,x,.52,cz-8);worldObstacles.push({x,z:cz-8,radius:.34});
    if(i<7)box(scene,2.3,.09,.12,wood,x+1.1,.48,cz-8);
    if(i<7)box(scene,2.3,.09,.12,wood,x+1.1,.82,cz-8);
   }
@@ -281,14 +281,14 @@ function addSettlementDetails(){
    box(pole,.12,3.4,.12,metal,0,1.7,0);box(pole,.8,.12,.12,metal,.32,3.25,0);
    const lamp=new THREE.Mesh(new THREE.SphereGeometry(.16,10,8),new THREE.MeshBasicMaterial({color:0xffe1a1}));
    lamp.position.set(.68,3.2,0);pole.add(lamp);
-   pole.position.set(cx+side*10,0,cz+7);scene.add(pole);
+   pole.position.set(cx+side*10,0,cz+7);scene.add(pole);worldObstacles.push({x:cx+side*10,z:cz+7,radius:.38});
   }
  }
  // Caixas, barris e paletes decorativos junto aos galpões.
  for(const [x,z] of [[43,30],[51,31],[-60,-42],[-68,-34],[70,-2],[74,-2]]){
   const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.34,.34,1.05,12),mat(0x596d68,.55,.5));
-  barrel.position.set(x,.53,z);barrel.castShadow=true;scene.add(barrel);
-  box(scene,.95,.72,.9,wood,x+1.5,.36,z+.6);
+  barrel.position.set(x,.53,z);barrel.castShadow=true;scene.add(barrel);worldObstacles.push({x,z,radius:.58});
+  box(scene,.95,.72,.9,wood,x+1.5,.36,z+.6);worldObstacles.push({x:x+1.5,z:z+.6,radius:.78});
  }
 }
 function addWorldDetail(){
@@ -606,24 +606,40 @@ function getHouseAtPosition(position){
  for(const o of worldObstacles){if(o.type!=='house')continue;const dx=position.x-o.x,dz=position.z-o.z,c=Math.cos(o.rotation),sn=Math.sin(o.rotation),lx=dx*c-dz*sn,lz=dx*sn+dz*c;if(Math.abs(lx)<4.0&&Math.abs(lz)<3.45)return {obstacle:o,lx,lz,c,sn};}
  return null;
 }
-function resolvePlayerObstacles(){
- const p=playerRig.holder.position,radius=.58;
+function resolvePlayerObstacles(previousPosition){
+ const p=playerRig.holder.position,radius=.7;
+ const previous=previousPosition||p.clone();
  for(const o of worldObstacles){
   if(o.type==='house'){
-   const dx=p.x-o.x,dz=p.z-o.z,c=Math.cos(o.rotation),sn=Math.sin(o.rotation);
-   let lx=dx*c-dz*sn,lz=dx*sn+dz*c,changed=false;
-   if(Math.abs(lx)<o.halfWidth+radius&&Math.abs(lz)<o.halfDepth+radius){
-    // Abertura frontal ampliada proporcionalmente à escala da construção.
-    if(lz>o.halfDepth-radius&&Math.abs(lx)>1.55-radius){lz=o.halfDepth+radius;changed=true;}
-    else if(lz< -o.halfDepth+radius){lz=-o.halfDepth-radius;changed=true;}
-    else if(lx>o.halfWidth-radius){lx=o.halfWidth+radius;changed=true;}
-    else if(lx< -o.halfWidth+radius){lx=-o.halfWidth-radius;changed=true;}
+   const c=Math.cos(o.rotation),sn=Math.sin(o.rotation);
+   const toLocal=(v)=>({x:(v.x-o.x)*c-(v.z-o.z)*sn,z:(v.x-o.x)*sn+(v.z-o.z)*c});
+   const a=toLocal(previous),b=toLocal(p),hx=o.halfWidth+radius,hz=o.halfDepth+radius;
+   const wasInside=Math.abs(a.x)<hx&&Math.abs(a.z)<hz;
+   const isInside=Math.abs(b.x)<hx&&Math.abs(b.z)<hz;
+   if(wasInside!==isInside){
+    const crossedFront=a.z>hz&&b.z<=hz||a.z<=hz&&b.z>hz;
+    const crossedDoor=crossedFront&&Math.abs((a.x+b.x)*.5)<1.55-radius;
+    if(!crossedDoor){p.x=previous.x;p.z=previous.z;}
+   }else if(isInside){
+    // Dentro da casa, mantém o jogador na área interna sem atravessar as paredes laterais/fundos.
+    if(Math.abs(b.x)>o.halfWidth-radius||Math.abs(b.z)>o.halfDepth-radius){
+     const dx=Math.abs(o.halfWidth-radius-Math.abs(b.x));
+     const dz=Math.abs(o.halfDepth-radius-Math.abs(b.z));
+     if(dx<dz)b.x=Math.sign(b.x)*(o.halfWidth-radius);
+     else b.z=Math.sign(b.z)*(o.halfDepth-radius);
+     p.x=o.x+b.x*c+b.z*sn;p.z=o.z-b.x*sn+b.z*c;
+    }
    }
-   if(changed){p.x=o.x+lx*c+lz*sn;p.z=o.z-lx*sn+lz*c;}
    continue;
   }
-  let dx=p.x-o.x,dz=p.z-o.z,distance=Math.hypot(dx,dz),minimum=o.radius+radius;
-  if(distance<minimum){if(distance<.001){dx=1;dz=0;distance=1}const nx=dx/distance,nz=dz/distance;p.x=o.x+nx*minimum;p.z=o.z+nz*minimum;const into=playerVelocity.x*nx+playerVelocity.z*nz;if(into<0){playerVelocity.x-=into*nx;playerVelocity.z-=into*nz}}
+  const dx=p.x-o.x,dz=p.z-o.z,distance=Math.hypot(dx,dz),minimum=(o.radius||.45)+radius;
+  if(distance<minimum){
+   if(distance<.001){p.x=previous.x;p.z=previous.z;continue;}
+   const nx=dx/distance,nz=dz/distance;
+   p.x=o.x+nx*minimum;p.z=o.z+nz*minimum;
+   const into=playerVelocity.x*nx+playerVelocity.z*nz;
+   if(into<0){playerVelocity.x-=into*nx;playerVelocity.z-=into*nz;}
+  }
  }
 }
 function play(rig,role,speed=1){if(!rig)return;const clip=rig.lib.role(role)?.clip;if(clip&&rig.playing!==clip)rig.playRole(role,{fade:.22,speed}).catch(()=>{})}
@@ -812,7 +828,7 @@ function animate(){
   const targetVelocity=move.clone().multiplyScalar(moveSpeed);
   const acceleration=movementMode==='prone'?7:movementMode==='crouch'?8:canSprint?11:9;
   playerVelocity.lerp(targetVelocity,1-Math.exp(-acceleration*dt));
-  p.position.addScaledVector(playerVelocity,dt);resolvePlayerObstacles();p.position.x=THREE.MathUtils.clamp(p.position.x,-124,124);p.position.z=THREE.MathUtils.clamp(p.position.z,-124,124);
+  const previousPlayerPosition=p.position.clone();p.position.addScaledVector(playerVelocity,dt);resolvePlayerObstacles(previousPlayerPosition);p.position.x=THREE.MathUtils.clamp(p.position.x,-124,124);p.position.z=THREE.MathUtils.clamp(p.position.z,-124,124);
  const grounded=p.position.y<=.001;
   const moving=playerVelocity.length()>.16;
   if(moving){dustClock-=dt;if(dustClock<=0){dustClock=movementMode==='prone'?.34:playerVelocity.length()>4.2?.12:.24;const foot=p.position.clone().add(new THREE.Vector3((Math.random()-.5)*.55,.12,(Math.random()-.5)*.55));for(let n=0;n<(movementMode==='prone'?1:3);n++)addParticle(foot,0xc6b58a,1.1,.055,.3)}
