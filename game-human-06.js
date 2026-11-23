@@ -490,8 +490,8 @@ function makeHumanoidModel(){
  const belt=new THREE.MeshStandardMaterial({color:0x292b27,roughness:.78}),metal=new THREE.MeshStandardMaterial({color:0x9c895d,metalness:.55,roughness:.42});
  const hair=new THREE.MeshStandardMaterial({color:0x30251f,roughness:.95}),eyes=new THREE.MeshStandardMaterial({color:0x211b18,roughness:.45});
  const bone=(name,parent,x,y,z)=>{const b=new THREE.Bone();b.name=name;b.position.set(x,y,z);parent.add(b);bones.set(name,b);return b};
- const ellipsoid=(parent,name,x,y,z,sx,sy,sz,material)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(1,32,24),material);m.name=name;m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m};
- const capsule=(parent,name,length,radius,material,x=0,y=0,z=0)=>{const m=new THREE.Mesh(new THREE.CapsuleGeometry(radius,Math.max(.01,length-2*radius),10,16),material);m.name=name;m.position.set(x,y-length*.5,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m};
+ const ellipsoid=(parent,name,x,y,z,sx,sy,sz,material)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(1,48,32),material);m.name=name;m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m};
+ const capsule=(parent,name,length,radius,material,x=0,y=0,z=0)=>{const h=Math.max(.02,length),r=Math.min(radius,h*.46),profile=[new THREE.Vector2(0,-h/2),new THREE.Vector2(r*.62,-h/2),new THREE.Vector2(r*.9,-h/2+r*.35),new THREE.Vector2(r,-h/2+r),new THREE.Vector2(r*.99,h/2-r),new THREE.Vector2(r*.88,h/2-r*.3),new THREE.Vector2(r*.58,h/2),new THREE.Vector2(0,h/2)];const geo=new THREE.LatheGeometry(profile,40);geo.computeVertexNormals();const m=new THREE.Mesh(geo,material);m.name=name;m.position.set(x,y-length*.5,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m};
  const hips=bone('mixamorigHips',root,0,.99,0);
  ellipsoid(hips,'pelvis',0,0,0,.205,.145,.13,skin);
  ellipsoid(hips,'combat_belt',0,-.018,.006,.218,.055,.145,belt);
@@ -512,8 +512,8 @@ function makeHumanoidModel(){
  torsoMesh.castShadow=true;torsoMesh.receiveShadow=true;spine.add(torsoMesh);
  const spine1=bone('mixamorigSpine1',spine,0,.17,0);
  const spine2=bone('mixamorigSpine2',spine1,0,.16,0);
- ellipsoid(spine2,'deltoid_left',-.205,.025,0,.092,.095,.092,shirt);
- ellipsoid(spine2,'deltoid_right',.205,.025,0,.092,.095,.092,shirt);
+ ellipsoid(spine2,'deltoid_left',-.205,.025,0,.085,.083,.08,shirt);
+ ellipsoid(spine2,'deltoid_right',.205,.025,0,.085,.083,.08,shirt);
  ellipsoid(spine2,'trapezius',0,.105,-.035,.155,.075,.09,shirt);
  // Volume anatômico do tórax e abdômen sob a camisa.
  ellipsoid(spine2,'left_pectoral',-.092,.055,.073,.105,.105,.055,shirt);
@@ -553,7 +553,7 @@ function makeHumanoidModel(){
  const neck=bone('mixamorigNeck',spine2,0,.13,0);
  capsule(neck,'neck_mesh',.13,.052,skin,0,.025,0);
  const head=bone('mixamorigHead',neck,0,.115,0);
- ellipsoid(head,'head_mesh',0,.055,0,.112,.145,.105,skinLight);
+ const skullProfile=[new THREE.Vector2(0,-.105),new THREE.Vector2(.045,-.10),new THREE.Vector2(.075,-.075),new THREE.Vector2(.094,-.025),new THREE.Vector2(.105,.045),new THREE.Vector2(.101,.105),new THREE.Vector2(.078,.15),new THREE.Vector2(.035,.17),new THREE.Vector2(0,.172)];const skullGeo=new THREE.LatheGeometry(skullProfile,48);skullGeo.scale(1,1,.91);const skull=new THREE.Mesh(skullGeo,skinLight);skull.name='anatomical_head';skull.position.set(0,.055,0);skull.castShadow=true;skull.receiveShadow=true;head.add(skull);
  ellipsoid(head,'cheek_left',-.067,.005,.048,.047,.052,.052,skinHighlight);
  ellipsoid(head,'cheek_right',.067,.005,.048,.047,.052,.052,skinHighlight);
  ellipsoid(head,'forehead',0,.112,.055,.083,.052,.048,skinLight);
@@ -587,17 +587,11 @@ function makeHumanoidModel(){
   const upper=bone(side<0?'mixamorigLeftArm':'mixamorigRightArm',spine2,side*.205,.075,0);
   ellipsoid(spine2,'shoulder',side*.205,.045,0,.09,.095,.09,shirt);
   capsule(upper,'upper_arm',.31,.064,skin,0,-.015,0);
-  ellipsoid(upper,'biceps_skin',0,-.12,.025,.061,.105,.061,skinHighlight);
-  ellipsoid(upper,'elbow',0,-.275,.005,.056,.055,.055,skin);
-  capsule(upper,'shirt_sleeve',.205,.078,shirt,0,-.015,0);
-  ellipsoid(upper,'bicep_volume',0,-.115,.008,.067,.135,.067,shirt);
-  ellipsoid(upper,'tricep_volume',0,-.13,-.035,.061,.125,.055,shirtDark);
+  capsule(upper,'shirt_sleeve',.215,.074,shirt,0,-.015,0);
   const fore=bone(side<0?'mixamorigLeftForeArm':'mixamorigRightForeArm',upper,0,-.30,0);
   capsule(fore,'forearm',.285,.052,skin,0,-.005,0);
   capsule(fore,'forearm_sleeve',.20,.066,shirt,0,-.005,0);
-  ellipsoid(fore,'forearm_shape',0,-.105,.006,.052,.125,.052,skinHighlight);
-  ellipsoid(fore,'forearm_muscle',0,-.12,.028,.045,.105,.035,skin);
-  ellipsoid(fore,'elbow_guard',0,-.015,.045,.058,.045,.025,shirtDark);
+  ellipsoid(fore,'elbow_guard',0,-.015,.045,.052,.038,.021,shirtDark);
   ellipsoid(fore,'wrist',0,-.235,.004,.042,.055,.042,skin);
   ellipsoid(fore,'sleeve_cuff',0,-.19,0,.067,.045,.067,shirtDark);
   // Luva tática com reforço na palma e costura no punho.
