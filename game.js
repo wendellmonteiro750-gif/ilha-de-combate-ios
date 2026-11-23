@@ -114,7 +114,7 @@ function buildExpandedDistricts(){
  const lots=[
   [-47,-52,16,13,0xb58c68,'house'],[-24,-55,17,14,0x9da99a,'house'],[45,-48,18,14,0xb18a65,'house'],
   [-52,47,18,15,0x9eaa9e,'house'],[-25,62,16,13,0xb98b6c,'house'],[48,48,18,15,0x9c9b7d,'house'],
-  [-78,-5,22,17,0x68767a,'warehouse'],[77,8,23,18,0x727d76,'warehouse'],[0,83,24,18,0x727c78,'warehouse'],
+  [-80,-24,22,17,0x68767a,'warehouse'],[80,25,23,18,0x727d76,'warehouse'],[25,92,24,18,0x727c78,'warehouse'],
   [0,-88,18,15,0xb1a17a,'house'],[-88,76,18,15,0x9d876d,'house']
  ];
  for(const lot of lots)addExpandedBuilding(...lot);
@@ -136,7 +136,7 @@ function buildForest(){
  const crown=new THREE.InstancedMesh(new THREE.SphereGeometry(1.18,12,10),mat(0x245b35,1),count);
  const crownA=new THREE.InstancedMesh(new THREE.SphereGeometry(.86,12,10),mat(0x367b43,1),count);
  const crownB=new THREE.InstancedMesh(new THREE.SphereGeometry(.72,12,10),mat(0x2c693b,1),count);
- const clearings=[[-47,-52,13],[-24,-55,13],[45,-48,14],[-52,47,14],[-25,62,13],[48,48,14],[-78,-5,17],[77,8,17],[0,83,18],[0,-88,14],[-88,76,14]];
+ const clearings=[[-47,-52,13],[-24,-55,13],[45,-48,14],[-52,47,14],[-25,62,13],[48,48,14],[-80,-24,17],[80,25,17],[25,92,18],[0,-88,14],[-88,76,14]];
  for(let i=0;i<count;i++){
   const a=i/count*Math.PI*2,r=55+Math.random()*67,scale=.72+Math.random()*.72,x=Math.cos(a)*r,z=Math.sin(a)*r;
   if(clearings.some(([cx,cz,cr])=>Math.hypot(x-cx,z-cz)<cr)){
