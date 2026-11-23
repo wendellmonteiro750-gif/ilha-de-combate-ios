@@ -510,8 +510,8 @@ async function createFighter(isEnemy=false,index=0){
    const gait=Math.sin(this.gaitPhase),opposite=Math.sin(this.gaitPhase+Math.PI);
    const crouchFactor=this.stanceMode==='crouch'?.42:this.stanceMode==='prone'?.08:1;
    // A animação do GLB já movimenta as pernas; a camada procedural só corrige a passada para evitar duplicação exagerada.
-   const gaitAmount=locomotion*crouchFactor*(this.sprintBlend?.16:.11);
-   for(const [name,angle] of [['mixamorigLeftUpLeg',gait*.42],['mixamorigRightUpLeg',opposite*.42],['mixamorigLeftLeg',Math.max(0,-gait)*.52],['mixamorigRightLeg',Math.max(0,-opposite)*.52]]){
+   const gaitAmount=locomotion*crouchFactor*(this.sprintBlend?.27:.19);
+   for(const [name,angle] of [['mixamorigLeftUpLeg',gait*.48],['mixamorigRightUpLeg',opposite*.48],['mixamorigLeftLeg',Math.max(0,-gait)*.62],['mixamorigRightLeg',Math.max(0,-opposite)*.62]]){
     const bone=this.bones.get(name);if(!bone||gaitAmount<.001)continue;
     const delta=new THREE.Quaternion().setFromEuler(new THREE.Euler(angle*gaitAmount,0,0,'XYZ'));
     bone.quaternion.multiply(delta);this._stanceApplied.push({name,inverse:delta.clone().invert()});
@@ -905,9 +905,9 @@ function animate(){
     playerRig.aimPitch=pitch*playerRig.weaponAimBlend;
     playerRig.reloadBlend=reloadTimer>0?THREE.MathUtils.clamp(reloadTimer/currentWeapon().reload,0,1):0;
    playerRig.weaponFireBlend=THREE.MathUtils.damp(playerRig.weaponFireBlend||0,Math.max(fireHeld?1:0,firePoseTimer>0?.92:0,THREE.MathUtils.clamp(recoil*3.2,0,.48)),14,dt);
-   playerRig.runBlend=canSprint?1:0;
-   playerRig.sprintBlend=canSprint?1:0;
-   playerRig.locomotionBlend=THREE.MathUtils.clamp(playerVelocity.length()/5.35,0,1);
+   playerRig.runBlend=THREE.MathUtils.damp(playerRig.runBlend||0,canSprint?1:0,10,dt);
+   playerRig.sprintBlend=playerRig.runBlend;
+   playerRig.locomotionBlend=THREE.MathUtils.damp(playerRig.locomotionBlend||0,THREE.MathUtils.clamp(playerVelocity.length()/5.35,0,1),12,dt);
    playerRig.weaponRunBlend=THREE.MathUtils.damp(playerRig.weaponRunBlend||0,canSprint?1:0,9,dt);
    if(playerRig.weaponPivot&&playerRig.weaponBasePosition&&playerRig.weaponBaseRotation){
     const moveAmount=THREE.MathUtils.clamp(playerVelocity.length()/5.35,0,1);
