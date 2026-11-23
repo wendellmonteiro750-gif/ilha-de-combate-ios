@@ -208,8 +208,8 @@ function addHouse(x,z,rotation=0,style=0,twoStorey=false){
  for(const sx of [-1,1])box(g,.12,1.05,.12,trim,sx*1.08,.78,4.12);
  box(g,2.2,.12,.12,wood,0,1.28,4.12);
  for(let k=0;k<3;k++)box(g,.12,.07,.42,accent,0,.12+k*.11,3.3+k*.14);
- g.scale.setScalar(1.24);g.position.set(x,0,z);g.rotation.y=rotation;scene.add(g);
- worldObstacles.push({type:'house',x,z,rotation,halfWidth:3.78,halfDepth:3.29,twoStorey});
+ g.scale.setScalar(1.38);g.position.set(x,0,z);g.rotation.y=rotation;scene.add(g);
+ worldObstacles.push({type:'house',x,z,rotation,halfWidth:4.18,halfDepth:3.62,twoStorey});
 }
 function addRoadNetwork(){
  // Estradas de terra batida com acostamento, conectando os pequenos bairros.
@@ -323,7 +323,7 @@ function buildWorld(){
  waterMat.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\\nvarying vec3 vWaterWorld;').replace('#include <begin_vertex>','#include <begin_vertex>\\n vWaterWorld=(modelMatrix*vec4(transformed,1.0)).xyz; transformed.y += sin(vWaterWorld.x*.035+vWaterWorld.z*.022)*.018 + cos(vWaterWorld.z*.04-vWaterWorld.x*.018)*.012;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\\nvarying vec3 vWaterWorld;').replace('#include <color_fragment>','#include <color_fragment>\\n float ripple=0.5+0.5*sin(vWaterWorld.x*.22+vWaterWorld.z*.16); diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.32,.72,.78),ripple*.10);');};
  for(let i=0;i<18;i++){const a=i*2.399,r=22+(i%8)*3.3;addPalm(Math.cos(a)*r,Math.sin(a)*r,.75+(i%4)*.1)}
  for(let i=0;i<34;i++){const a=i*2.399,r=52+(i%13)*5.1;addPalm(Math.cos(a)*r,Math.sin(a)*r,.85+(i%5)*.12)}
- addHouse(-12,-12,.2,0);addHouse(14,-18,-.3,1,true);addHouse(22,9,.8,2);addHouse(-25,15,-.5,3,true);
+ addHouse(-12,-12,.2,0,true);addHouse(14,-18,-.3,1,true);addHouse(22,9,.8,2,true);addHouse(-25,15,-.5,3,true);
  addHouse(68,35,.4,2,true);addHouse(-76,-42,-.7,1);addHouse(38,-88,.2,0);addHouse(-92,72,1.1,3);addHouse(102,5,-.4,2);
  // Novas casas distribuídas pela ilha para criar mais áreas de exploração.
  addHouse(42,54,.65,1);addHouse(-48,68,-.25,2,true);addHouse(84,-58,1.35,3);addHouse(-58,-76,.45,0);
@@ -603,7 +603,7 @@ async function createFighter(isEnemy=false,index=0){
  addRifle(rig);scene.add(holder);await rig.playRole('idle');return rig;
 }
 function getHouseAtPosition(position){
- for(const o of worldObstacles){if(o.type!=='house')continue;const dx=position.x-o.x,dz=position.z-o.z,c=Math.cos(o.rotation),sn=Math.sin(o.rotation),lx=dx*c-dz*sn,lz=dx*sn+dz*c;if(Math.abs(lx)<3.05&&Math.abs(lz)<2.62)return {obstacle:o,lx,lz,c,sn};}
+ for(const o of worldObstacles){if(o.type!=='house')continue;const dx=position.x-o.x,dz=position.z-o.z,c=Math.cos(o.rotation),sn=Math.sin(o.rotation),lx=dx*c-dz*sn,lz=dx*sn+dz*c;if(Math.abs(lx)<4.0&&Math.abs(lz)<3.45)return {obstacle:o,lx,lz,c,sn};}
  return null;
 }
 function resolvePlayerObstacles(){
@@ -613,8 +613,8 @@ function resolvePlayerObstacles(){
    const dx=p.x-o.x,dz=p.z-o.z,c=Math.cos(o.rotation),sn=Math.sin(o.rotation);
    let lx=dx*c-dz*sn,lz=dx*sn+dz*c,changed=false;
    if(Math.abs(lx)<o.halfWidth+radius&&Math.abs(lz)<o.halfDepth+radius){
-    // A abertura frontal de 2,24 m permite atravessar a porta; as outras paredes bloqueiam.
-    if(lz>o.halfDepth-radius&&Math.abs(lx)>1.12-radius){lz=o.halfDepth+radius;changed=true;}
+    // Abertura frontal ampliada proporcionalmente à escala da construção.
+    if(lz>o.halfDepth-radius&&Math.abs(lx)>1.55-radius){lz=o.halfDepth+radius;changed=true;}
     else if(lz< -o.halfDepth+radius){lz=-o.halfDepth-radius;changed=true;}
     else if(lx>o.halfWidth-radius){lx=o.halfWidth+radius;changed=true;}
     else if(lx< -o.halfWidth+radius){lx=-o.halfWidth-radius;changed=true;}
