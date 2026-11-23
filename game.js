@@ -86,120 +86,112 @@ function house(x,z,color){
  worldBlockers.push({x,z,r:3.8});
 }
 function buildHero(){
+ // Novo operador tático: corpo segmentado por articulações, com volumes
+ // anatômicos sobrepostos para reduzir o aspecto de boneco feito de blocos.
  hero=new THREE.Group();scene.add(hero);
- const skin=mat(0xd99b70),shirt=mat(0x27795e),pants=mat(0x263d55),boots=mat(0x242b2e),hair=mat(0x30251f),vest=mat(0x475247),gun=mat(0x252b2e),glove=mat(0x343b38);
- // Procedural articulated rig: pelvis, torso, head, upper/lower arms and legs.
+ const skin=mat(0xb98262),shirt=mat(0x344b42),pants=mat(0x303d3a),boots=mat(0x171e1d),hair=mat(0x211d19),vest=mat(0x4a5548),gun=mat(0x202725),glove=mat(0x252d2a),joint=mat(0x59634f),fabric=mat(0x3b4940);
+ const oval=(parent,rx,ry,rz,m,x,y,z)=>{const o=mesh(parent,new THREE.SphereGeometry(1,20,16),m,[x,y,z]);o.scale.set(rx,ry,rz);return o};
  rig.body=new THREE.Group();rig.body.position.y=1.03;hero.add(rig.body);
- rig.pelvis=new THREE.Group();rig.pelvis.position.set(0,0,0);rig.body.add(rig.pelvis);
- cube(rig.pelvis,.48,.3,.34,pants,0,-.08,0);
- // Tórax com volume anatômico, ombros e equipamento tático.
- capsule(rig.body,.265,.49,shirt,0,.49,0).scale.set(1.42,1.18,.82);
- cube(rig.body,.79,.48,.43,vest,0,.50,-.025);
+ rig.pelvis=new THREE.Group();rig.body.add(rig.pelvis);
+ oval(rig.pelvis,.285,.19,.205,pants,0,-.01,0);
+ // Camadas do tronco: abdômen, caixa torácica, peitoral e colete ajustado.
+ oval(rig.body,.255,.30,.19,shirt,0,.29,0);
+ oval(rig.body,.355,.34,.205,shirt,0,.59,-.005);
+ oval(rig.body,.37,.29,.215,vest,0,.57,-.025);
+ oval(rig.body,.29,.20,.19,fabric,0,.27,-.005);
+ cube(rig.body,.66,.10,.34,mat(0x303a34),0,.13,-.015);
  for(const side of [-1,1]){
-  const shoulder=mesh(rig.body,new THREE.SphereGeometry(.17,12,10),vest,[side*.43,.77,0]);
-  shoulder.scale.set(1,.88,.95);
-  cube(rig.body,.16,.25,.12,mat(0x34443d),side*.22,.48,-.245);
-  cube(rig.body,.19,.14,.12,mat(0x59634e),side*.30,.26,-.255);
+  // Alças, placas laterais, bolsos e proteção de ombro.
+  const strap=mesh(rig.body,new THREE.BoxGeometry(.105,.54,.07),mat(0x303b34),[side*.235,.58,-.205]);strap.rotation.z=-side*.12;
+  oval(rig.body,.17,.15,.17,vest,side*.405,.77,-.005);
+  oval(rig.body,.12,.13,.12,joint,side*.46,.75,-.015);
+  cube(rig.body,.17,.18,.10,fabric,side*.25,.42,-.225);
+  cube(rig.body,.15,.13,.09,joint,side*.25,.22,-.215);
+  cube(rig.body,.09,.13,.10,mat(0x202a25),side*.32,.59,-.225);
  }
- cube(rig.body,.69,.09,.44,mat(0x343b35),0,.13,-.015);
- for(const side of [-1,1])cube(rig.body,.19,.18,.12,mat(0x59634e),side*.24,.20,-.255);
- rig.head=new THREE.Group();rig.head.position.set(0,1.08,0);rig.body.add(rig.head);
- capsule(rig.head,.13,.17,skin,0,-.02,0);
- // Pescoço, orelhas e traços faciais voltados para a direção do cano (-Z).
- capsule(rig.body,.105,.16,skin,0,.94,0);
- // Cabeça com formato oval e maxilar mais definido.
- const face=mesh(rig.head,new THREE.SphereGeometry(.27,24,20),skin,[0,.28,0]);
- face.scale.set(.86,1.14,.92);
- const jaw=mesh(rig.head,new THREE.SphereGeometry(.205,18,14),skin,[0,.105,-.018]);
- jaw.scale.set(1,.67,.91);
- // Orelhas e detalhes do rosto posicionados à frente da superfície facial.
+ // Pescoço, crânio, mandíbula e detalhes faciais.
+ const neck=capsule(rig.body,.105,.16,skin,0,.91,0);
+ rig.head=new THREE.Group();rig.head.position.set(0,1.06,0);rig.body.add(rig.head);
+ oval(rig.head,.205,.275,.19,skin,0,.19,-.005);
+ oval(rig.head,.165,.125,.16,skin,0,.075,-.015);
+ oval(rig.head,.215,.105,.20,hair,0,.39,.005);
+ // Capacete tático baixo, correia e proteção auricular.
+ const helmet=mesh(rig.head,new THREE.SphereGeometry(.225,20,14,0,Math.PI*2,0,Math.PI*.58),mat(0x35443a),[0,.405,.005]);helmet.scale.set(1.12,.86,1.05);
+ cube(rig.head,.39,.045,.30,mat(0x28342e),0,.34,-.015);
  for(const side of [-1,1]){
-  const ear=mesh(rig.head,new THREE.SphereGeometry(.058,12,10),skin,[side*.238,.015,-.005]);
-  ear.scale.set(.68,1,.62);
-  mesh(rig.head,new THREE.SphereGeometry(.027,10,8),mat(0x9d6654),[side*.248,.015,-.035]);
-  const eyeWhite=mesh(rig.head,new THREE.SphereGeometry(.034,12,10),mat(0xf0e5d7),[side*.092,.292,-.239]);
-  eyeWhite.scale.set(1,.68,.42);
-  mesh(rig.head,new THREE.SphereGeometry(.018,10,8),mat(0x49352b),[side*.092,.292,-.255]);
-  mesh(rig.head,new THREE.SphereGeometry(.009,8,6),mat(0x171717),[side*.092,.292,-.263]);
-  const brow=mesh(rig.head,new THREE.SphereGeometry(.052,12,8),hair,[side*.095,.345,-.231]);
-  brow.scale.set(1,.22,.35);
+  oval(rig.head,.045,.07,.045,skin,side*.205,.16,0);
+  oval(rig.head,.052,.065,.045,joint,side*.207,.17,.005);
+  oval(rig.head,.043,.024,.025,mat(0xd8c9b5),side*.078,.22,-.174);
+  oval(rig.head,.018,.018,.012,mat(0x241d18),side*.078,.22,-.194);
+  oval(rig.head,.055,.018,.022,hair,side*.08,.255,-.175);
  }
- // Nariz, narinas, boca e queixo dão leitura de rosto humano de frente.
- const nose=mesh(rig.head,new THREE.SphereGeometry(.045,14,12),skin,[0,.222,-.267]);
- nose.scale.set(.72,.88,1.0);
- for(const side of [-1,1]){
-  mesh(rig.head,new THREE.SphereGeometry(.009,8,6),mat(0x70483c),[side*.018,.198,-.282]);
+ oval(rig.head,.035,.055,.045,skin,0,.16,-.185);
+ oval(rig.head,.038,.012,.018,mat(0x684538),0,.075,-.17);
+ // Colete com placas, fivelas e bolsos utilitários.
+ for(let i=0;i<3;i++){
+  cube(rig.body,.13,.14,.055,vest,-.22+i*.22,.48,-.247);
+  cube(rig.body,.105,.025,.06,mat(0x252f2a),-.22+i*.22,.55,-.278);
  }
- const mouth=mesh(rig.head,new THREE.SphereGeometry(.031,12,8),mat(0x754638),[0,.135,-.245]);
- mouth.scale.set(1,.28,.38);
- const lowerLip=mesh(rig.head,new THREE.SphereGeometry(.025,10,8),mat(0x986052),[0,.124,-.244]);
- lowerLip.scale.set(1,.22,.3);
- const hairCap=mesh(rig.head,new THREE.SphereGeometry(.278,20,14,0,Math.PI*2,0,Math.PI*.54),hair,[0,.35,0]);
- hairCap.scale.set(1.02,1,.99);
- // Camiseta com peito, abdômen e cintura menos blocados sob o colete.
- const chest=mesh(rig.body,new THREE.SphereGeometry(1,18,14),shirt,[0,.61,-.005]);
- chest.scale.set(.37,.30,.205);
- const abdomen=mesh(rig.body,new THREE.SphereGeometry(1,16,12),shirt,[0,.29,.005]);
- abdomen.scale.set(.265,.245,.19);
- const waist=mesh(rig.body,new THREE.SphereGeometry(1,16,12),pants,[0,.02,.005]);
- waist.scale.set(.285,.19,.205);
- // Alças acolchoadas e bolsos com volume no colete.
- for(const side of [-1,1]){
-  const strap=mesh(rig.body,new THREE.BoxGeometry(.105,.52,.075),mat(0x343e36),[side*.245,.56,-.245]);
-  strap.rotation.z=side*-.16;
-  cube(rig.body,.19,.16,.075,vest,side*.25,.43,-.275);
- }
- // Two-segment legs with knee pivots and feet.
+ cube(rig.body,.58,.075,.09,mat(0x252d28),0,.06,-.16);
+ for(const side of [-1,1])cube(rig.body,.18,.17,.11,vest,side*.23,.015,-.19);
+ // Pernas com coxa, joelho, canela, proteção e tornozelo independentes.
  rig.legs=[];
  for(const side of [-1,1]){
-  const upper=new THREE.Group();upper.position.set(side*.22,-.18,0);rig.body.add(upper);
-  capsule(upper,.155,.43,pants,0,-.27,0);
-  mesh(upper,new THREE.SphereGeometry(.125,10,8),mat(0x394b5a),[0,-.49,-.005]);
-  const knee=new THREE.Group();knee.position.set(0,-.52,0);upper.add(knee);capsule(knee,.115,.39,pants,0,-.23,.015);
-  mesh(knee,new THREE.SphereGeometry(.125,10,8),mat(0x59634e),[0,-.34,-.105]);
-  const ankle=new THREE.Group();ankle.position.set(0,-.45,-.055);knee.add(ankle);
-  cube(ankle,.27,.16,.39,boots,0,-.015,-.08);
-  cube(ankle,.25,.10,.18,mat(0x343a38),0,-.025,-.245);
-  cube(ankle,.285,.035,.24,mat(0x111817),0,-.09,-.17);
+  const upper=new THREE.Group();upper.position.set(side*.205,-.13,0);rig.body.add(upper);
+  const thigh=capsule(upper,.145,.39,pants,0,-.255,0);thigh.scale.set(1.08,1.12,1);
+  oval(upper,.15,.15,.15,pants,0,-.48,-.005);
+  oval(upper,.145,.105,.13,joint,0,-.51,-.095);
+  const knee=new THREE.Group();knee.position.set(0,-.51,0);upper.add(knee);
+  capsule(knee,.105,.34,pants,0,-.20,.015);
+  oval(knee,.125,.12,.075,vest,0,-.075,-.105);
+  oval(knee,.115,.12,.085,joint,0,-.075,-.16);
+  const ankle=new THREE.Group();ankle.position.set(0,-.43,-.035);knee.add(ankle);
+  capsule(ankle,.095,.14,pants,0,-.04,0);
+  cube(ankle,.235,.15,.34,boots,0,-.105,-.105);
+  cube(ankle,.24,.045,.31,mat(0x0c1110),0,-.185,-.105);
+  cube(ankle,.12,.045,.10,mat(0x3b4540),0,-.025,-.265);
   rig.legs.push({upper,knee,ankle,side});
  }
- // Articulated upper arms and forearms are separate joints; hands are posed onto the rifle grips.
+ // Braços independentes: bíceps, cotovelo, antebraço, luva e dedos.
  rig.arms=[];
  for(const side of [-1,1]){
   const upper=new THREE.Group();rig.body.add(upper);
-  capsule(upper,.12,.29,shirt,0,-.265,0);
+  capsule(upper,.115,.29,shirt,0,-.235,0);
+  oval(upper,.12,.17,.12,shirt,0,-.23,-.005);
+  oval(upper,.115,.105,.12,vest,0,-.43,-.015);
   const fore=new THREE.Group();rig.body.add(fore);
-  capsule(fore,.105,.27,shirt,0,-.24,0);
-  mesh(fore,new THREE.SphereGeometry(.112,10,8),vest,[0,-.43,-.005]);
+  capsule(fore,.095,.27,shirt,0,-.22,0);
+  oval(fore,.105,.12,.105,fabric,0,-.39,-.01);
+  oval(fore,.095,.075,.09,joint,0,-.43,-.02);
   const hand=new THREE.Group();fore.add(hand);
-  mesh(hand,new THREE.SphereGeometry(.105,10,9),glove,[0,-.045,-.035]);
-  for(let finger=0;finger<3;finger++){
-   capsule(hand,.022,.055,glove,-.045+finger*.045,-.105,-.075);
+  oval(hand,.085,.105,.075,glove,0,-.045,-.035);
+  for(let finger=0;finger<4;finger++){
+   const f=capsule(hand,.018,.055,glove,-.052+finger*.034,-.115,-.075);
+   f.rotation.z=(finger-1.5)*-.08;
   }
+  oval(hand,.026,.065,.025,glove,.09,-.07,-.04);
   rig.arms.push({upper,fore,hand,side});
  }
- // Rifle points along the character's forward axis (-Z).
+ // Rifle com coronha, guarda-mão, carregador, mira e cano orientado para -Z.
  weapon=new THREE.Group();weapon.position.set(.28,.50,-.28);rig.body.add(weapon);
- cube(weapon,.16,.17,.85,gun,0,0,-.22);cube(weapon,.075,.075,.7,gun,0,.02,-.92);
- cube(weapon,.13,.13,.35,vest,0,0,.38);cube(weapon,.11,.3,.18,gun,0,-.2,-.24);
- cube(weapon,.08,.07,.16,gun,0,.12,-.25);
- // Trilho superior, alça de mira, coronha, guarda-mão e carregador detalhados.
- cube(weapon,.055,.07,.12,mat(0x111719),0,.12,-.60);
- cube(weapon,.12,.25,.13,gun,0,-.22,-.48);
- cube(weapon,.23,.12,.30,gun,0,.015,.43);
- cube(weapon,.09,.08,.42,mat(0x3c4542),0,.12,-.12);
- for(let i=0;i<5;i++)cube(weapon,.19,.025,.035,mat(0x111719),0,.105,-.25-i*.105);
- cube(weapon,.07,.045,.12,mat(0x111719),0,.19,-.52);
- const barrel=mesh(weapon,new THREE.CylinderGeometry(.035,.045,.42,12),gun,[0,.015,-1.08]);barrel.rotation.x=Math.PI/2;
- const muzzle=mesh(weapon,new THREE.CylinderGeometry(.055,.045,.10,12),mat(0x151a1b),[0,.015,-1.31]);muzzle.rotation.x=Math.PI/2;
- cube(weapon,.055,.20,.10,mat(0x171d1b),0,-.18,.08);
- // Flash e luz de disparo são ativados apenas no instante do tiro.
- muzzleFlash=new THREE.Group();muzzleFlash.position.set(0,.015,-1.39);weapon.add(muzzleFlash);
+ cube(weapon,.15,.16,.78,gun,0,0,-.20);
+ cube(weapon,.075,.075,.68,gun,0,.015,-.88);
+ cube(weapon,.13,.13,.34,vest,0,0,.36);
+ cube(weapon,.105,.28,.16,gun,0,-.19,-.22);
+ cube(weapon,.055,.065,.15,mat(0x111715),0,.11,-.55);
+ cube(weapon,.12,.23,.13,gun,0,-.20,-.43);
+ cube(weapon,.22,.11,.28,gun,0,.015,.39);
+ cube(weapon,.09,.075,.39,mat(0x414b45),0,.105,-.08);
+ for(let i=0;i<5;i++)cube(weapon,.18,.022,.032,mat(0x111715),0,.10,-.20-i*.10);
+ cube(weapon,.065,.04,.12,mat(0x111715),0,.17,-.49);
+ const barrel=mesh(weapon,new THREE.CylinderGeometry(.032,.042,.42,12),gun,[0,.012,-1.04]);barrel.rotation.x=Math.PI/2;
+ const muzzle=mesh(weapon,new THREE.CylinderGeometry(.05,.04,.10,12),mat(0x111715),[0,.012,-1.27]);muzzle.rotation.x=Math.PI/2;
+ cube(weapon,.05,.18,.09,mat(0x171d1a),0,-.17,.07);
+ muzzleFlash=new THREE.Group();muzzleFlash.position.set(0,.012,-1.35);weapon.add(muzzleFlash);
  const flashMat=new THREE.MeshBasicMaterial({color:0xffd36a,transparent:true,opacity:.95});
  const flash=mesh(muzzleFlash,new THREE.ConeGeometry(.12,.42,8),flashMat,[0,0,-.20]);flash.rotation.x=-Math.PI/2;
- const core=mesh(muzzleFlash,new THREE.SphereGeometry(.075,8,8),new THREE.MeshBasicMaterial({color:0xffffff}),[0,0,-.035]);
- muzzleLight=new THREE.PointLight(0xffb347,0,3);muzzleLight.position.set(0,.02,-.2);muzzleFlash.add(muzzleLight);
- muzzleFlash.visible=false;
+ mesh(muzzleFlash,new THREE.SphereGeometry(.075,8,8),new THREE.MeshBasicMaterial({color:0xffffff}),[0,0,-.035]);
+ muzzleLight=new THREE.PointLight(0xffb347,0,3);muzzleLight.position.set(0,.02,-.2);muzzleFlash.add(muzzleLight);muzzleFlash.visible=false;
 }
 function loadRealHero(){
  const loader=new GLTFLoader();
