@@ -509,7 +509,7 @@ async function createFighter(isEnemy=false,index=0){
    this.gaitPhase=(this.gaitPhase||0)+dt*(this.sprintBlend?13.5:8.5)*(.25+locomotion*.75);
    const gait=Math.sin(this.gaitPhase),opposite=Math.sin(this.gaitPhase+Math.PI);
    const crouchFactor=this.stanceMode==='crouch'?.42:this.stanceMode==='prone'?.08:1;
-   const gaitAmount=locomotion*crouchFactor*(this.sprintBlend?.72:.48);
+   // A animação do GLB já movimenta as pernas; a camada procedural só corrige a passada para evitar duplicação exagerada.\n   const gaitAmount=locomotion*crouchFactor*(this.sprintBlend?.16:.11);
    for(const [name,angle] of [['mixamorigLeftUpLeg',gait*.42],['mixamorigRightUpLeg',opposite*.42],['mixamorigLeftLeg',Math.max(0,-gait)*.52],['mixamorigRightLeg',Math.max(0,-opposite)*.52]]){
     const bone=this.bones.get(name);if(!bone||gaitAmount<.001)continue;
     const delta=new THREE.Quaternion().setFromEuler(new THREE.Euler(angle*gaitAmount,0,0,'XYZ'));
@@ -530,8 +530,8 @@ async function createFighter(isEnemy=false,index=0){
    const reloadReach=Math.sin((1-reload)*Math.PI)*reload;
    const pose=[
     ['mixamorigHips',prone ? .82 : crouch ? .42 : -(this.jumpBlend||0)*.16,0,0],
-    ['mixamorigSpine',prone ? .48 : crouch ? -.10 : -.30*combatPose-.12*aim+ .10*run-(this.jumpBlend||0)*.08+moveBob*.35,0,0],
-    ['mixamorigSpine1',prone ? .22 : crouch ? -.08 : -.22*combatPose-.07*aim+.06*run-(this.jumpBlend||0)*.04+moveBob*.25,0,0],
+    ['mixamorigSpine',prone ? .48 : crouch ? -.10 : -.30*combatPose-.12*aim+ .10*run-(this.jumpBlend||0)*.08+moveBob*.35,0,-(this.lateralMotion||0)*(.10-.045*aim)],
+    ['mixamorigSpine1',prone ? .22 : crouch ? -.08 : -.22*combatPose-.07*aim+.06*run-(this.jumpBlend||0)*.04+moveBob*.25,0,(this.lateralMotion||0)*(.055-.025*aim)],
     ['mixamorigSpine2',prone ? .10 : crouch ? -.04 : -.12*combatPose-.035*aim,0,0],
     ['mixamorigNeck',0,0,0],
     ['mixamorigHead',-(this.aimPitch||0)*.32,0,0],
@@ -622,7 +622,7 @@ async function createFighter(isEnemy=false,index=0){
      const reloadSocket=this.weaponLeftReloadGrip||this.weaponLeftGrip;
      const reloadTarget=reloadSocket.getWorldPosition(new THREE.Vector3());
      const handTarget=support.lerp(reloadTarget,reload);
-     solveHand(leftUpper,leftFore,leftHand,handTarget);
+     solveHand(leftUpper,leftFore,leftHand,handTarget);\n     // Mantém a orientação do punho esquerdo relativa à arma, sem torcer a mão a cada quadro.\n     model.updateMatrixWorld(true);this.weaponPivot.updateMatrixWorld(true);\n     const weaponWorldQ=this.weaponPivot.getWorldQuaternion(new THREE.Quaternion());\n     if(!this.leftGripOrientationOffset){\n      const handWorldQ=leftHand.getWorldQuaternion(new THREE.Quaternion());\n      this.leftGripOrientationOffset=weaponWorldQ.clone().invert().multiply(handWorldQ);\n     }\n     const desiredHandWorldQ=weaponWorldQ.clone().multiply(this.leftGripOrientationOffset);\n     const handParentQ=leftHand.parent.getWorldQuaternion(new THREE.Quaternion());\n     const desiredHandLocalQ=handParentQ.invert().multiply(desiredHandWorldQ);\n     leftHand.quaternion.slerp(desiredHandLocalQ,.72);\n     if(!this._ikRestore.some(item=>item.bone===leftHand))this._ikRestore.push({bone:leftHand,quaternion:leftHand.quaternion.clone()});
     }
    }
   },
@@ -672,7 +672,7 @@ function setMovementMode(mode){
 function applyBodyMotion(rig,forwardSpeed,lateralSpeed,dt){
  if(!rig)return;
  const holder=rig.holder;
- const run=THREE.MathUtils.clamp(Math.hypot(forwardSpeed,lateralSpeed)/5.4,0,1);
+ const run=THREE.MathUtils.clamp(Math.hypot(forwardSpeed,lateralSpeed)/5.4,0,1);\n rig.lateralMotion=THREE.MathUtils.clamp(lateralSpeed/5.4,-1,1);\n rig.forwardMotion=THREE.MathUtils.clamp(forwardSpeed/5.4,-1,1);
  const stance=rig.stanceMode==='prone' ? -.10 : rig.stanceMode==='crouch' ? -.035 : 0;
  const firing=rig.isPlayer?THREE.MathUtils.clamp(rig.weaponFireBlend||0,0,1):0;
  const aiming=rig.isPlayer?THREE.MathUtils.clamp(rig.weaponAimBlend||0,0,1):0;
