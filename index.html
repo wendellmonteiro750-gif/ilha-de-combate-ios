@@ -1,49 +1,7 @@
 <!doctype html>
-<html lang="pt-BR">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#14251f">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Battle Island">
-<link rel="manifest" href="./manifest.webmanifest">
-<link rel="icon" href="./icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="./icon.svg">
-<title>Battle Island — Battle Royale</title>
-<link rel="stylesheet" href="./style.css?v=sigmax-hud-01">
-</head>
-<body>
-<div id="game"></div>
-<div id="hud" class="ff-hud">
- <div class="ff-map"><div class="map-grid"></div><span class="map-road road-a"></span><span class="map-road road-b"></span><span class="map-pin">▲</span><small>ILHA DE COMBATE</small></div>
- <div class="ff-team"><div><b>1</b> SOLDADO 1 <i>◆</i></div><div><b>2</b> SOLDADO 2 <i>◆</i></div><div><b>3</b> SOLDADO 3 <i>◆</i></div><div><b>4</b> SOLDADO 4 <i>◆</i></div></div>
- <div class="ff-utility"><span>◖))</span><span>☺</span><span>◉</span><span>●</span><span>✉</span></div>
- <div class="ff-top-center"><span>◀</span><span>↶</span><span class="save">▣</span></div>
- <div class="ff-top-right"><div class="ff-counter">♥ <b id="playerCounter">100</b></div><div class="ff-counter">◉ <b>500</b></div><div class="ff-counter">♟ <b id="aliveCount">5</b></div><div class="ff-counter">☠ <b id="killCount">0</b></div><div class="ff-counter">⚙</div></div>
- <div class="ff-weapon-panel"><div class="ff-current"><strong id="ammo">30 / 90</strong><span>▰━━━▰</span><b>AK</b></div><div class="ff-slots"><span>▰<small>80</small></span><span>▱<small>50</small></span><span>∞</span></div></div>
- <div class="ff-items"><span>ITEM</span><span>ITEM</span><span>ITEM</span><span>ITEM</span></div>
- <div class="ff-tip" id="tip">JOYSTICK: MOVER · ARRASTE A TELA: CÂMERA</div>
- <div class="crosshair"><i></i><b></b></div>
- <div class="ff-status"><span id="health">VIDA 100</span><span id="stamina">FÔLEGO 100</span><span id="poseLabel">POSTURA: EM PÉ</span><span id="message">COMBATE EM ANDAMENTO</span></div>
-</div>
-<div id="controls" class="ff-controls">
- <div id="stick"><div id="knob"></div></div>
- <button class="control ff-action grenade" aria-label="Granada">◉<small>GRANADA</small></button>
- <button class="control run" id="run" aria-label="Correr">➤</button>
- <button class="control jump" id="jump" aria-label="Pular">↟</button>
- <button class="control crouch" id="crouch" aria-label="Agachar">▾</button>
- <button class="control prone" id="prone" aria-label="Deitar">━</button>
- <button class="control aim" id="aim" aria-label="Mirar">◎</button>
- <button class="control reload" id="reload" aria-label="Recarregar">↻</button>
- <button class="control weapon" id="weapon" aria-label="Guardar arma">⚔</button>
- <button class="control fire" id="fire" aria-label="Atirar">✦</button>
- <div class="ff-extra"><span>✚</span><span>◉</span><span>▣</span></div>
-</div>
-<div id="lobby"><div class="lobby-card"><div class="eyebrow">OPERAÇÃO • ILHA TROPICAL</div><h1>BATTLE<br><em>ISLAND</em></h1><p>Prepare seu equipamento. Entre na zona de treinamento e domine o campo de combate.</p><button id="play">INICIAR MISSÃO&nbsp; →</button><small>CAMPO DE TREINAMENTO • MODO TERCEIRA PESSOA</small><p class="install-hint">NO IPHONE: SAFARI → COMPARTILHAR → ADICIONAR À TELA DE INÍCIO</p></div></div>
-<div id="error" hidden></div>
-<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
-<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js").catch(error=>console.warn("Cache offline indisponível:",error)));}</script>
-<script type="module" src="./game.js?v=island-final-08"></script>
-</body>
-</html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name="theme-color" content="#14251f"><meta name="apple-mobile-web-app-capable" content="yes"><title>OPERAÇÃO NOVE — Battle Royale</title><link rel="stylesheet" href="./style.css?v=nove-02"></head><body>
+<div id="game"></div><div id="labels"></div>
+<div id="hud"><div class="topbar"><div class="brand"><b>09</b><span>OPERAÇÃO NOVE<small>BATTLE ROYALE</small></span></div><div class="stats"><span id="health">VIDA 100</span><span id="ammo">30 / 120</span><span id="kills">ELIMINAÇÕES 0</span></div></div><div class="crosshair"><i></i><b></b></div><div class="bottom-info"><span id="poseLabel">POSTURA: EM PÉ</span><span id="message">ESCOLHA SEU MODO</span></div></div>
+<div id="controls"><div id="stick"><div id="knob"></div></div><button class="control run" id="run">↗</button><button class="control jump" id="jump">↑</button><button class="control crouch" id="crouch">▾</button><button class="control prone" id="prone">▰</button><button class="control aim" id="aim">◎</button><button class="control reload" id="reload">↻</button><button class="control swap" id="swap">⇄</button><button class="control fire" id="fire">✦</button></div>
+<div id="lobby"><div class="lobby-card"><div class="eyebrow">NOVE REGIÕES • UMA ÚLTIMA EQUIPE</div><h1>OPERAÇÃO<br><em>NOVE</em></h1><p>Explore nove cidades, encontre equipamentos, enfrente adversários e sobreviva até o fim.</p><div class="lobby-modes"><span>SOLO</span><span>LOOT</span><span>COMBATE</span></div><button id="play">ENTRAR NA PARTIDA →</button><small>PROTÓTIPO JOGÁVEL • TERCEIRA PESSOA</small></div></div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script><script type="module" src="./game.js?v=nove-03"></script></body></html>
