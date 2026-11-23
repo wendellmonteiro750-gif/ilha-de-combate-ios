@@ -521,7 +521,7 @@ async function createFighter(isEnemy=false,index=0){
    const ready=this.isPlayer?1:.72,aim=THREE.MathUtils.clamp(this.weaponAimBlend||0,0,1),combatPose=Math.max(aim,THREE.MathUtils.clamp(this.weaponFireBlend||0,0,1));
    const fire=THREE.MathUtils.clamp(this.weaponFireBlend||0,0,1),run=THREE.MathUtils.clamp(this.weaponRunBlend||0,0,1),reload=THREE.MathUtils.clamp(this.reloadBlend||0,0,1);
    const firePhase=this.firePosePhase||0;
-   const readyTarget=this.isPlayer?(run?.12:Math.max(.72,aim*.98,fire*.96,reload*.78)):.62;
+   const readyTarget=this.isPlayer?(run?.82:Math.max(.78,aim*.98,fire*.96,reload*.82)):.62;
    this.weaponReadyBlend=THREE.MathUtils.damp(this.weaponReadyBlend??.72,readyTarget,12,dt);
    const armReady=this.weaponReadyBlend,elbowReady=THREE.MathUtils.clamp(armReady+aim*.12,0,1);
    const reloadPhase=Math.sin((1-reload)*Math.PI);
@@ -593,7 +593,7 @@ async function createFighter(isEnemy=false,index=0){
     // pois isso cria uma segunda âncora e faz a arma escapar da empunhadura.
     // A mão esquerda segue um socket real criado na geometria de cada arma longa.
     const leftUpper=this.bones.get('mixamorigLeftArm'),leftFore=this.bones.get('mixamorigLeftForeArm'),leftHand=this.bones.get('mixamorigLeftHand');
-    if(leftUpper&&leftFore&&leftHand&&this.weaponLeftGrip){
+    if(leftUpper&&leftFore&&leftHand&&this.weaponLeftGrip&&(this.weaponSpec.kind!=='pistol'||reload>.02)){
      model.updateMatrixWorld(true);this.weaponPivot.updateMatrixWorld(true);
      const reload=THREE.MathUtils.clamp(this.reloadBlend||0,0,1);
      const support=this.weaponLeftGrip.getWorldPosition(new THREE.Vector3());
