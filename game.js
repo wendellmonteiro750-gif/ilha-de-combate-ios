@@ -496,7 +496,9 @@ function update(dt){
  // correção local de 180°; compensamos isso ao orientar o grupo do herói.
  // Em mira, o tronco fica voltado para a câmera e pode deslocar-se de lado
  // ou para trás sem perder a direção da mira.
- if(inputMagnitude>.08){
+ // Ao mirar, o corpo inteiro acompanha a direção horizontal da câmera,
+ // mesmo parado. Sem mirar, mantém a rotação de movimento 360° já aprovada.
+ if(aim||inputMagnitude>.08){
   const facing=aim?yaw:Math.atan2(inputDir.x,inputDir.z)-Math.PI;
   const turn=THREE.MathUtils.euclideanModulo(facing-hero.rotation.y+Math.PI,Math.PI*2)-Math.PI;
   hero.rotation.y+=turn*(1-Math.exp(-dt*(aim?15:12)));
