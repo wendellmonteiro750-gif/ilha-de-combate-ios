@@ -226,25 +226,53 @@ function setMsg(s){$('message').textContent=s}
 function updateHud(){$('health').textContent='VIDA '+Math.max(0,Math.round(health));$('ammo').textContent=ammo+' / '+reserve;$('kills').textContent='ELIMINAÇÕES '+score;$('poseLabel').textContent='POSTURA: '+(pose==='prone'?'DEITADO':pose==='crouch'?'AGACHADO':'EM PÉ')}
 function collidesAt(x,z){return blockers.some(b=>x>b.minX-.32&&x<b.maxX+.32&&z>b.minZ-.32&&z<b.maxZ+.32)}
 let poseBlend=0,jumpVelocity=0,walkPhase=0,reloadAnim=0,recoilAnim=0;
+const playerVelocity=new THREE.Vector3(),moveTarget=new THREE.Vector3();
+let airborne=false,landSquash=0,lastMoveDirection=new THREE.Vector3();
 function move(dt){
  const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
- const dir=forward.multiplyScalar(-my).add(right.multiplyScalar(mx));if(dir.lengthSq()>1)dir.normalize();
- const speed=(run?8:4.3)*(pose==='crouch'?.48:pose==='prone'?.18:1),dx=dir.x*speed*dt,dz=dir.z*speed*dt;
- const nx=THREE.MathUtils.clamp(hero.position.x+dx,-137,137),nz=THREE.MathUtils.clamp(hero.position.z+dz,-137,137);
- if(!collidesAt(nx,hero.position.z))hero.position.x=nx;if(!collidesAt(hero.position.x,nz))hero.position.z=nz;
- if(dir.lengthSq()>.001)hero.rotation.y=THREE.MathUtils.damp(hero.rotation.y,Math.atan2(-dir.x,-dir.z),12,dt);
- const targetPose=pose==='prone'?1:pose==='crouch'?.48:0;poseBlend=THREE.MathUtils.damp(poseBlend,targetPose,8,dt);
- torso.position.y=THREE.MathUtils.lerp(1.05,.72,poseBlend);torso.rotation.x=-1.48*poseBlend;rifle.rotation.x=1.48*poseBlend;
- walkPhase+=dt*(run?13:7.5)*(dir.lengthSq()>.001?1:0);
+ const input=forward.clone().multiplyScalar(-my).addScaledVector(right,mx);
+ if(input.lengthSq()>1)input.normalize();
+ const grounded=hero.position.y<=.001&&jumpVelocity<=0;
+ const postureFactor=pose==='crouch'?.52:pose==='prone'?.2:1;
+ const sprintFactor=run&&pose==='stand'?1.72:1;
+ const maxSpeed=4.15*postureFactor*sprintFactor;
+ moveTarget.copy(input).multiplyScalar(maxSpeed);
+ // Aceleração e frenagem progressivas: dá peso à corrida sem atrasar a resposta lateral.
+ const accel=grounded?(input.lengthSq()>.001?19:23):7.5;
+ playerVelocity.x=THREE.MathUtils.damp(playerVelocity.x,moveTarget.x,accel,dt);
+ playerVelocity.z=THREE.MathUtils.damp(playerVelocity.z,moveTarget.z,accel,dt);
+ const velocityLength=Math.hypot(playerVelocity.x,playerVelocity.z);
+ if(velocityLength>.12){
+  const nx=THREE.MathUtils.clamp(hero.position.x+playerVelocity.x*dt,-137,137);
+  const nz=THREE.MathUtils.clamp(hero.position.z+playerVelocity.z*dt,-137,137);
+  if(!collidesAt(nx,hero.position.z))hero.position.x=nx;else playerVelocity.x=0;
+  if(!collidesAt(hero.position.x,nz))hero.position.z=nz;else playerVelocity.z=0;
+  lastMoveDirection.set(playerVelocity.x,0,playerVelocity.z).normalize();
+  hero.rotation.y=THREE.MathUtils.damp(hero.rotation.y,Math.atan2(-lastMoveDirection.x,-lastMoveDirection.z),14,dt);
+ }
+ const moving=velocityLength>.16;
+ const targetPose=pose==='prone'?1:pose==='crouch'?.48:0;
+ poseBlend=THREE.MathUtils.damp(poseBlend,targetPose,9,dt);
+ const gaitSpeed=THREE.MathUtils.clamp(velocityLength/4.5,0,1.8);
+ walkPhase+=dt*(7.5+gaitSpeed*6.5)*(moving?1:0);
  const idleBreath=Math.sin(performance.now()*.0022)*.018,aimPose=aim?1:0;
- torso.position.y=THREE.MathUtils.lerp(1.05,.72,poseBlend)+idleBreath;
+ torso.position.y=THREE.MathUtils.lerp(1.05,.72,poseBlend)+idleBreath+landSquash;
  torso.rotation.x=-1.48*poseBlend-aimPose*.035-recoilAnim*.08;
  rifle.rotation.x=1.48*poseBlend-aimPose*.06-recoilAnim*.16+reloadAnim*.12;
- limbs.forEach(l=>{const swing=dir.lengthSq()>.001?Math.sin(walkPhase)*(run?.82:.46):0;
+ limbs.forEach(l=>{
+  const swing=moving?Math.sin(walkPhase)*(run?.82:.46)*Math.min(1,gaitSpeed):0;
   if(l.leg)l.g.rotation.x=swing*(1-poseBlend*.72);
   else l.g.rotation.x=THREE.MathUtils.lerp(aimPose?-.42:idleBreath,Math.PI*poseBlend,poseBlend)+swing*(1-poseBlend)+reloadAnim*(l.side<0?.38:.7);
  });
- if(hero.position.y>0||jumpVelocity>0){jumpVelocity-=19*dt;hero.position.y=Math.max(0,hero.position.y+jumpVelocity*dt);if(hero.position.y===0)jumpVelocity=0}
+ // Salto com controle aéreo e manutenção do impulso: permite pular para trás/lado e corrigir a trajetória.
+ if(hero.position.y>0||jumpVelocity>0){
+  airborne=true;jumpVelocity-=19.5*dt;
+  hero.position.y=Math.max(0,hero.position.y+jumpVelocity*dt);
+  if(hero.position.y===0){
+   jumpVelocity=0;airborne=false;landSquash=-.055;
+  }
+ }else airborne=false;
+ landSquash=THREE.MathUtils.damp(landSquash,0,18,dt);
 }
 const cameraRay=new THREE.Raycaster();
 const cameraLookTarget=new THREE.Vector3(),cameraDesired=new THREE.Vector3(),cameraForward=new THREE.Vector3(),cameraSide=new THREE.Vector3(),cameraOffset=new THREE.Vector3();
@@ -338,13 +366,13 @@ function updateBots(dt){
  }
 }
 function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);if(gameStarted){updateKeyboardMove();move(dt);if(shooting)shoot();updateLoot();updateBots(dt)}animateSoldierRig(dt);cameraUpdate(dt);for(let i=effects.length-1;i>=0;i--){effects[i].t-=dt;if(effects[i].t<=0){scene.remove(effects[i].o);effects[i].o.geometry.dispose();effects[i].o.material.dispose();effects.splice(i,1)}}renderer.render(scene,camera)}
-function start(){gameStarted=true;health=100;ammo=30;reserve=120;score=0;hero.position.set(0,0,10);$('lobby').classList.add('hidden');setMsg('POUSO CONCLUÍDO · EXPLORE AS NOVE CIDADES');updateHud()}
+function start(){gameStarted=true;health=100;ammo=30;reserve=120;score=0;hero.position.set(0,0,10);playerVelocity.set(0,0,0);jumpVelocity=0;airborne=false;$('lobby').classList.add('hidden');setMsg('POUSO CONCLUÍDO · EXPLORE AS NOVE CIDADES');updateHud()}
 $('play').addEventListener('click',start);
 $('fire').addEventListener('pointerdown',e=>{e.preventDefault();shooting=true;shoot()});['pointerup','pointercancel','pointerleave'].forEach(t=>$('fire').addEventListener(t,()=>shooting=false));
 $('reload').addEventListener('pointerdown',e=>{e.preventDefault();reload()});
 $('swap').addEventListener('pointerdown',e=>{e.preventDefault();switchWeapon()});
 $('run').addEventListener('pointerdown',()=>run=true);['pointerup','pointercancel','pointerleave'].forEach(t=>$('run').addEventListener(t,()=>run=false));
-$('jump').addEventListener('pointerdown',()=>{if(gameStarted&&pose==='stand'&&hero.position.y===0)jumpVelocity=7.2});
+$('jump').addEventListener('pointerdown',()=>{if(gameStarted&&pose!=='prone'&&hero.position.y===0)jumpVelocity=7.2});
 $('crouch').addEventListener('pointerdown',()=>{pose=pose==='crouch'?'stand':'crouch';updateHud()});
 $('prone').addEventListener('pointerdown',()=>{pose=pose==='prone'?'stand':'prone';updateHud()});
 function setAim(on){aim=on;$('aim').classList.toggle('active',aim)}$('aim').addEventListener('pointerdown',e=>{e.preventDefault();setAim(true)});['pointerup','pointercancel','pointerleave'].forEach(t=>$('aim').addEventListener(t,()=>setAim(false)));
@@ -356,7 +384,7 @@ addEventListener('keydown',e=>{
  if(keys.has(k))return;keys.add(k);
  if(k==='r')reload();
  if(k==='q')switchWeapon();
- if(k===' ') {if(gameStarted&&pose==='stand'&&hero.position.y===0)jumpVelocity=7.2}
+ if(k===' ') {if(gameStarted&&pose!=='prone'&&hero.position.y===0)jumpVelocity=7.2}
  if(k==='c'){pose=pose==='crouch'?'stand':'crouch';updateHud()}
  if(k==='z'){pose=pose==='prone'?'stand':'prone';updateHud()}
  if(k==='shift')run=true;
