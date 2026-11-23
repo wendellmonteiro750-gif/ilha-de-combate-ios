@@ -42,7 +42,7 @@ let hudEditing=false,hudDrag=null;
 function saveGameSettings(){try{localStorage.setItem('ic-game-settings',JSON.stringify(gameSettings));}catch{}}
 let adaptiveFrameTime=0,adaptiveFrameCount=0,adaptiveCheckTime=0,adaptivePixelRatio=0;
 function applyGraphicsSettings(){if(!renderer)return;const mobile=innerWidth<700;const q={low:{ratio:mobile?.68:1,shadows:false},medium:{ratio:mobile?.82:1.15,shadows:false},high:{ratio:mobile?.95:1.5,shadows:false},ultra:{ratio:mobile?1.05:1.75,shadows:true}}[gameSettings.quality]||{ratio:mobile?.68:.9,shadows:false};const cap=Math.min(devicePixelRatio||1,q.ratio);adaptivePixelRatio=mobile?Math.min(cap,adaptivePixelRatio||cap):cap;renderer.setPixelRatio(adaptivePixelRatio);renderer.shadowMap.enabled=!mobile&&!!gameSettings.shadows&&!!q.shadows;renderer.shadowMap.needsUpdate=true;renderer.setSize(innerWidth,innerHeight);}
-function adaptMobileFrameRate(frameDt){if(innerWidth>=700||!renderer)return;adaptiveFrameTime+=frameDt;adaptiveFrameCount++;adaptiveCheckTime+=frameDt;if(adaptiveCheckTime<2)return;const fps=adaptiveFrameCount/Math.max(.001,adaptiveFrameTime);const q={low:.68,medium:.82,high:.95,ultra:1.05}[gameSettings.quality]||.68;const cap=Math.min(devicePixelRatio||1,q);let next=adaptivePixelRatio;if(fps<48)next=Math.max(.62,adaptivePixelRatio-.10);else if(fps>57)next=Math.min(cap,adaptivePixelRatio+.05);if(Math.abs(next-adaptivePixelRatio)>.015){adaptivePixelRatio=next;renderer.setPixelRatio(next);renderer.setSize(innerWidth,innerHeight);}adaptiveFrameTime=0;adaptiveFrameCount=0;adaptiveCheckTime=0;}
+function adaptMobileFrameRate(frameDt){if(innerWidth>=700||!renderer)return;adaptiveFrameTime+=frameDt;adaptiveFrameCount++;adaptiveCheckTime+=frameDt;if(adaptiveCheckTime<2)return;const fps=adaptiveFrameCount/Math.max(.001,adaptiveFrameTime);const q={low:.68,medium:.82,high:.95,ultra:1.05}[gameSettings.quality]||.68;const cap=Math.min(devicePixelRatio||1,q);let next=adaptivePixelRatio;if(fps<50)next=Math.max(.52,adaptivePixelRatio-.10);else if(fps>58)next=Math.min(cap,adaptivePixelRatio+.05);if(Math.abs(next-adaptivePixelRatio)>.015){adaptivePixelRatio=next;renderer.setPixelRatio(next);renderer.setSize(innerWidth,innerHeight);}adaptiveFrameTime=0;adaptiveFrameCount=0;adaptiveCheckTime=0;}
 function applyHudSettings(){const hud=document.querySelector('#hud');if(!hud)return;hud.style.setProperty('--hud-scale',gameSettings.hudScale/100);hud.style.setProperty('--hud-opacity',gameSettings.hudOpacity/100);const map=document.querySelector('.minimap');if(map)map.style.display=gameSettings.minimap?'':'none';}
 function initSettings(){
  const panel=document.querySelector('#settingsPanel'),open=()=>{panel.classList.add('open');panel.setAttribute('aria-hidden','false')},close=()=>{panel.classList.remove('open');panel.setAttribute('aria-hidden','true');if(hudEditing)toggleHudEditor(false)};
@@ -85,7 +85,7 @@ function makeSurfaceMap(kind){
   ctx.fillStyle='#705139';ctx.fillRect(0,0,size,size);
   for(let i=0;i<90;i++){ctx.strokeStyle=i%3?'rgba(38,24,14,.18)':'rgba(220,180,125,.16)';ctx.lineWidth=1+Math.random()*2;const y=Math.random()*size;ctx.beginPath();ctx.moveTo(0,y);ctx.bezierCurveTo(70,y-5,160,y+7,size,y+(Math.random()-.5)*8);ctx.stroke()}
  }
- const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=Math.min(innerWidth<700?8:12,renderer?.capabilities?.getMaxAnisotropy?.()||2);surfaceMaps[kind]=t;return t;
+ const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=Math.min(innerWidth<700?4:12,renderer?.capabilities?.getMaxAnisotropy?.()||2);surfaceMaps[kind]=t;return t;
 }
 function box(parent,w,h,d,material,x,y,z){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m}
 function addTextureGround(){
@@ -94,7 +94,7 @@ function addTextureGround(){
  const grad=ctx.createLinearGradient(0,0,size,size);grad.addColorStop(0,'#71894c');grad.addColorStop(.52,'#637c42');grad.addColorStop(1,'#536f3e');ctx.fillStyle=grad;ctx.fillRect(0,0,1024,1024);
  for(let i=0;i<speckles;i++){const x=Math.random()*size,y=Math.random()*size,v=55+Math.random()*105,a=.035+Math.random()*.16;ctx.fillStyle='rgba('+Math.floor(v*.72)+','+Math.floor(v)+','+Math.floor(v*.46)+','+a+')';ctx.beginPath();ctx.ellipse(x,y,1+Math.random()*4,.7+Math.random()*2,Math.random()*3,0,Math.PI*2);ctx.fill()}
  for(let i=0;i<(mobile?55:180);i++){const x=Math.random()*size,y=Math.random()*size,r=8+Math.random()*35;const g=ctx.createRadialGradient(x,y,1,x,y,r);g.addColorStop(0,'rgba(42,65,35,.16)');g.addColorStop(1,'rgba(42,65,35,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()}
- const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(24,24);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=Math.min(mobile?8:12,renderer.capabilities.getMaxAnisotropy());return t;
+ const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(24,24);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=Math.min(mobile?4:12,renderer.capabilities.getMaxAnisotropy());return t;
 }
 function addPalm(x,z,s=1){
  const g=new THREE.Group();const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.12*s,.24*s,4.2*s,12),mat(0x79543a));trunk.position.y=2.1*s;trunk.rotation.z=-.08;trunk.castShadow=true;g.add(trunk);
@@ -110,7 +110,7 @@ function addHouse(x,z,rotation=0,style=0,twoStorey=false){
   {wall:0xb8c3b9,trim:0xe0e2d7,roof:0x555047,wood:0x514638,glass:0x7da9ad,accent:0x788b7e}
  ];
  const p=palettes[Math.abs(style)%palettes.length],wall=mat(p.wall,.96),trim=mat(p.trim,.9),wood=mat(p.wood,.88),roof=mat(p.roof,.82),glass=new THREE.MeshStandardMaterial({color:p.glass,roughness:.16,metalness:.22}),accent=mat(p.accent,.9);
- wall.map=makeSurfaceMap('plaster');wall.map.repeat.set(2.2,1.3);wall.bumpMap=wall.map;wall.bumpScale=.045;wall.needsUpdate=true;roof.map=makeSurfaceMap('roof');roof.map.repeat.set(1.5,1.5);roof.bumpMap=roof.map;roof.bumpScale=.035;roof.needsUpdate=true;wood.map=makeSurfaceMap('wood');wood.map.repeat.set(1,1.4);wood.bumpMap=wood.map;wood.bumpScale=.025;wood.needsUpdate=true;
+ wall.map=makeSurfaceMap('plaster');wall.map.repeat.set(2.2,1.3);if(innerWidth>=700){wall.bumpMap=wall.map;wall.bumpScale=.045;}wall.needsUpdate=true;roof.map=makeSurfaceMap('roof');roof.map.repeat.set(1.5,1.5);if(innerWidth>=700){roof.bumpMap=roof.map;roof.bumpScale=.035;}roof.needsUpdate=true;wood.map=makeSurfaceMap('wood');wood.map.repeat.set(1,1.4);if(innerWidth>=700){wood.bumpMap=wood.map;wood.bumpScale=.025;}wood.needsUpdate=true;
  const floor=mat(style%2?0x877b68:0x9b8c73,.98),interior=mat(0xc2b69e,.96),darkWood=mat(0x59432f,.9),metal=mat(0x454b49,.58,.35);
  // Fundação elevada, paredes claras e rodapé de pedra.
  box(g,6.65,.24,5.85,mat(0x77766c),0,.12,0);
@@ -316,7 +316,7 @@ function buildWorld(){
  const ambient=new THREE.AmbientLight(0xdce2df,.18);scene.add(ambient);
  const sun=new THREE.DirectionalLight(0xffe8ce,2.65);sun.position.set(-42,78,34);sun.castShadow=!!gameSettings.shadows&&gameSettings.quality!=='low';sun.shadow.mapSize.set(innerWidth<700?1024:2048,innerWidth<700?1024:2048);sun.shadow.camera.left=-165;sun.shadow.camera.right=165;sun.shadow.camera.top=165;sun.shadow.camera.bottom=-165;sun.shadow.bias=-.00018;sun.shadow.normalBias=.025;sun.shadow.radius=innerWidth<700?2:3;sun.shadow.camera.near=1;sun.shadow.camera.far=260;scene.add(sun);
  const fill=new THREE.DirectionalLight(0x9db5c4,.42);fill.position.set(55,28,-48);scene.add(fill);
- const groundMap=addTextureGround();const groundMaterial=new THREE.MeshStandardMaterial({map:groundMap,roughness:.98});groundMaterial.bumpMap=groundMap;groundMaterial.bumpScale=.055;const ground=new THREE.Mesh(new THREE.PlaneGeometry(800,800),groundMaterial);ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+ const groundMap=addTextureGround();const groundMaterial=new THREE.MeshStandardMaterial({map:groundMap,roughness:.98});if(innerWidth>=700){groundMaterial.bumpMap=groundMap;groundMaterial.bumpScale=.055;}const ground=new THREE.Mesh(new THREE.PlaneGeometry(800,800),groundMaterial);ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
  const beach=new THREE.Mesh(new THREE.RingGeometry(119,141,192),new THREE.MeshStandardMaterial({color:0xd9c18c,roughness:.95}));beach.rotation.x=-Math.PI/2;beach.position.y=.035;scene.add(beach);
  const waterMat=new THREE.MeshStandardMaterial({color:0x168aa6,roughness:.24,metalness:.12,transparent:false});
  const water=new THREE.Mesh(new THREE.PlaneGeometry(1100,1100,1,1),waterMat);water.rotation.x=-Math.PI/2;water.position.y=-.28;scene.add(water);
@@ -881,24 +881,26 @@ function shoot(){
   mesh.position.copy(origin).add(shotDir.clone().multiplyScalar(.48));mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),shotDir);scene.add(mesh);
   bullets.push({mesh,dir:shotDir,life:currentWeapon().range/72,damage:currentWeapon().damage,travelled:0,range:currentWeapon().range});
  }
- muzzleFlash(origin,dir);document.querySelector('#crosshair')?.classList.add('firing');setTimeout(()=>document.querySelector('#crosshair')?.classList.remove('firing'),85);
+ muzzleFlash(origin,dir);document.querySelector('#crosshair')?.classList.add('firing');crosshairFlashTimer=.085;
  const recoilByWeapon=[.085,.065,.19,.17,.048,.125];const kick=recoilByWeapon[weaponIndex]||.085;recoil=Math.min(.55,recoil+(aiming?.055:.085)*kick/.085*(currentWeapon().pellets?1.35:1));recoilPitch=Math.min(.24,recoilPitch+kick*(aiming?.48:1)*(currentWeapon().pellets?1.2:1));pitch=THREE.MathUtils.clamp(pitch+kick*(aiming?.48:1)*(currentWeapon().pellets?1.2:1),-.78,.78);
  statusEl.textContent=ammo===0?(reserveAmmo[weaponIndex]>0?'RECARREGUE':'SEM MUNIÇÃO'):(aiming?'MIRA PRECISA':'DISPARANDO');
 }
-let radarClock=0;
+let radarClock=0,radarDotPool=[],crosshairFlashTimer=0;
 function updateRadar(){
  const radar=document.querySelector('#radarDots');if(!radar||!playerRig)return;
- radar.innerHTML='';
+ let visible=0;
  for(const enemy of enemies){
   if(!enemy.alive)continue;
   const dx=enemy.rig.holder.position.x-playerRig.holder.position.x;
   const dz=enemy.rig.holder.position.z-playerRig.holder.position.z;
-  const distance=Math.hypot(dx,dz);if(distance>105)continue;
-  const dot=document.createElement('i');dot.className='radar-dot';
+  if(dx*dx+dz*dz>11025)continue;
+  let dot=radarDotPool[visible];
+  if(!dot){dot=document.createElement('i');dot.className='radar-dot';radar.appendChild(dot);radarDotPool.push(dot);}
   dot.style.left=(50+THREE.MathUtils.clamp(dx/105*45,-45,45))+'%';
   dot.style.top=(50+THREE.MathUtils.clamp(dz/105*45,-45,45))+'%';
-  radar.appendChild(dot);
+  dot.style.display='block';visible++;
  }
+ for(let i=visible;i<radarDotPool.length;i++)radarDotPool[i].style.display='none';
 }
 function animate(){
  const frameDt=clock.getDelta(),dt=Math.min(frameDt,.04),p=playerRig.holder;adaptMobileFrameRate(frameDt);
@@ -929,7 +931,7 @@ function animate(){
   playerRig.jumpV=(playerRig.jumpV||0)-15*dt;p.position.y=Math.max(0,p.position.y+(playerRig.jumpV||0)*dt);if(p.position.y===0&&playerRig.jumpV<0)playerRig.jumpV=0;
   playerRig.motionSpeed=playerVelocity.length();playerRig.airBlend=THREE.MathUtils.clamp(p.position.y/.72,0,1);applyBodyMotion(playerRig,playerVelocity.dot(forward),playerVelocity.dot(right),dt);playerRig.update(dt);if(p.position.y<=.025){playerRig.root.position.y=0;playerRig.root.updateMatrixWorld(true);const groundBounds=new THREE.Box3().setFromObject(playerRig.root);if(Number.isFinite(groundBounds.min.y)&&groundBounds.min.y<0)playerRig.root.position.y=-groundBounds.min.y+.012;}if(playerRig.weaponPivot){playerRig.weaponKick=Math.max(0,(playerRig.weaponKick||0)-dt*1.35);playerRig.weaponPivot.rotation.x=-.08-(playerRig.weaponKick||0);}
  for(const e of enemies){if(!e.alive)continue;const ep=e.rig.holder,delta=p.position.clone().sub(ep.position);const dist=delta.length();if(dist>2.3){delta.normalize();ep.position.addScaledVector(delta,1.35*dt);ep.rotation.y=Math.atan2(delta.x,delta.z);if(e.anim!=='run'){e.anim='run';play(e.rig,'run')}}else{if(e.anim!=='idle'){e.anim='idle';play(e.rig,'idle')}e.attack+=dt;if(e.attack>1.5){e.attack=0;const raw=4,blocked=Math.min(armor,raw*.5);armor-=blocked;health=Math.max(0,health-(raw-blocked));refreshVitals();statusEl.textContent='SOB ATAQUE';setTimeout(()=>{if(health>0)statusEl.textContent='PRONTO'},450)}}applyBodyMotion(e.rig,dist>2.3?1.35:0,0,dt);e.rig.update(dt);if(e.rig.weaponPivot){e.rig.weaponKick=Math.max(0,(e.rig.weaponKick||0)-dt*.9);e.rig.weaponPivot.rotation.x=-.08-(e.rig.weaponKick||0)}}
- for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];b.mesh.position.addScaledVector(b.dir,72*dt);b.life-=dt;let hit=false;for(const e of enemies){if(e.alive){const base=e.rig.holder.position,head=base.clone().add(new THREE.Vector3(0,1.72,0)),torso=base.clone().add(new THREE.Vector3(0,.96,0));const headHit=b.mesh.position.distanceTo(head)<.42,bodyHit=b.mesh.position.distanceTo(torso)<.72;if(headHit||bodyHit){const falloff=Math.max(.52,1-(b.travelled/Math.max(1,b.range))*.42),dealt=b.damage*falloff*(headHit?2.15:1);e.hp-=dealt;hitMarkerTimer=.18;document.querySelector('#crosshair')?.classList.add('hit');burst(b.mesh.position,headHit?16:10,headHit?0xffe16b:0xffa34d,4.8);statusEl.textContent=headHit?'TIRO NA CABEÇA!':'ACERTO';hit=true;if(e.hp<=0){e.alive=false;burst(e.rig.holder.position.clone().add(new THREE.Vector3(0,1,0)),22,0xffd06b,5);scene.remove(e.rig.holder);e.rig.dispose();kills++;scoreEl.textContent=String(kills);document.querySelector('#remainingEnemies').textContent=String(enemies.filter(x=>x.alive).length)}break}}}b.travelled+=72*dt;if(hit||b.life<=0||b.travelled>=b.range){scene.remove(b.mesh);bullets.splice(i,1)}}
+ for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];b.mesh.position.addScaledVector(b.dir,72*dt);b.life-=dt;let hit=false;for(const e of enemies){if(e.alive){const base=e.rig.holder.position,bx=b.mesh.position.x-base.x,by=b.mesh.position.y-base.y,bz=b.mesh.position.z-base.z;const headY=by-1.72,bodyY=by-.96;const headHit=bx*bx+headY*headY+bz*bz<.1764,bodyHit=bx*bx+bodyY*bodyY+bz*bz<.5184;if(headHit||bodyHit){const falloff=Math.max(.52,1-(b.travelled/Math.max(1,b.range))*.42),dealt=b.damage*falloff*(headHit?2.15:1);e.hp-=dealt;hitMarkerTimer=.18;document.querySelector('#crosshair')?.classList.add('hit');burst(b.mesh.position,headHit?16:10,headHit?0xffe16b:0xffa34d,4.8);statusEl.textContent=headHit?'TIRO NA CABEÇA!':'ACERTO';hit=true;if(e.hp<=0){e.alive=false;burst(e.rig.holder.position.clone().add(new THREE.Vector3(0,1,0)),22,0xffd06b,5);scene.remove(e.rig.holder);e.rig.dispose();kills++;scoreEl.textContent=String(kills);document.querySelector('#remainingEnemies').textContent=String(enemies.filter(x=>x.alive).length)}break}}}b.travelled+=72*dt;if(hit||b.life<=0||b.travelled>=b.range){scene.remove(b.mesh);bullets.splice(i,1)}}
  fireCooldown=Math.max(0,fireCooldown-dt);
  if(burstRemaining>0&&fireCooldown<=0&&reloadTimer<=0){shoot();burstRemaining--;}
  else if(gameSettings.autoFire&&fireMode==='AUTO'&&fireHeld&&fireCooldown<=0&&reloadTimer<=0&&currentWeapon().modes.includes('AUTO'))shoot();
@@ -957,6 +959,6 @@ function animate(){
   const wantedFov=THREE.MathUtils.lerp(sprintHeld&&!aiming?70:66,Math.max(36,48-scopeLevel*3.5),aimBlend);if(Math.abs(camera.fov-wantedFov)>.08){camera.fov=THREE.MathUtils.lerp(camera.fov,wantedFov,smooth);camera.updateProjectionMatrix();}
   const crosshair=document.querySelector('#crosshair');if(crosshair){const movementBloom=THREE.MathUtils.clamp(playerVelocity.length()/7.1,0,1)*(aiming?.18:.34);const bloomScale=THREE.MathUtils.clamp((aiming?.72:1)+movementBloom+recoil*.7,.68,1.55);crosshair.style.scale=String(bloomScale);}
  updateSafeZone(dt);
- if(hitMarkerTimer>0){hitMarkerTimer-=dt;if(hitMarkerTimer<=0)document.querySelector('#crosshair')?.classList.remove('hit')}updateEffects(dt);radarClock-=dt;if(radarClock<=0){radarClock=.35;updateRadar()}renderer.render(scene,camera);
+ if(hitMarkerTimer>0){hitMarkerTimer-=dt;if(hitMarkerTimer<=0)document.querySelector('#crosshair')?.classList.remove('hit')}if(crosshairFlashTimer>0){crosshairFlashTimer-=dt;if(crosshairFlashTimer<=0)document.querySelector('#crosshair')?.classList.remove('firing')}updateEffects(dt);radarClock-=dt;if(radarClock<=0){radarClock=.35;updateRadar()}renderer.render(scene,camera);
 }
 init().catch(err=>{console.error('Falha ao iniciar Ilha de Combate:',err);loading.style.display='none';errorPanel.style.display='grid';document.querySelector('#errorMessage').textContent='Falha ao iniciar: '+(err?.message||'erro desconhecido')+'. Atualize a página e tente novamente.'});
