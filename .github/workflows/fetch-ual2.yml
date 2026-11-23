@@ -1,0 +1,40 @@
+name: Fetch Quaternius UAL2 prone transitions
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'game.js'
+      - '.github/workflows/fetch-ual2.yml'
+permissions:
+  contents: write
+jobs:
+  fetch-ual2:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download official CC0 UAL2 Standard and add it to the game
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -s assets/UAL2_Standard.glb ]; then
+            echo "UAL2 already present"
+            exit 0
+          fi
+          mkdir -p assets
+          response="$(curl -fsSL -X POST 'https://quaternius.itch.io/universal-animation-library-2/file/17958478?source=game_download&as_props=1' -H 'Accept: application/json' -H 'Content-Type: application/json' --data '{}')"
+          url="$(printf '%s' "$response" | jq -r '.url // empty')"
+          test -n "$url"
+          curl -fL "$url" -o /tmp/ual2.zip
+          echo '4008ea208a604773a2b2177d965f0f5d3195498b5bf838c3f5785d68e95f2a68  /tmp/ual2.zip' | sha256sum -c -
+          entry="$(unzip -Z1 /tmp/ual2.zip | grep -E '(^|/)Unreal-Godot/UAL2_Standard\.glb$' | head -n 1)"
+          test -n "$entry"
+          unzip -p /tmp/ual2.zip "$entry" > assets/UAL2_Standard.glb
+          test -s assets/UAL2_Standard.glb
+          test "$(head -c 4 assets/UAL2_Standard.glb)" = 'glTF'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/UAL2_Standard.glb
+          if ! git diff --cached --quiet; then
+            git commit -m 'Add Quaternius UAL2 CC0 prone transition animations'
+            git push
+          fi
