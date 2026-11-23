@@ -509,8 +509,8 @@ async function createFighter(isEnemy=false,index=0){
    const armReady=ready*(1-aim*.12),elbowReady=ready*(1-aim*.08);
    const pose=[
     ['mixamorigHips',prone ? .82 : crouch ? .42 : -(this.jumpBlend||0)*.16,0,0],
-    ['mixamorigSpine',prone ? .48 : crouch ? -.10 : -.19*combatPose-(this.jumpBlend||0)*.08,0,0],
-    ['mixamorigSpine1',prone ? .22 : crouch ? -.08 : -.13*combatPose-(this.jumpBlend||0)*.04,0,0],
+    ['mixamorigSpine',prone ? .48 : crouch ? -.10 : -.28*combatPose-(this.jumpBlend||0)*.08,0,0],
+    ['mixamorigSpine1',prone ? .22 : crouch ? -.08 : -.20*combatPose-(this.jumpBlend||0)*.04,0,0],
     ['mixamorigLeftUpLeg',prone ? -.42 : crouch ? -.52 : -(this.jumpBlend||0)*.34,0,0],
     ['mixamorigRightUpLeg',prone ? -.42 : crouch ? -.52 : -(this.jumpBlend||0)*.28,0,0],
     ['mixamorigLeftLeg',prone ? .18 : crouch ? 1.02 : (this.jumpBlend||0)*.62,0,0],
@@ -606,7 +606,8 @@ function applyBodyMotion(rig,forwardSpeed,lateralSpeed,dt){
  const holder=rig.holder;
  const run=THREE.MathUtils.clamp(Math.hypot(forwardSpeed,lateralSpeed)/5.4,0,1);
  const stance=rig.stanceMode==='prone' ? -.10 : rig.stanceMode==='crouch' ? -.035 : 0;
- const targetPitch=-run*(rig.runBlend ? .105 : .045)+stance;
+ const firing=rig.isPlayer?THREE.MathUtils.clamp(rig.weaponFireBlend||0,0,1):0;
+ const targetPitch=-run*(rig.runBlend ? .105 : .045)+stance+firing*.17;
  const targetRoll=THREE.MathUtils.clamp(-lateralSpeed*.018,-.07,.07);
  const blend=1-Math.exp(-8*dt);
  holder.rotation.x=THREE.MathUtils.lerp(holder.rotation.x,targetPitch,blend);
