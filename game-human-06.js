@@ -863,7 +863,7 @@ function shoot(){
  if(ammo<=0){statusEl.textContent=reserveAmmo[weaponIndex]>0?'RECARREGUE':'SEM MUNIÇÃO';fireHeld=false;burstRemaining=0;return}
  ammo--;weaponAmmo[weaponIndex]=ammo;refreshAmmo();
  fireCooldown=currentWeapon().rate*(aiming?.86:1);
- const dir=new THREE.Vector3();camera.getWorldDirection(dir);
+ const cameraRight=new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion);const horizontalOffset=.06*Math.tan(THREE.MathUtils.degToRad(camera.fov*.5))*(window.innerWidth/window.innerHeight);const dir=new THREE.Vector3();camera.getWorldDirection(dir);dir.addScaledVector(cameraRight,horizontalOffset).normalize();
  const movement=THREE.MathUtils.clamp(playerVelocity.length()/7.1,0,1);
  const aimAccuracy=aiming?Math.max(.1,.22-scopeLevel*.028):1;
  const stanceAccuracy=movementMode==='prone'?.52:movementMode==='crouch'?.72:1;
@@ -871,7 +871,6 @@ function shoot(){
  const movementPenalty=1+movement*(aiming?1.05:1.35);
  const recoilPenalty=1+recoil*1.8;
  const spread=currentWeapon().spread*aimAccuracy*stanceAccuracy*airborne*movementPenalty*recoilPenalty*(1-attachmentLevel*.085);
- const cameraRight=new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion);
  const cameraUp=new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion);
  playerRig.weaponMuzzle?.getWorldPosition(_shotOrigin);const origin=playerRig.weaponMuzzle?_shotOrigin.clone():playerRig.holder.position.clone().add(new THREE.Vector3(0,1.42,0)).add(dir.clone().multiplyScalar(.8));
  for(let n=0;n<(currentWeapon().pellets||1);n++){
