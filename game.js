@@ -826,8 +826,11 @@ function animate(){
     playerRig.weaponPivot.position.y+=.085*aim-.16*run-.055*reloadBlend+Math.sin(gait)*(.012*moveAmount)*(1-aim);
     playerRig.weaponPivot.position.x-=.018*aim+THREE.MathUtils.clamp(strafe/5.35,-1,1)*.012*moveAmount;
     playerRig.weaponPivot.rotation.copy(playerRig.weaponBaseRotation);
-    playerRig.weaponPivot.rotation.x-=.19*aim+.42*run+.22*reloadBlend+(playerRig.weaponKick||0);\n     // A arma acompanha a elevação vertical da mira, em vez de permanecer fixa no peito.\n     playerRig.weaponPivot.rotation.x+=THREE.MathUtils.clamp(pitch,-.78,.78)*aim*.82;
-    playerRig.weaponPivot.rotation.z-=THREE.MathUtils.clamp(strafe/5.35,-1,1)*.075*moveAmount;\n     playerRig.weaponPivot.rotation.z-=THREE.MathUtils.clamp(strafe/5.35,-1,1)*.035*aim;
+    playerRig.weaponPivot.rotation.x-=.19*aim+.42*run+.22*reloadBlend+(playerRig.weaponKick||0);
+     // A arma acompanha a elevação vertical da mira, em vez de permanecer fixa no peito.
+     playerRig.weaponPivot.rotation.x+=THREE.MathUtils.clamp(pitch,-.78,.78)*aim*.82;
+    playerRig.weaponPivot.rotation.z-=THREE.MathUtils.clamp(strafe/5.35,-1,1)*.075*moveAmount;
+     playerRig.weaponPivot.rotation.z-=THREE.MathUtils.clamp(strafe/5.35,-1,1)*.035*aim;
     playerRig.weaponPivot.rotation.y+=.08*reloadBlend;
     playerRig.weaponPivot.rotation.y+=Math.sin(gait*.5)*.012*moveAmount*(1-aim);
    }
