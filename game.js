@@ -86,7 +86,7 @@ function house(x,z,color){
  worldBlockers.push({x,z,r:3.8});
 }
 // Rig humanoide procedural com hierarquia de ossos e membros articulados.
-let rig=null,weaponEquipped=true,weaponModel=null;
+let rig=null,weaponEquipped=true,weaponModel=null,reloadPoseUntil=0,firePoseUntil=0;
 const skinMat=mat(0xb98262,.82),uniformMat=mat(0x35483d,.92),pantsMat=mat(0x303a34,.95),bootMat=mat(0x202722,.9),gearMat=mat(0x596451,.95);
 function bone(parent,name,x,y,z){const b=new THREE.Bone();b.name=name;b.position.set(x,y,z);parent.add(b);return b}
 function boneCapsule(parent,r,length,material,y=-length/2){const m=mesh(parent,new THREE.CapsuleGeometry(r,length,5,9),material,[0,y,0]);return m}
@@ -140,30 +140,48 @@ function setWeaponMode(equipped){
 }
 function animateRig(dt,speed,sprinting,crouch,prone){
  if(!rig)return;
- const moving=speed>.18,phase=performance.now()*.009*(sprinting?1.55:1);
- const stride=moving?Math.sin(phase)*Math.min(1,speed/3.2):0;
+ const now=performance.now(),moving=speed>.16;
+ const phase=now*.008*(sprinting?1.65:1);
+ const stride=moving?Math.sin(phase)*Math.min(1,speed/3.4):0;
  const bob=moving?Math.abs(Math.cos(phase))*.025:0;
- const low=prone?-.55:crouch?-.16:0;
- rig.pelvis.position.y=1.20+low+bob+(grounded?0:hero.position.y*.12);
- rig.spine.rotation.x=prone?-.95:crouch?.24:sprinting?.10:0;
- rig.chest.rotation.x=aim&&weaponEquipped?-.08:0;
- rig.head.rotation.x=aim?-.04:0;
+ const reloadPose=weaponEquipped&&now<reloadPoseUntil;
+ const firingPose=weaponEquipped&&now<firePoseUntil;
+ // O quadril e a coluna comandam a postura; o corpo inteiro acompanha ao deitar.
+ rig.pelvis.position.y=1.20+(prone?-.02:crouch?-.13:0)+bob;
+ rig.pelvis.rotation.x=prone?-1.28:0;
+ rig.spine.rotation.x=prone?-.10:crouch?.18:sprinting?.08:0;
+ rig.chest.rotation.x=prone?-.08:(aim&&weaponEquipped?-.07:0);
+ rig.head.rotation.x=aim?-.05:0;
  for(const side of [-1,1]){
   const k=side<0?'L':'R',arm=rig.arms[k],leg=rig.legs[k];
-  leg.thigh.rotation.x=prone?-.10:stride*side;
-  leg.knee.rotation.x=prone?-.15:Math.max(0,-stride*side)*.9+(crouch?.45:0);
-  leg.calf.rotation.x=prone?-.12:Math.max(0,stride*side)*.25;
+  // Pernas com flexão de joelho e amortecimento de passada.
+  leg.thigh.rotation.x=prone?-.04:stride*side*(crouch?.42:1);
+  leg.knee.rotation.x=prone?-.06:Math.max(0,-stride*side)*.82+(crouch?.48:0);
+  leg.calf.rotation.x=prone?-.02:Math.max(0,stride*side)*.20;
   if(weaponEquipped){
-   arm.shoulder.rotation.x=-.82+(aim?-.12:0);arm.shoulder.rotation.z=side*(side<0?-.20:.28);
-   arm.upper.rotation.x=-.42;arm.fore.rotation.x=-.48;arm.hand.rotation.x=.05;
+   // Postura de combate: as duas mãos sustentam o rifle, cotovelos flexionados.
+   arm.shoulder.rotation.x=prone?-.98:(reloadPose&&k==='R'?.12:-.92+(aim?-.12:0));
+   arm.shoulder.rotation.z=side<0?-.34:.20;
+   arm.upper.rotation.x=prone?-.16:(reloadPose&&k==='R'?.48:-.34);
+   arm.fore.rotation.x=prone?-.12:(reloadPose&&k==='R'?-.12:-.56);
+   arm.hand.rotation.x=firingPose&&k==='R'?-.12:.04;
+   if(k==='L'){
+    arm.shoulder.rotation.x=prone?-.78:-1.02;
+    arm.shoulder.rotation.z=-.48;
+    arm.upper.rotation.x=-.18;
+    arm.fore.rotation.x=-.62;
+   }
   }else{
-   arm.shoulder.rotation.x=prone?-.25:stride*side*.8;
-   arm.shoulder.rotation.z=side*.08;
-   arm.upper.rotation.x=prone?-.25:0;arm.fore.rotation.x=prone?-.2:0;arm.hand.rotation.x=0;
+   // Sem arma: balanço natural dos braços acompanha a passada.
+   arm.shoulder.rotation.x=prone?-.10:stride*side*.78;
+   arm.shoulder.rotation.z=side*.06;
+   arm.upper.rotation.x=prone?-.12:0;
+   arm.fore.rotation.x=prone?-.08:Math.max(0,-stride*side)*.12;
+   arm.hand.rotation.x=0;
   }
  }
- if(prone){rig.pelvis.rotation.x=-.12;rig.chest.rotation.x=-.28}
- else rig.pelvis.rotation.x=0;
+ if(prone){rig.chest.rotation.x=-.08;rig.neck.rotation.x=.08}
+ else rig.neck.rotation.x=0;
 }
 function bind(){
  const stick=$('stick'),knob=$('knob');let sid=null,rect=null;
@@ -176,7 +194,7 @@ function bind(){
  $('jump').addEventListener('pointerdown',e=>{e.preventDefault();if(grounded&&pose!=='prone'){velocityY=6.2;grounded=false}});
  $('crouch').addEventListener('pointerdown',e=>{e.preventDefault();setPose(pose==='crouch'?'stand':'crouch')});
  $('prone').addEventListener('pointerdown',e=>{e.preventDefault();setPose(pose==='prone'?'stand':'prone')});
- $('reload').addEventListener('pointerdown',e=>{e.preventDefault();if(!reloading&&ammo<30){reloading=true;$('message').textContent='RECARREGANDO';setTimeout(()=>{ammo=30;reloading=false;stats();$('message').textContent='ÁREA DE TREINO'},1450)}});
+ $('reload').addEventListener('pointerdown',e=>{e.preventDefault();if(!reloading&&ammo<30){reloading=true;reloadPoseUntil=performance.now()+1450;$('message').textContent='RECARREGANDO';setTimeout(()=>{ammo=30;reloading=false;stats();$('message').textContent='ÁREA DE TREINO'},1450)}});
  let drag=null;renderer.domElement.addEventListener('pointerdown',e=>{if(e.clientX>innerWidth*.38){drag={id:e.pointerId,x:e.clientX,y:e.clientY};renderer.domElement.setPointerCapture(e.pointerId)}});
  renderer.domElement.addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag.x=e.clientX;drag.y=e.clientY;const sensitivity=aim?.0042:.0062;yaw-=dx*sensitivity;pitch=THREE.MathUtils.clamp(pitch+dy*(aim?.0028:.0035),-.72,.42)});
  ['pointerup','pointercancel'].forEach(ev=>renderer.domElement.addEventListener(ev,e=>{if(drag&&e.pointerId===drag.id)drag=null}));
