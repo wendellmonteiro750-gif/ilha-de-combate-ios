@@ -27,7 +27,7 @@ function switchWeapon(){if(reloadTimer>0)return;weaponIndex=(weaponIndex+1)%weap
 
 const playerVelocity=new THREE.Vector3(),cameraLook=new THREE.Vector3();
 let safeRing=null,zoneElapsed=0,zoneDamageClock=0,lootItems=[];
-const keys={forward:0,side:0},bullets=[],enemies=[],effects=[];let dustClock=0,recoil=0,aiming=false,hitMarkerTimer=0,fireHeld=false,fireCooldown=0,reloadTimer=0;
+const keys={forward:0,side:0},bullets=[],enemies=[],effects=[];let dustClock=0,recoil=0,aiming=false,aimBlend=0,hitMarkerTimer=0,fireHeld=false,fireCooldown=0,reloadTimer=0;
 const BASE='https://raw.githubusercontent.com/NoLimitNexus/game-models/main/';
 
 function mat(color,roughness=.86,metalness=0){return new THREE.MeshStandardMaterial({color,roughness,metalness})}
@@ -504,7 +504,9 @@ function setupControls(){
  document.querySelector('#jump').onclick=()=>{playerRig.jumpV=5.8};
  const sprintButton=document.querySelector('#sprint');
  if(sprintButton){sprintButton.addEventListener('pointerdown',e=>{e.preventDefault();sprintHeld=true;sprintButton.classList.add('active');sprintButton.setPointerCapture(e.pointerId)});const stopSprint=()=>{sprintHeld=false;sprintButton.classList.remove('active')};sprintButton.addEventListener('pointerup',stopSprint);sprintButton.addEventListener('pointercancel',stopSprint);sprintButton.addEventListener('lostpointercapture',stopSprint)}
- document.querySelector('#aim').onclick=()=>{aiming=!aiming;document.querySelector('#aim').classList.toggle('active',aiming);document.querySelector('#crosshair')?.classList.toggle('aiming',aiming);statusEl.textContent=aiming?'MIRA PRECISA':'EM COMBATE'};
+ const aimButton=document.querySelector('#aim');
+ aimButton.setAttribute('aria-pressed','false');
+ aimButton.onclick=()=>{aiming=!aiming;aimButton.classList.toggle('active',aiming);aimButton.setAttribute('aria-pressed',String(aiming));document.querySelector('#crosshair')?.classList.toggle('aiming',aiming);statusEl.textContent=aiming?'MIRA PRECISA':'EM COMBATE'};
  const fireButton=document.querySelector('#fire');
  fireButton.addEventListener('pointerdown',e=>{e.preventDefault();fireHeld=true;fireButton.setPointerCapture(e.pointerId);shoot()});
  const stopFire=()=>{fireHeld=false};fireButton.addEventListener('pointerup',stopFire);fireButton.addEventListener('pointercancel',stopFire);fireButton.addEventListener('lostpointercapture',stopFire);
@@ -525,10 +527,16 @@ function shoot(){
  ammo--;weaponAmmo[weaponIndex]=ammo;ammoEl.textContent='MUNIÇÃO '+ammo;document.querySelector('#ammoLarge').textContent=ammo;refreshInventory();
  fireCooldown=currentWeapon().rate*(aiming?.82:1);
  const dir=new THREE.Vector3();camera.getWorldDirection(dir);
- const spread=(aiming?currentWeapon().spread*Math.max(.08,.25-scopeLevel*.055):currentWeapon().spread)+(playerVelocity.length()>.5?currentWeapon().spread*.8:0);
- dir.x+=(Math.random()-.5)*spread;dir.y+=(Math.random()-.5)*spread;dir.z+=(Math.random()-.5)*spread;dir.normalize();
+ const movement=THREE.MathUtils.clamp(playerVelocity.length()/7.1,0,1);
+ const aimAccuracy=aiming?Math.max(.12,.22-scopeLevel*.025):1;
+ const movementPenalty=1+movement*(aiming?.75:1.35);
+ const recoilPenalty=1+recoil*1.8;
+ const spread=currentWeapon().spread*aimAccuracy*movementPenalty*recoilPenalty;
+ const cameraRight=new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion);
+ const cameraUp=new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion);
+ dir.addScaledVector(cameraRight,(Math.random()-.5)*spread).addScaledVector(cameraUp,(Math.random()-.5)*spread);dir.normalize();
  const origin=playerRig.holder.position.clone().add(new THREE.Vector3(0,1.42,0)).add(dir.clone().multiplyScalar(.8));
- muzzleFlash(origin,dir);document.querySelector('#crosshair')?.classList.add('firing');setTimeout(()=>document.querySelector('#crosshair')?.classList.remove('firing'),85);recoil=Math.min(.24,recoil+(aiming?.035:.065));
+ muzzleFlash(origin,dir);document.querySelector('#crosshair')?.classList.add('firing');setTimeout(()=>document.querySelector('#crosshair')?.classList.remove('firing'),85);recoil=Math.min(.42,recoil+(aiming?.045:.075));
  const mesh=new THREE.Mesh(new THREE.CylinderGeometry(.014,.014,.72,6),new THREE.MeshBasicMaterial({color:0xffdf91,transparent:true,opacity:.95}));
  mesh.position.copy(origin).add(dir.clone().multiplyScalar(.48));mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir);scene.add(mesh);bullets.push({mesh,dir,life:.22,damage:currentWeapon().damage});
  statusEl.textContent=ammo===0?'RECARREGUE':(aiming?'MIRA PRECISA':'DISPARANDO');
@@ -566,7 +574,19 @@ function animate(){
  fireCooldown=Math.max(0,fireCooldown-dt);
  if(fireHeld&&fireCooldown<=0&&reloadTimer<=0)shoot();
  if(reloadTimer>0){reloadTimer-=dt;if(reloadTimer<=0){reloadTimer=0;weaponAmmo[weaponIndex]=currentWeapon().mag;refreshAmmo();document.querySelector('#reload').classList.remove('active');statusEl.textContent='PRONTO'}}
- recoil=Math.max(0,recoil-dt*.55);const forwardView=new THREE.Vector3(Math.sin(worldYaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(worldYaw)*Math.cos(pitch));const rightView=new THREE.Vector3(Math.cos(worldYaw),0,Math.sin(worldYaw));const movingBob=playerVelocity.length()>.25?Math.sin(clock.elapsedTime*(aiming?7.5:10.5))*.025*(aiming?.35:1):0;const lookTarget=p.position.clone().add(new THREE.Vector3(0,1.46+movingBob,0)).add(forwardView.clone().multiplyScalar(aiming?2.55:1.35)).add(new THREE.Vector3(0,recoil*.16,0));const cameraDistance=aiming?3.15:(sprintHeld?5.0:4.8);const shoulder=aiming?.36:.62;const desiredCamera=lookTarget.clone().add(forwardView.clone().multiplyScalar(-cameraDistance)).add(rightView.multiplyScalar(shoulder));const smooth=1-Math.exp(-(aiming?20:14)*dt);camera.position.lerp(desiredCamera,smooth);cameraLook.lerp(lookTarget,smooth);camera.lookAt(cameraLook);const wantedFov=aiming?49:(sprintHeld?70:66);if(Math.abs(camera.fov-wantedFov)>.1){camera.fov=THREE.MathUtils.lerp(camera.fov,wantedFov,smooth);camera.updateProjectionMatrix();}
+ recoil=Math.max(0,recoil-dt*(aiming?.72:.9));
+  aimBlend=THREE.MathUtils.damp(aimBlend,aiming?1:0,13,dt);
+  const forwardView=new THREE.Vector3(Math.sin(worldYaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(worldYaw)*Math.cos(pitch));
+  const rightView=new THREE.Vector3(Math.cos(worldYaw),0,Math.sin(worldYaw));
+  const movingBob=playerVelocity.length()>.25?Math.sin(clock.elapsedTime*(aiming?7.5:10.5))*.025*(aiming?.35:1):0;
+  const aimForward=THREE.MathUtils.lerp(1.35,2.15,aimBlend);
+  const lookTarget=p.position.clone().add(new THREE.Vector3(0,1.46+movingBob+recoil*.72,0)).add(forwardView.clone().multiplyScalar(aimForward));
+  const cameraDistance=THREE.MathUtils.lerp(sprintHeld&&!aiming?5.0:4.8,3.18,aimBlend);
+  const shoulder=THREE.MathUtils.lerp(.62,.22,aimBlend);
+  const desiredCamera=lookTarget.clone().add(forwardView.clone().multiplyScalar(-cameraDistance)).add(rightView.multiplyScalar(shoulder));
+  const smooth=1-Math.exp(-15*dt);camera.position.lerp(desiredCamera,smooth);cameraLook.lerp(lookTarget,smooth);camera.lookAt(cameraLook);
+  const wantedFov=THREE.MathUtils.lerp(sprintHeld&&!aiming?70:66,48,aimBlend);if(Math.abs(camera.fov-wantedFov)>.08){camera.fov=THREE.MathUtils.lerp(camera.fov,wantedFov,smooth);camera.updateProjectionMatrix();}
+  const crosshair=document.querySelector('#crosshair');if(crosshair){const movementBloom=THREE.MathUtils.clamp(playerVelocity.length()/7.1,0,1)*(aiming?.18:.34);const bloomScale=THREE.MathUtils.clamp((aiming?.72:1)+movementBloom+recoil*.7,.68,1.55);crosshair.style.scale=String(bloomScale);}
  updateSafeZone(dt);
  if(hitMarkerTimer>0){hitMarkerTimer-=dt;if(hitMarkerTimer<=0)document.querySelector('#crosshair')?.classList.remove('hit')}updateEffects(dt);radarClock-=dt;if(radarClock<=0){radarClock=.18;updateRadar()}renderer.render(scene,camera);
 }
