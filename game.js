@@ -219,7 +219,7 @@ function shoot(){
 function reload(){if(reloading||ammo===30||reserve<=0)return;reloading=true;setMsg('RECARREGANDO');sound(260,.16,'triangle',.025);setTimeout(()=>sound(190,.13,'triangle',.025),520);setTimeout(()=>{const n=Math.min(30-ammo,reserve);ammo+=n;reserve-=n;reloading=false;updateHud();setMsg('PRONTO PARA COMBATE')},1450)}
 function updateLoot(){for(const l of loot){if(!l.active)continue;l.g.rotation.y+=.012;if(l.g.position.distanceTo(hero.position)<2.4){l.active=false;l.g.visible=false;sound(620,.07,'sine',.025);if(l.kind==='MUNIÇÃO')reserve+=45;else if(l.kind==='KIT MÉDICO')health=Math.min(100,health+35);else if(l.kind==='COLETE')health=Math.min(150,health+15);else{ammo=Math.min(30,ammo+10);reserve+=20}setMsg('COLETADO: '+l.kind);updateHud()}}}
 function updateBots(dt){for(const b of bots){if(!b.alive)continue;const d=b.g.position.distanceTo(hero.position);if(d<46){const dir=hero.position.clone().sub(b.g.position).setY(0).normalize();b.g.position.addScaledVector(dir,dt*(d>12?2.1:.4));b.g.lookAt(hero.position.x,0,hero.position.z);if(d<32&&performance.now()-b.shot>1500){b.shot=performance.now();health=Math.max(0,health-(2+Math.random()*4));updateHud();if(health<=0){setMsg('VOCÊ FOI ELIMINADO');$('lobby').classList.remove('hidden');$('play').textContent='TENTAR NOVAMENTE';gameStarted=false}}}}}
-function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);if(gameStarted){move(dt);updateLoot();updateBots(dt)}animateSoldierRig(dt);cameraUpdate(dt);for(let i=effects.length-1;i>=0;i--){effects[i].t-=dt;if(effects[i].t<=0){scene.remove(effects[i].o);effects[i].o.geometry.dispose();effects[i].o.material.dispose();effects.splice(i,1)}}renderer.render(scene,camera)}
+function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);if(gameStarted){updateKeyboardMove();move(dt);if(shooting)shoot();updateLoot();updateBots(dt)}animateSoldierRig(dt);cameraUpdate(dt);for(let i=effects.length-1;i>=0;i--){effects[i].t-=dt;if(effects[i].t<=0){scene.remove(effects[i].o);effects[i].o.geometry.dispose();effects[i].o.material.dispose();effects.splice(i,1)}}renderer.render(scene,camera)}
 function start(){gameStarted=true;health=100;ammo=30;reserve=120;score=0;hero.position.set(0,0,10);$('lobby').classList.add('hidden');setMsg('POUSO CONCLUÍDO · EXPLORE AS NOVE CIDADES');updateHud()}
 $('play').addEventListener('click',start);
 $('fire').addEventListener('pointerdown',e=>{e.preventDefault();shooting=true;shoot()});['pointerup','pointercancel','pointerleave'].forEach(t=>$('fire').addEventListener(t,()=>shooting=false));
@@ -229,7 +229,35 @@ $('run').addEventListener('pointerdown',()=>run=true);['pointerup','pointercance
 $('jump').addEventListener('pointerdown',()=>{if(gameStarted&&pose==='stand'&&hero.position.y===0)jumpVelocity=7.2});
 $('crouch').addEventListener('pointerdown',()=>{pose=pose==='crouch'?'stand':'crouch';updateHud()});
 $('prone').addEventListener('pointerdown',()=>{pose=pose==='prone'?'stand':'prone';updateHud()});
-$('aim').addEventListener('pointerdown',()=>{aim=!aim;$('aim').classList.toggle('active',aim)});
+function setAim(on){aim=on;$('aim').classList.toggle('active',aim)}$('aim').addEventListener('pointerdown',e=>{e.preventDefault();setAim(true)});['pointerup','pointercancel','pointerleave'].forEach(t=>$('aim').addEventListener(t,()=>setAim(false)));
+// Controles equivalentes ao projeto anterior: teclado, corrida, posturas e ações.
+const keys=new Set();
+addEventListener('keydown',e=>{
+ const k=e.key.toLowerCase();
+ if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright',' ','shift'].includes(k))e.preventDefault();
+ if(keys.has(k))return;keys.add(k);
+ if(k==='r')reload();
+ if(k==='q')switchWeapon();
+ if(k===' ') {if(gameStarted&&pose==='stand'&&hero.position.y===0)jumpVelocity=7.2}
+ if(k==='c'){pose=pose==='crouch'?'stand':'crouch';updateHud()}
+ if(k==='z'){pose=pose==='prone'?'stand':'prone';updateHud()}
+ if(k==='shift')run=true;
+ if(k==='control')setAim(true);
+ if(k==='enter'&&!gameStarted)start();
+});
+addEventListener('keyup',e=>{
+ const k=e.key.toLowerCase();keys.delete(k);
+ if(k==='shift')run=false;
+ if(k==='control')setAim(false);
+});
+function updateKeyboardMove(){
+ if(keys.has('a')||keys.has('arrowleft'))mx=-1;
+ else if(keys.has('d')||keys.has('arrowright'))mx=1;
+ else if(!stickId)mx=0;
+ if(keys.has('w')||keys.has('arrowup'))my=-1;
+ else if(keys.has('s')||keys.has('arrowdown'))my=1;
+ else if(!stickId)my=0;
+}
 const stick=$('stick'),knob=$('knob');let stickId=null;stick.addEventListener('pointerdown',e=>{stickId=e.pointerId;stick.setPointerCapture(stickId);joy(e)});stick.addEventListener('pointermove',e=>{if(e.pointerId===stickId)joy(e)});function joy(e){const r=stick.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2),len=Math.min(46,Math.hypot(dx,dy)),a=Math.atan2(dy,dx);knob.style.transform='translate('+Math.cos(a)*len+'px,'+Math.sin(a)*len+'px)';mx=Math.cos(a)*len/46;my=Math.sin(a)*len/46}function endStick(){stickId=null;mx=my=0;knob.style.transform=''}['pointerup','pointercancel'].forEach(t=>stick.addEventListener(t,endStick));
 let lookId=null,lastX=0,lastY=0;renderer.domElement.addEventListener('pointerdown',e=>{if(e.clientX<innerWidth*.35&&e.clientY>innerHeight*.5)return;lookId=e.pointerId;lastX=e.clientX;lastY=e.clientY;renderer.domElement.setPointerCapture(lookId)});renderer.domElement.addEventListener('pointermove',e=>{if(e.pointerId!==lookId)return;yaw-=(e.clientX-lastX)*.006;pitch=THREE.MathUtils.clamp(pitch+(e.clientY-lastY)*.004,-.65,.45);lastX=e.clientX;lastY=e.clientY});['pointerup','pointercancel'].forEach(t=>renderer.domElement.addEventListener(t,()=>lookId=null));
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,mobile?1.35:2))});
