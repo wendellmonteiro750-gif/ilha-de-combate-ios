@@ -256,11 +256,15 @@ function createCombatWeapon(){
  const bodyHeight=bodyBounds.getSize(new THREE.Vector3()).y;
  const rifleBounds=new THREE.Box3().setFromObject(weaponModel);
  const rifleLength=rifleBounds.getSize(new THREE.Vector3()).z;
- const targetLength=bodyHeight*.48;
- const proportionalScale=(bodyHeight>0&&rifleLength>0)?targetLength/rifleLength:.62;
- weaponModel.scale.setScalar(THREE.MathUtils.clamp(proportionalScale,.48,.72));
+ // Calibra o comprimento pela altura real do soldado, sem deixar a arma
+ // exagerada em relação às mãos e aos braços do personagem.
+ const targetLength=bodyHeight*.44;
+ const proportionalScale=(bodyHeight>0&&rifleLength>0)?targetLength/rifleLength:.56;
+ const finalScale=THREE.MathUtils.clamp(proportionalScale,.42,.62);
+ weaponModel.scale.setScalar(finalScale);
  weaponModel.userData.bodyHeight=bodyHeight;
  weaponModel.userData.targetLength=targetLength;
+ weaponModel.userData.proportionalScale=finalScale;
 }
 function setWeaponMode(equipped){
  weaponEquipped=equipped;
