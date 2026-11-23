@@ -85,9 +85,21 @@ const hero=new THREE.Group();scene.add(hero);hero.position.set(0,0,10);
 const torso=new THREE.Group();torso.position.y=1.05;hero.add(torso);
 const skin=mat(0x9a6c50),uniform=mat(0x34483c),pants=mat(0x303b36),armor=mat(0x4b5a4c),black=mat(0x1c2524,.42,.25);
 function ell(p,x,y,z,sx,sy,sz,m){const o=new THREE.Mesh(new THREE.SphereGeometry(1,16,12),m);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.castShadow=true;p.add(o);return o}
-ell(torso,0,.42,0,.36,.42,.23,uniform);ell(torso,0,.42,-.05,.38,.32,.24,armor);ell(torso,0,.88,0,.2,.25,.19,skin);ell(torso,0,1.15,0,.22,.27,.2,skin);ell(torso,0,1.34,0,.23,.14,.21,black);
+// Corpo articulado procedural, com peças separadas para transições de animação.
+ell(torso,0,.42,0,.36,.42,.23,uniform);ell(torso,0,.42,-.05,.38,.32,.24,armor);
+ell(torso,0,.88,0,.2,.25,.19,skin);ell(torso,0,1.15,0,.22,.27,.2,skin);
+ell(torso,0,1.34,0,.25,.17,.23,mat(0x26372f));box(torso,.34,.055,.12,black,0,1.31,-.19);
+box(torso,.43,.55,.22,mat(0x293c32),0,.47,.27);
+for(const side of [-1,1]){box(torso,.13,.22,.12,mat(0x6e7950),side*.31,.37,-.02);box(torso,.12,.16,.1,black,side*.2,.05,-.19)}
 const limbs=[];
-for(const side of [-1,1]){const leg=new THREE.Group();leg.position.set(side*.19,-.12,0);torso.add(leg);ell(leg,0,-.28,0,.14,.32,.15,pants);ell(leg,0,-.61,-.04,.11,.28,.12,pants);box(leg,.23,.14,.36,black,0,-.84,-.1);limbs.push({g:leg,side,leg:true});const arm=new THREE.Group();arm.position.set(side*.39,.72,0);torso.add(arm);ell(arm,0,-.2,0,.12,.26,.12,uniform);ell(arm,0,-.48,-.05,.09,.23,.1,skin);limbs.push({g:arm,side,leg:false})}
+for(const side of [-1,1]){
+ const leg=new THREE.Group();leg.position.set(side*.19,-.12,0);torso.add(leg);
+ ell(leg,0,-.28,0,.14,.32,.15,pants);ell(leg,0,-.61,-.04,.11,.28,.12,pants);
+ ell(leg,0,-.42,-.11,.125,.13,.06,armor);box(leg,.23,.14,.36,black,0,-.84,-.1);
+ const arm=new THREE.Group();arm.position.set(side*.39,.72,0);torso.add(arm);
+ ell(arm,0,-.2,0,.12,.26,.12,uniform);ell(arm,0,-.48,-.05,.09,.23,.1,uniform);ell(arm,0,-.55,-.07,.095,.09,.09,black);
+ limbs.push({g:leg,side,leg:true},{g:arm,side,leg:false});
+}
 const rifle=new THREE.Group();rifle.position.set(.27,.48,-.27);torso.add(rifle);
 box(rifle,.15,.14,.9,black,0,0,-.18);box(rifle,.09,.08,.55,mats.metal,0,.02,-.84);box(rifle,.12,.28,.17,black,0,-.19,-.2);box(rifle,.23,.1,.28,black,0,0,.39);box(rifle,.08,.18,.1,mats.metal,0,.13,-.32);
 const muzzle=new THREE.PointLight(0xffb34f,0,7);muzzle.position.set(0,0,-1.18);rifle.add(muzzle);
@@ -104,19 +116,23 @@ spawnBots();
 function setMsg(s){$('message').textContent=s}
 function updateHud(){$('health').textContent='VIDA '+Math.max(0,Math.round(health));$('ammo').textContent=ammo+' / '+reserve;$('kills').textContent='ELIMINAÇÕES '+score;$('poseLabel').textContent='POSTURA: '+(pose==='prone'?'DEITADO':pose==='crouch'?'AGACHADO':'EM PÉ')}
 function collidesAt(x,z){return blockers.some(b=>x>b.minX-.32&&x<b.maxX+.32&&z>b.minZ-.32&&z<b.maxZ+.32)}
+let poseBlend=0,jumpVelocity=0,walkPhase=0;
 function move(dt){
  const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
  const dir=forward.multiplyScalar(-my).add(right.multiplyScalar(mx));if(dir.lengthSq()>1)dir.normalize();
  const speed=(run?8:4.3)*(pose==='crouch'?.48:pose==='prone'?.18:1),dx=dir.x*speed*dt,dz=dir.z*speed*dt;
  const nx=THREE.MathUtils.clamp(hero.position.x+dx,-137,137),nz=THREE.MathUtils.clamp(hero.position.z+dz,-137,137);
- if(!collidesAt(nx,hero.position.z))hero.position.x=nx;
- if(!collidesAt(hero.position.x,nz))hero.position.z=nz;
- if(dir.lengthSq()>.001)hero.rotation.y=Math.atan2(-dir.x,-dir.z);
- torso.position.y=pose==='prone'?.35:pose==='crouch'?.68:1.05;
- torso.rotation.x=pose==='prone'?-.85:pose==='crouch'?.08:0;
- limbs.forEach(l=>{const swing=dir.lengthSq()>.001?Math.sin(performance.now()*.012)*(run?.85:.48):0;l.g.rotation.x=swing*(l.leg?1:-1);});
+ if(!collidesAt(nx,hero.position.z))hero.position.x=nx;if(!collidesAt(hero.position.x,nz))hero.position.z=nz;
+ if(dir.lengthSq()>.001)hero.rotation.y=THREE.MathUtils.damp(hero.rotation.y,Math.atan2(-dir.x,-dir.z),12,dt);
+ const targetPose=pose==='prone'?1:pose==='crouch'?.48:0;poseBlend=THREE.MathUtils.damp(poseBlend,targetPose,8,dt);
+ torso.position.y=THREE.MathUtils.lerp(1.05,.72,poseBlend);torso.rotation.x=-1.48*poseBlend;rifle.rotation.x=1.48*poseBlend;
+ walkPhase+=dt*(run?12:7)*(dir.lengthSq()>.001?1:0);
+ limbs.forEach(l=>{const swing=dir.lengthSq()>.001?Math.sin(walkPhase)*(run?.78:.43):0;
+  l.g.rotation.x=l.leg?swing*(1-poseBlend*.7):THREE.MathUtils.lerp(0,Math.PI*poseBlend,poseBlend)+swing*(1-poseBlend);
+ });
+ if(hero.position.y>0||jumpVelocity>0){jumpVelocity-=19*dt;hero.position.y=Math.max(0,hero.position.y+jumpVelocity*dt);if(hero.position.y===0)jumpVelocity=0}
 }
-function cameraUpdate(dt){const target=hero.position.clone().add(new THREE.Vector3(0,pose==='prone'?.75:pose==='crouch'?1.35:2.0,0));const dist=aim?4.2:6.8;const desired=target.clone().add(new THREE.Vector3(Math.sin(yaw)*dist*Math.cos(pitch),dist*(.22+Math.sin(-pitch)),Math.cos(yaw)*dist*Math.cos(pitch)));camera.position.lerp(desired,1-Math.exp(-7*dt));camera.lookAt(target)}
+function cameraUpdate(dt){const target=hero.position.clone().add(new THREE.Vector3(0,THREE.MathUtils.lerp(2,.72,poseBlend),0));const dist=aim?4:6.8,shoulder=aim?1.05:1.35;const desired=target.clone().add(new THREE.Vector3(Math.sin(yaw)*dist*Math.cos(pitch)+Math.cos(yaw)*shoulder,dist*(.2+Math.sin(-pitch)),Math.cos(yaw)*dist*Math.cos(pitch)-Math.sin(yaw)*shoulder));camera.position.lerp(desired,1-Math.exp(-8*dt));camera.lookAt(target)}
 let audioCtx=null;
 function sound(freq=140,duration=.07,kind='sawtooth',volume=.035){try{audioCtx ||= new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();osc.type=kind;osc.frequency.setValueAtTime(freq,audioCtx.currentTime);osc.frequency.exponentialRampToValueAtTime(Math.max(35,freq*.38),audioCtx.currentTime+duration);gain.gain.setValueAtTime(volume,audioCtx.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+duration);osc.connect(gain);gain.connect(audioCtx.destination);osc.start();osc.stop(audioCtx.currentTime+duration)}catch(e){}}
 function hitEffect(point,color=0xffd27a){const p=new THREE.Mesh(new THREE.SphereGeometry(.13,8,8),new THREE.MeshBasicMaterial({color}));p.position.copy(point);scene.add(p);effects.push({o:p,t:.22})}
@@ -148,7 +164,7 @@ $('fire').addEventListener('pointerdown',e=>{e.preventDefault();shooting=true;sh
 $('reload').addEventListener('pointerdown',e=>{e.preventDefault();reload()});
 $('swap').addEventListener('pointerdown',e=>{e.preventDefault();switchWeapon()});
 $('run').addEventListener('pointerdown',()=>run=true);['pointerup','pointercancel','pointerleave'].forEach(t=>$('run').addEventListener(t,()=>run=false));
-$('jump').addEventListener('pointerdown',()=>{if(gameStarted&&pose==='stand'){hero.position.y+=.7;setTimeout(()=>hero.position.y=0,420)}});
+$('jump').addEventListener('pointerdown',()=>{if(gameStarted&&pose==='stand'&&hero.position.y===0)jumpVelocity=7.2});
 $('crouch').addEventListener('pointerdown',()=>{pose=pose==='crouch'?'stand':'crouch';updateHud()});
 $('prone').addEventListener('pointerdown',()=>{pose=pose==='prone'?'stand':'prone';updateHud()});
 $('aim').addEventListener('pointerdown',()=>{aim=!aim;$('aim').classList.toggle('active',aim)});
