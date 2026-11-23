@@ -147,7 +147,7 @@ export class BattleSystems {
   }
   jump(){
     if(this.phase!=='plane')return;this.phase='freefall';this.freefallTime=0;document.getElementById('br-panel').style.display='none';
-    this.hero.position.y=39;this.dropTarget.set(this.hero.position.x+16,0,this.hero.position.z);
+    this.hero.position.y=42.5;this.dropTarget.set(this.hero.position.x+16,0,this.hero.position.z);
     this.onStatus('SALTO! QUEDA LIVRE — PARAQUEDAS ABRIRÁ AUTOMATICAMENTE');
     document.getElementById('br-hint').textContent='QUEDA LIVRE · PREPARE-SE PARA ABRIR O PARAQUEDAS';
   }
