@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#101b22">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Ilha de Combate — 3D</title>
+<title>Ilha de Combate — Battle Royale</title>
 <link rel="stylesheet" href="./style.css">
 </head>
 <body>
@@ -14,9 +14,9 @@
 <div id="loading">CARREGANDO ILHA DE COMBATE 3D…</div>
 <div id="lobby" class="lobby-screen">
  <div class="lobby-vignette"></div><div class="lobby-top"><span class="lobby-mark">IC</span><span>ILHA DE COMBATE <small>BATTLE ROYALE</small></span><span class="lobby-online"><i></i> CAMPO DE TREINO</span></div>
- <div class="lobby-content"><div class="lobby-kicker">SOBREVIVA. LUTE. VENÇA.</div><h1>ILHA DE<br><em>COMBATE</em></h1><p>Prepare seu equipamento e entre na batalha.</p>
+ <div class="lobby-content"><div class="lobby-kicker">OPERAÇÃO DE SOBREVIVÊNCIA</div><h1>ILHA DE<br><em>COMBATE</em></h1><p>Entre na zona de combate. Encontre equipamentos. Seja o último sobrevivente.</p>
  <button id="playGame" class="lobby-play"><span>ENTRAR NA PARTIDA</span><b>➜</b></button>
- <div class="lobby-features"><span>◈ 3D</span><span>◈ 5 OPONENTES</span><span>◈ SOBREVIVÊNCIA</span></div></div>
+ <div class="lobby-features"><span>◈ BATTLE ROYALE</span><span>◈ 5 OPONENTES</span><span>◈ LOOT & COMBATE</span></div></div>
  <div class="lobby-footer"><span>PROJETO INDEPENDENTE</span><span>VERSÃO DE TESTE</span></div>
 </div>
 
@@ -24,13 +24,13 @@
 <div id="hud" style="display:none">
  <div id="crosshair" aria-hidden="true"><i></i><i></i><i></i><i></i><b></b></div>
  <div class="hud-top">
-  <div class="player-card"><div class="avatar">IC</div><div class="player-info"><b>ILHA DE COMBATE</b><small id="status">● EM COMBATE</small></div></div>
+  <div class="player-card"><div class="avatar">IC</div><div class="player-info"><b>SOBREVIVENTE</b><small id="status">● CAMPO DE BATALHA</small></div></div>
   <div class="match-info"><span><b id="score">0</b><small>ABATES</small></span><span><b id="remainingEnemies">5</b><small>INIMIGOS</small></span></div>
   <div class="minimap"><div class="map-grid"></div><div class="map-cross"></div><div id="radarDots"></div><i class="player-arrow"></i><small>MAPA</small></div>
  </div>
  <div class="stats"><span id="health">VIDA 100</span><span id="ammo">MUNIÇÃO 30</span><span id="armorText">COLETE 0</span><span id="zoneText">ZONA 120m</span><button id="weaponSwitch" type="button">ARMA: FUZIL</button><button id="inventoryToggle" type="button">MOCHILA</button><button id="medkit" type="button">✚ KIT (1)</button></div>
  <div class="health-panel"><div class="health-label"><b>HP</b><strong id="healthValue">100</strong></div><div class="health-track"><i id="healthFill"></i></div></div>
- <div id="joystick"><div id="stick"></div></div>
+ <div id="joystick"><div id="stick"></div></div><button id="sprint" class="sprint-btn" type="button"><span>⚡</span><small>CORRER</small></button>
  <div class="actions"><button id="aim" class="aim-btn"><span>⌖</span><small>MIRA</small></button><button id="jump" class="jump-btn"><span>↗</span><small>PULAR</small></button><button id="fire" class="fire-btn"><span>◎</span><small>ATIRAR</small></button><button id="reload" class="reload-btn"><span>↻</span><small>RECARGA</small></button></div>
  <div class="ammo-panel"><b id="ammoLarge">30</b><span>/ 30<br>MUNIÇÃO</span></div>
  <section id="inventoryPanel" aria-label="Inventário">
