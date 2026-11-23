@@ -429,16 +429,40 @@ async function createFighter(isEnemy=false,index=0){
  };
  const torso=bones.get('mixamorigSpine2')||bones.get('mixamorigSpine1')||bones.get('mixamorigSpine');
  if(torso){
-  const vest=new THREE.Group(),fabric=new THREE.MeshStandardMaterial({color:isEnemy?0x343d36:0x303a35,roughness:.94}),plate=new THREE.MeshStandardMaterial({color:0x202a29,roughness:.76,metalness:.12}),pouch=new THREE.MeshStandardMaterial({color:isEnemy?0x514637:0x66543a,roughness:.95});
-  const make=(w,h,d,m,x,y,z)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;vest.add(o)};
-  make(.43,.48,.18,fabric,0,.02,.045);make(.34,.31,.035,plate,0,.025,.145);
-  for(const x of [-.15,0,.15])make(.085,.12,.065,pouch,x,-.17,.17);
-  for(const x of [-.22,.22])make(.075,.39,.09,fabric,x,.02,.02);
-  make(.12,.07,.2,plate,0,.24,.04);torso.add(vest);
+  const outfit=new THREE.Group(),shirt=new THREE.MeshStandardMaterial({color:isEnemy?0x343d36:0x2477b8,roughness:.94}),shorts=new THREE.MeshStandardMaterial({color:isEnemy?0x514637:0x30343b,roughness:.96}),trim=new THREE.MeshStandardMaterial({color:0xd8d4c7,roughness:.88});
+  const make=(parent,w,h,d,m,x,y,z)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o};
+  if(isEnemy){
+   make(outfit,.43,.48,.18,shirt,0,.02,.045);make(outfit,.34,.31,.035,trim,0,.025,.145);
+   for(const x of [-.22,.22])make(outfit,.075,.39,.09,shirt,x,.02,.02);
+   torso.add(outfit);
+  }else{
+   // Camiseta casual azul, sem colete tático.
+   const tee=new THREE.Mesh(new THREE.CapsuleGeometry(.205,.28,4,8),shirt);tee.scale.set(1,1,.58);tee.position.set(0,-.005,.025);tee.castShadow=true;outfit.add(tee);
+   for(const x of [-.235,.235]){const sleeve=new THREE.Mesh(new THREE.CapsuleGeometry(.075,.17,3,7),shirt);sleeve.position.set(x,.105,.02);sleeve.rotation.z=x<0?-.28:.28;sleeve.castShadow=true;outfit.add(sleeve)}
+   torso.add(outfit);
+   const pelvis=bones.get('mixamorigHips')||bones.get('Hips');
+   if(pelvis){
+    const shortsGroup=new THREE.Group();
+    make(shortsGroup,.43,.27,.24,shorts,0,-.105,.015);
+    make(shortsGroup,.19,.29,.245,shorts,-.115,-.285,.015);
+    make(shortsGroup,.19,.29,.245,shorts,.115,-.285,.015);
+    make(shortsGroup,.44,.045,.25,trim,0,.025,.018);pelvis.add(shortsGroup);
+   }
+   // Sandálias presas aos pés para acompanhar as animações.
+   for(const side of ['Left','Right']){
+    const foot=bones.get('mixamorig'+side+'Foot')||bones.get(side+'Foot');
+    if(foot){
+     const sandal=new THREE.Group(),sole=new THREE.MeshStandardMaterial({color:0x29231e,roughness:1}),strap=new THREE.MeshStandardMaterial({color:0xc49a62,roughness:.9});
+     make(sandal,.19,.045,.34,sole,0,-.035,.055);
+     make(sandal,.17,.035,.055,strap,0,.005,.02);
+     make(sandal,.035,.035,.15,strap,-.055,.005,.065);make(sandal,.035,.035,.15,strap,.055,.005,.065);foot.add(sandal);
+    }
+   }
+  }
  }
  const head=bones.get('mixamorigHead')||bones.get('Head');
- if(head){
-  const helmet=new THREE.Group(),shell=new THREE.Mesh(new THREE.SphereGeometry(.145,24,16),new THREE.MeshStandardMaterial({color:isEnemy?0x454d43:0x35443f,roughness:.72,metalness:.08}));
+ if(head&&isEnemy){
+  const helmet=new THREE.Group(),shell=new THREE.Mesh(new THREE.SphereGeometry(.145,24,16),new THREE.MeshStandardMaterial({color:0x454d43,roughness:.72,metalness:.08}));
   shell.scale.set(1.12,.76,1.1);shell.position.y=.095;helmet.add(shell);
   const rim=new THREE.Mesh(new THREE.TorusGeometry(.145,.012,8,28),new THREE.MeshStandardMaterial({color:0x1b2422,roughness:.8}));
   rim.position.y=.04;rim.rotation.x=Math.PI/2;helmet.add(rim);head.add(helmet);
