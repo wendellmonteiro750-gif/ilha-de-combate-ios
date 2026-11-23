@@ -467,7 +467,7 @@ function update(dt){
  animateRig(dt,horizontalSpeed,sprinting,crouch,prone);
  const target=new THREE.Vector3(hero.position.x,hero.position.y+(prone?.48:crouch?1.20:1.58),hero.position.z);
  const baseDist=(aim?3.15:sprinting?5.15:5.6)*.55; // câmera 45% mais próxima do personagem
- const shoulder=(aim?.72:1.18)*.55;
+ const shoulder=(aim?.90:1.55)*.55; // desloca o soldado um pouco mais para longe da mira central
  const offset=new THREE.Vector3(Math.sin(yaw)*baseDist*Math.cos(pitch)+Math.cos(yaw)*shoulder,baseDist*(.30+Math.sin(-pitch)),Math.cos(yaw)*baseDist*Math.cos(pitch)-Math.sin(yaw)*shoulder);
  cameraDesired.copy(target).add(offset);
  cameraRay.set(target,offset.clone().normalize());cameraRay.far=baseDist;
