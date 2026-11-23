@@ -86,62 +86,75 @@ function addPalm(x,z,s=1){
 function addHouse(x,z,rotation=0,style=0){
  const g=new THREE.Group();
  const palettes=[
-  {wall:0xc9b995,trim:0xeee0bd,roof:0x704638,wood:0x654832,glass:0x80b9c4},
-  {wall:0xb8c0b2,trim:0xe0dfce,roof:0x45515a,wood:0x594b3c,glass:0x83b9c5},
-  {wall:0xd0a779,trim:0xf0d1a5,roof:0x79513a,wood:0x63432e,glass:0x83b6bd},
-  {wall:0x9fada2,trim:0xd8d9c8,roof:0x554d43,wood:0x514638,glass:0x8ab8bd}
+  {wall:0xd1c4a7,trim:0xf0e5ce,roof:0x714b3d,wood:0x65452f,glass:0x6da5ad,accent:0x9a7956},
+  {wall:0xc3c9bd,trim:0xe7e6d8,roof:0x46515a,wood:0x594b3c,glass:0x77aeb8,accent:0x7a897d},
+  {wall:0xd8b58d,trim:0xf2d7b5,roof:0x86543b,wood:0x69462f,glass:0x76aeb5,accent:0xa27a50},
+  {wall:0xb8c3b9,trim:0xe0e2d7,roof:0x555047,wood:0x514638,glass:0x7da9ad,accent:0x788b7e}
  ];
- const p=palettes[Math.abs(style)%palettes.length],wall=mat(p.wall,.94),trim=mat(p.trim,.88),wood=mat(p.wood,.9),roof=mat(p.roof,.78),glass=new THREE.MeshStandardMaterial({color:p.glass,roughness:.22,metalness:.12});
- const floor=mat(style%2?0x82745f:0x9b8d72,.98),interior=mat(style%2?0xb6aa91:0xc0b69e,.96),darkWood=mat(0x59432f,.9);
- // Planta baixa de 6 x 5,3 m: piso interno, paredes com vão real de entrada e telhado.
- box(g,6.5,.22,5.7,mat(0x777467),0,.11,0);
- box(g,6.05,.16,5.25,floor,0,.29,0);
- box(g,6.05,2.65,.22,wall,0,1.62,-2.52);
- box(g,.22,2.65,5.05,wall,-2.92,1.62,0);
- box(g,.22,2.65,5.05,wall,2.92,1.62,0);
- box(g,1.8,2.65,.22,wall,-2.02,1.62,2.52);
- box(g,1.8,2.65,.22,wall,2.02,1.62,2.52);
- box(g,2.2,.72,.22,wall,0,2.59,2.52);
- // Porta articulada e já entreaberta; a passagem fica livre para entrar e sair.
- const doorPivot=new THREE.Group();doorPivot.position.set(-1.02,0,2.62);doorPivot.rotation.y=-1.18;g.add(doorPivot);
- box(doorPivot,1.02,2.12,.12,wood,.51,1.36,0);
- box(doorPivot,.84,1.94,.035,mat(0x806044),.51,1.36,.075);
- const knob=new THREE.Mesh(new THREE.SphereGeometry(.045,8,8),mat(0xd4b36a,.32,.7));knob.position.set(.88,1.35,.12);doorPivot.add(knob);
- box(g,1.55,.16,.48,trim,0,.12,2.92);box(g,1.85,.13,.58,mat(0x817c6c),0,.07,3.12);
- // Janelas com vidro, moldura e peitoril.
+ const p=palettes[Math.abs(style)%palettes.length],wall=mat(p.wall,.96),trim=mat(p.trim,.9),wood=mat(p.wood,.88),roof=mat(p.roof,.82),glass=new THREE.MeshStandardMaterial({color:p.glass,roughness:.2,metalness:.16}),accent=mat(p.accent,.9);
+ const floor=mat(style%2?0x877b68:0x9b8c73,.98),interior=mat(0xc2b69e,.96),darkWood=mat(0x59432f,.9),metal=mat(0x454b49,.58,.35);
+ // Fundação elevada, paredes claras e rodapé de pedra.
+ box(g,6.65,.24,5.85,mat(0x77766c),0,.12,0);
+ box(g,6.12,.16,5.28,floor,0,.29,0);
+ box(g,6.08,.32,.24,accent,0,.48,-2.52);box(g,6.08,.32,.24,accent,0,.48,2.52);
+ box(g,.24,.32,5.05,accent,-2.92,.48,0);box(g,.24,.32,5.05,accent,2.92,.48,0);
+ // Paredes: frente com vão de porta e traseira com duas janelas de verdade.
+ box(g,6.05,2.62,.22,wall,0,1.93,-2.52);
+ box(g,.22,2.62,5.05,wall,-2.92,1.93,0);box(g,.22,2.62,5.05,wall,2.92,1.93,0);
+ box(g,1.55,2.62,.22,wall,-2.12,1.93,2.52);box(g,1.55,2.62,.22,wall,2.12,1.93,2.52);
+ box(g,2.95,.62,.22,wall,0,3.25,2.52);
+ // Porta de madeira com moldura e puxador.
+ const doorPivot=new THREE.Group();doorPivot.position.set(-1.02,0,2.64);doorPivot.rotation.y=-.82;g.add(doorPivot);
+ box(doorPivot,1.02,2.12,.13,wood,.51,1.36,0);box(doorPivot,.82,1.88,.035,accent,.51,1.36,.08);
+ for(let k=0;k<3;k++)box(doorPivot,.7,.035,.045,trim,.51,.78+k*.48,.11);
+ const knob=new THREE.Mesh(new THREE.SphereGeometry(.045,10,8),metal);knob.position.set(.88,1.35,.13);doorPivot.add(knob);
+ box(g,1.55,.16,.5,trim,0,.12,2.92);box(g,1.82,.13,.58,accent,0,.07,3.13);
+ // Janelas traseiras: vãos com vidro, caixilho, divisórias e venezianas.
  for(const sx of [-1,1]){
-  box(g,1.05,.92,.08,wood,sx*2.02,1.78,2.66);
-  box(g,.87,.73,.035,glass,sx*2.02,1.8,2.71);
-  box(g,.07,.82,.045,trim,sx*2.02,1.8,2.74);
-  box(g,1.0,.07,.045,trim,sx*2.02,1.8,2.74);
-  box(g,1.22,.12,.22,wood,sx*2.02,1.28,2.75);
-  box(g,1.2,.12,.18,trim,sx*2.02,2.31,2.68);
-  for(let k=0;k<3;k++)box(g,1.0,.035,.055,wood,sx*2.02,1.55+k*.18,2.75);
+  const wx=sx*1.52;
+  box(g,1.38,.16,.24,wall,wx,2.75,-2.52);
+  box(g,1.38,.16,.24,wall,wx,.99,-2.52);
+  box(g,.16,1.6,.24,wall,wx- .69,1.87,-2.52);
+  box(g,.16,1.6,.24,wall,wx+ .69,1.87,-2.52);
+  box(g,1.18,1.38,.055,wood,wx,1.87,-2.61);
+  box(g,1.02,1.2,.035,glass,wx,1.87,-2.65);
+  box(g,.055,1.18,.045,trim,wx,1.87,-2.68);
+  box(g,1.02,.055,.045,trim,wx,1.87,-2.68);
+  box(g,.055,1.2,.045,wood,wx-.34,1.87,-2.69);box(g,.055,1.2,.045,wood,wx+.34,1.87,-2.69);
+  box(g,1.42,.12,.3,wood,wx,1.05,-2.68);
+  box(g,1.42,.1,.24,trim,wx,2.69,-2.6);
  }
- // Móveis internos simples para dar escala e cobertura real no combate.
- box(g,1.65,.22,.88,darkWood,-1.55,.53,-1.35);
- box(g,1.48,.16,.72,interior,-1.55,.72,-1.35);
- box(g,.13,.58,.13,darkWood,-2.2,.29,-1.65);box(g,.13,.58,.13,darkWood,-.9,.29,-1.65);
- box(g,.9,.72,.52,wood,1.82,.66,-1.58);
- box(g,.96,.12,.58,trim,1.82,1.05,-1.58);
- box(g,1.15,.12,.72,darkWood,.2,.82,-.7);
- for(const sx of [-.27,.67])for(const sz of [-.95,-.45])box(g,.09,.75,.09,darkWood,.2+sx,.38,-.7+sz);
- // Prateleira baixa e detalhes de parede.
+ // Detalhes de fachada: pilares, vigas, luminária e pequenas marcas de desgaste.
+ for(const sx of [-1,1]){
+  box(g,.13,2.55,.16,trim,sx*2.78,1.92,2.65);
+  box(g,.16,.18,.16,wood,sx*2.78,3.22,2.65);
+ }
+ box(g,6.08,.12,.12,trim,0,2.82,2.65);
+ box(g,.24,.36,.18,metal,0,2.55,2.72);
+ const lamp=new THREE.Mesh(new THREE.SphereGeometry(.09,10,8),new THREE.MeshStandardMaterial({color:0xffd58a,emissive:0x8d5722,emissiveIntensity:.22}));lamp.position.set(0,2.35,2.78);g.add(lamp);
+ // Mobiliário interno, distribuído sem bloquear o corredor de entrada.
+ box(g,1.65,.22,.88,darkWood,-1.55,.53,-1.25);box(g,1.48,.16,.72,interior,-1.55,.72,-1.25);
+ box(g,.13,.58,.13,darkWood,-2.2,.29,-1.55);box(g,.13,.58,.13,darkWood,-.9,.29,-1.55);
+ box(g,.9,.72,.52,wood,1.82,.66,-1.58);box(g,.96,.12,.58,trim,1.82,1.05,-1.58);
+ box(g,1.15,.12,.72,darkWood,.2,.82,-.55);
+ for(const sx of [-.27,.67])for(const sz of [-.95,-.45])box(g,.09,.75,.09,darkWood,.2+sx,.38,-.55+sz);
  box(g,1.25,.12,.32,wood,-1.65,1.18,.25);
  for(let k=0;k<3;k++)box(g,.08,.48,.3,darkWood,-2.18+k*.48,.88,.25);
- // Telhado de duas águas, beirais, cumeeira, calhas e chaminé.
- const roofA=new THREE.Mesh(new THREE.BoxGeometry(3.55,.18,6.15),roof);roofA.position.set(-1.52,3.12,0);roofA.rotation.z=-.48;roofA.castShadow=true;roofA.receiveShadow=true;g.add(roofA);
- const roofB=new THREE.Mesh(new THREE.BoxGeometry(3.55,.18,6.15),roof);roofB.position.set(1.52,3.12,0);roofB.rotation.z=.48;roofB.castShadow=true;roofB.receiveShadow=true;g.add(roofB);
- box(g,.2,.2,6.2,trim,0,3.94,0);
- box(g,.12,.12,5.9,mat(0x4a4b46,.55,.25),-3.05,2.78,0);box(g,.12,.12,5.9,mat(0x4a4b46,.55,.25),3.05,2.78,0);
- box(g,.62,.85,.62,mat(0x806f5b),-1.75,3.55,-1.2);box(g,.72,.14,.72,mat(0x4a4a45),-1.75,4.02,-1.2);
- box(g,.72,.42,.34,mat(0xc5c9c1,.65,.2),2.2,2.75,-1.75);
- for(let k=0;k<4;k++)box(g,.55,.025,.36,mat(0x59615e,.6,.3),2.2,2.62+k*.07,-1.75);
- // Varanda frontal e pilares.
- box(g,2.3,.16,1.35,wood,0,.22,3.55);
- for(const sx of [-1,1])box(g,.12,2.25,.12,trim,sx*1.02,1.3,4.05);
- box(g,2.2,.12,.12,wood,0,2.35,4.05);
- for(const sx of [-1,1])box(g,.12,2.7,.12,trim,sx*2.94,1.62,2.58);
+ // Telhado inclinado com telhas em faixas, beirais e cumeeira.
+ const roofA=new THREE.Mesh(new THREE.BoxGeometry(3.58,.2,6.15),roof);roofA.position.set(-1.52,3.16,0);roofA.rotation.z=-.48;roofA.castShadow=true;roofA.receiveShadow=true;g.add(roofA);
+ const roofB=new THREE.Mesh(new THREE.BoxGeometry(3.58,.2,6.15),roof);roofB.position.set(1.52,3.16,0);roofB.rotation.z=.48;roofB.castShadow=true;roofB.receiveShadow=true;g.add(roofB);
+ for(let side of [-1,1])for(let row=0;row<7;row++){
+  const z=-2.7+row*.9;
+  const tile=new THREE.Mesh(new THREE.BoxGeometry(3.25,.035,.055),accent);tile.position.set(side*-1.52,3.22-Math.abs(z)*.0,z);tile.rotation.z=side*-.48;g.add(tile);
+ }
+ box(g,.22,.22,6.25,trim,0,3.98,0);
+ box(g,.14,.12,6.15,metal,-3.1,2.78,0);box(g,.14,.12,6.15,metal,3.1,2.78,0);
+ box(g,.62,.85,.62,accent,-1.75,3.55,-1.2);box(g,.72,.14,.72,metal,-1.75,4.02,-1.2);
+ // Varanda, guarda-corpo e escada de acesso.
+ box(g,2.5,.16,1.42,wood,0,.22,3.55);
+ for(const sx of [-1,1])box(g,.12,1.05,.12,trim,sx*1.08,.78,4.12);
+ box(g,2.2,.12,.12,wood,0,1.28,4.12);
+ for(let k=0;k<3;k++)box(g,.12,.07,.42,accent,0,.12+k*.11,3.3+k*.14);
  g.position.set(x,0,z);g.rotation.y=rotation;scene.add(g);
  worldObstacles.push({type:'house',x,z,rotation,halfWidth:3.05,halfDepth:2.65});
 }
@@ -417,45 +430,74 @@ function addRifle(rig,index=0){
 }
 function makeHumanoidModel(){
  const root=new THREE.Group();root.name='IlhaHumanoid_OwnModel';
- const bones=new Map(),skin=new THREE.MeshStandardMaterial({color:0xb98265,roughness:.78,metalness:0}),skinLight=new THREE.MeshStandardMaterial({color:0xc99173,roughness:.8}),shorts=new THREE.MeshStandardMaterial({color:0x28333a,roughness:.88}),eyes=new THREE.MeshStandardMaterial({color:0x211b18,roughness:.45});
+ const bones=new Map();
+ const skin=new THREE.MeshStandardMaterial({color:0xb98265,roughness:.82}),skinLight=new THREE.MeshStandardMaterial({color:0xc99173,roughness:.84});
+ const shirt=new THREE.MeshStandardMaterial({color:0x526b58,roughness:.94}),shirtDark=new THREE.MeshStandardMaterial({color:0x35483d,roughness:.92});
+ const pants=new THREE.MeshStandardMaterial({color:0x303b3d,roughness:.96}),pantsLight=new THREE.MeshStandardMaterial({color:0x46504b,roughness:.95});
+ const boots=new THREE.MeshStandardMaterial({color:0x292b2a,roughness:.88}),sole=new THREE.MeshStandardMaterial({color:0x171a1a,roughness:.95});
+ const belt=new THREE.MeshStandardMaterial({color:0x292b27,roughness:.78}),metal=new THREE.MeshStandardMaterial({color:0x9c895d,metalness:.55,roughness:.42});
+ const hair=new THREE.MeshStandardMaterial({color:0x30251f,roughness:.95}),eyes=new THREE.MeshStandardMaterial({color:0x211b18,roughness:.45});
  const bone=(name,parent,x,y,z)=>{const b=new THREE.Bone();b.name=name;b.position.set(x,y,z);parent.add(b);bones.set(name,b);return b};
- const ellipsoid=(parent,name,x,y,z,sx,sy,sz,material)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(1,14,10),material);m.name=name;m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m};
- const capsule=(parent,name,length,radius,material,x=0,y=0,z=0)=>{const m=new THREE.Mesh(new THREE.CapsuleGeometry(radius,Math.max(.01,length-2*radius),4,8),material);m.name=name;m.position.set(x,y-length*.5,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m};
+ const ellipsoid=(parent,name,x,y,z,sx,sy,sz,material)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(1,20,14),material);m.name=name;m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m};
+ const capsule=(parent,name,length,radius,material,x=0,y=0,z=0)=>{const m=new THREE.Mesh(new THREE.CapsuleGeometry(radius,Math.max(.01,length-2*radius),6,10),material);m.name=name;m.position.set(x,y-length*.5,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m};
  const hips=bone('mixamorigHips',root,0,.99,0);
  ellipsoid(hips,'pelvis',0,0,0,.205,.145,.13,skin);
- ellipsoid(hips,'shorts',0,-.005,0,.212,.15,.137,shorts);
+ ellipsoid(hips,'combat_belt',0,-.018,.006,.218,.055,.145,belt);
+ box(hips,.1,.075,.025,metal,0,-.02,.145);
  const spine=bone('mixamorigSpine',hips,0,.12,0);
  capsule(spine,'abdomen',.28,.115,skin,0,-.01,0);
+ ellipsoid(spine,'shirt_waist',0,-.015,0,.205,.15,.137,shirt);
  const spine1=bone('mixamorigSpine1',spine,0,.17,0);
  ellipsoid(spine1,'chest',0,.045,0,.235,.205,.135,skin);
+ ellipsoid(spine1,'shirt_torso',0,.035,-.002,.252,.218,.15,shirt);
  const spine2=bone('mixamorigSpine2',spine1,0,.16,0);
  ellipsoid(spine2,'upper_chest',0,.015,0,.225,.14,.13,skin);
+ ellipsoid(spine2,'shirt_upper',0,.015,0,.24,.15,.148,shirt);
+ // Gola, costuras e bolsos discretos.
+ ellipsoid(spine2,'shirt_collar',0,.12,.005,.105,.055,.105,shirtDark);
+ box(spine2,.018,.24,.012,shirtDark,0,-.005,.151);
+ for(const sx of [-1,1]){
+  box(spine2,.13,.11,.025,shirtDark,sx*.145,.025,.145);
+  box(spine2,.13,.018,.03,shirt,sx*.145,-.035,.16);
+ }
  const neck=bone('mixamorigNeck',spine2,0,.13,0);
  capsule(neck,'neck_mesh',.13,.052,skin,0,.025,0);
  const head=bone('mixamorigHead',neck,0,.115,0);
  ellipsoid(head,'head_mesh',0,.055,0,.112,.145,.105,skinLight);
  ellipsoid(head,'nose',0,.035,.099,.025,.035,.028,skin);
+ ellipsoid(head,'hair_cap',0,.145,-.012,.116,.067,.108,hair);
+ ellipsoid(head,'hair_back',0,.065,-.075,.105,.105,.06,hair);
  for(const side of [-1,1]){
   ellipsoid(head,'ear',side*.112,.055,0,.022,.042,.025,skin);
   ellipsoid(head,'eye',side*.043,.083,.091,.012,.012,.008,eyes);
-  ellipsoid(head,'brow',side*.043,.105,.091,.022,.008,.009,skin);
+  ellipsoid(head,'brow',side*.043,.105,.091,.022,.008,.009,hair);
   const upper=bone(side<0?'mixamorigLeftArm':'mixamorigRightArm',spine2,side*.205,.075,0);
-  ellipsoid(spine2,'shoulder',side*.205,.045,0,.09,.095,.09,skin);
+  ellipsoid(spine2,'shoulder',side*.205,.045,0,.09,.095,.09,shirt);
   capsule(upper,'upper_arm',.31,.064,skin,0,-.015,0);
+  capsule(upper,'shirt_sleeve',.205,.078,shirt,0,-.015,0);
   const fore=bone(side<0?'mixamorigLeftForeArm':'mixamorigRightForeArm',upper,0,-.30,0);
   capsule(fore,'forearm',.285,.052,skin,0,-.005,0);
+  capsule(fore,'forearm_sleeve',.20,.066,shirt,0,-.005,0);
+  ellipsoid(fore,'sleeve_cuff',0,-.19,0,.067,.045,.067,shirtDark);
   const hand=bone(side<0?'mixamorigLeftHand':'mixamorigRightHand',fore,0,-.275,0);
   ellipsoid(hand,'palm',0,-.035,.005,.052,.07,.035,skin);
+  ellipsoid(hand,'glove_cuff',0,-.018,0,.06,.035,.042,belt);
   for(let f=0;f<4;f++)capsule(hand,'finger',.065,.009,skin,(f-1.5)*.021,-.095,.008);
   capsule(hand,'thumb',.06,.012,skin,side*.052,-.045,.012);
   const upLeg=bone(side<0?'mixamorigLeftUpLeg':'mixamorigRightUpLeg',hips,side*.105,-.055,0);
   capsule(upLeg,'thigh',.445,.095,skin,0,-.015,0);
+  capsule(upLeg,'cargo_trouser',.455,.108,pants,0,-.015,-.003);
+  ellipsoid(upLeg,'cargo_pocket',side*.075,-.23,.085,.075,.11,.025,pantsLight);
   const leg=bone(side<0?'mixamorigLeftLeg':'mixamorigRightLeg',upLeg,0,-.43,0);
   capsule(leg,'calf',.415,.064,skin,0,-.005,0);
+  capsule(leg,'lower_trouser',.415,.078,pants,0,-.005,-.002);
+  ellipsoid(leg,'knee_pad',0,-.045,.066,.078,.085,.025,pantsLight);
   const foot=bone(side<0?'mixamorigLeftFoot':'mixamorigRightFoot',leg,0,-.395,.015);
-  ellipsoid(foot,'foot_mesh',0,-.018,.065,.075,.045,.135,skin);
+  ellipsoid(foot,'ankle_boot',0,-.012,.025,.075,.07,.09,boots);
+  ellipsoid(foot,'boot_toe',0,-.035,.095,.082,.052,.13,boots);
+  ellipsoid(foot,'boot_sole',0,-.078,.075,.084,.018,.14,sole);
   const toe=bone(side<0?'mixamorigLeftToeBase':'mixamorigRightToeBase',foot,0,-.01,.12);
-  ellipsoid(toe,'toe_mesh',0,0,.025,.07,.035,.055,skin);
+  ellipsoid(toe,'toe_mesh',0,0,.025,.07,.035,.055,boots);
  }
  root.updateMatrixWorld(true);
  return {root,bones};
