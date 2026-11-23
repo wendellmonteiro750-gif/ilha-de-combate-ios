@@ -210,29 +210,56 @@ for(let i=0;i<(isMobile?12:34);i++){const a=rand()*Math.PI*2,r=75+rand()*65;make
 // Palmeiras nas praias.
 for(let i=0;i<(isMobile?16:38);i++){const a=rand()*Math.PI*2,r=133+rand()*9;makeTree(Math.cos(a)*r,Math.sin(a)*r,.7+rand()*.35,true)}
 
-// Operador de teste.
-const player=new THREE.Group();scene.add(player);const body=new THREE.Group();player.add(body);
-const skin=mat(0xb88768),uniform=mat(0x354b43),pants=mat(0x293a34),gear=mat(0x59665a),boots=mat(0x171d1d),detail=mat(0x202a27);
-function limb(parent,material,r,len,x,y,z){const m=new THREE.Mesh(new THREE.CapsuleGeometry(r,len,4,8),material);m.position.set(x,y,z);m.castShadow=true;parent.add(m);return m}
-const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.48,.72,5,10),uniform);torso.position.y=1.65;torso.castShadow=true;body.add(torso);
-const neck=new THREE.Mesh(new THREE.CylinderGeometry(.13,.15,.22,10),skin);neck.position.y=2.16;body.add(neck);
-// Colete tático, bolsos, cinto e mochila dão volume humano ao operador.
-for(let side of [-1,1]){addBox(body,side*.25,1.55,.36,.22,.27,.13,gear);addBox(body,side*.23,1.25,.02,.2,.13,.12,detail)}
-addBox(body,0,1.63,-.34,.62,.72,.25,gear);addBox(body,0,1.27,0,.78,.13,.5,detail);
-const vest=new THREE.Mesh(new THREE.BoxGeometry(.83,.7,.42),gear);vest.position.set(0,1.67,.12);body.add(vest);
-const head=new THREE.Mesh(new THREE.SphereGeometry(.28,16,12),skin);head.position.y=2.48;body.add(head);
-const helmet=new THREE.Mesh(new THREE.SphereGeometry(.31,16,10,0,Math.PI*2,0,Math.PI*.56),M.dark);helmet.position.y=2.58;body.add(helmet);
-// Rosto legível em terceira pessoa: orelhas, nariz e olhos.
-for(const side of [-1,1]){const ear=new THREE.Mesh(new THREE.SphereGeometry(.065,8,8),skin);ear.position.set(side*.275,2.46,0);body.add(ear);const eye=new THREE.Mesh(new THREE.SphereGeometry(.025,8,6),detail);eye.position.set(side*.105,2.49,.255);body.add(eye)}
-const nose=new THREE.Mesh(new THREE.ConeGeometry(.055,.13,6),skin);nose.rotation.x=Math.PI/2;nose.position.set(0,2.43,.29);body.add(nose);
-const arms=[],legs=[];
+// Operador humano procedural — malha articulada leve para celulares.
+const player=new THREE.Group();scene.add(player);
+const body=new THREE.Group();player.add(body);
+const skin=mat(0xb88768),uniform=mat(0x354b43),pants=mat(0x293a34),gear=mat(0x59665a),boots=mat(0x171d1d),detail=mat(0x202a27),fabric=mat(0x46564a);
+function limb(parent,material,r,len,x,y,z){const m=new THREE.Mesh(new THREE.CapsuleGeometry(r,len,4,10),material);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m}
+function sphere(parent,material,r,x,y,z){const m=new THREE.Mesh(new THREE.SphereGeometry(r,12,10),material);m.position.set(x,y,z);m.castShadow=true;parent.add(m);return m}
+// Tronco com peito, cintura, quadril, pescoço e equipamento.
+const pelvis=new THREE.Mesh(new THREE.BoxGeometry(.72,.38,.42),pants);pelvis.position.y=1.02;body.add(pelvis);
+const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.43,.72,5,12),uniform);torso.position.y=1.66;torso.castShadow=true;body.add(torso);
+const shoulders=new THREE.Mesh(new THREE.BoxGeometry(1.08,.25,.42),uniform);shoulders.position.y=2.02;body.add(shoulders);
+const neck=new THREE.Mesh(new THREE.CylinderGeometry(.13,.16,.22,10),skin);neck.position.y=2.18;body.add(neck);
+// Colete, placas, bolsos, cinto e mochila.
+const vest=new THREE.Mesh(new THREE.BoxGeometry(.82,.72,.43),gear);vest.position.set(0,1.68,.12);body.add(vest);
+addBox(body,0,1.83,.35,.48,.28,.055,detail);
+for(const side of [-1,1]){addBox(body,side*.26,1.48,.36,.2,.25,.12,gear);addBox(body,side*.24,1.28,.02,.2,.12,.12,detail)}
+addBox(body,0,1.67,-.34,.64,.7,.25,gear);addBox(body,0,1.25,0,.78,.13,.5,detail);
+// Cabeça, orelhas, olhos, nariz, boca, cabelo e capacete.
+const head=new THREE.Mesh(new THREE.SphereGeometry(.265,18,14),skin);head.scale.set(1,1.12,.92);head.position.set(0,2.49,.025);body.add(head);
 for(const side of [-1,1]){
- const arm=new THREE.Group();arm.position.set(side*.58,2.05,0);body.add(arm);limb(arm,uniform,.17,.62,0,-.38,0);
- const hand=new THREE.Mesh(new THREE.SphereGeometry(.14,10,8),skin);hand.position.set(0,-.79,.04);arm.add(hand);arms.push(arm);
- const leg=new THREE.Group();leg.position.set(side*.25,1.08,0);body.add(leg);limb(leg,pants,.21,.68,0,-.38,0);
- addBox(leg,0,-.83,.12,.38,.22,.62,boots);legs.push(leg);
+ sphere(body,skin,.065,side*.26,2.46,.02);
+ sphere(body,detail,.027,side*.105,2.51,.245);
 }
-const gun=new THREE.Group();gun.position.set(.32,1.82,.55);body.add(gun);addBox(gun,0,0,0,.18,.18,1.05,M.dark);addBox(gun,0,-.13,-.12,.14,.23,.3,gear);
+const nose=new THREE.Mesh(new THREE.ConeGeometry(.052,.13,7),skin);nose.rotation.x=Math.PI/2;nose.position.set(0,2.44,.27);body.add(nose);
+addBox(body,0,2.365,.238,.105,.018,.025,detail);
+const hair=new THREE.Mesh(new THREE.SphereGeometry(.27,14,9,0,Math.PI*2,0,Math.PI*.42),detail);hair.position.set(0,2.62,-.015);body.add(hair);
+const helmet=new THREE.Mesh(new THREE.SphereGeometry(.31,16,10,0,Math.PI*2,0,Math.PI*.56),M.dark);helmet.position.y=2.66;body.add(helmet);
+addBox(body,0,2.54,.285,.42,.055,.08,M.dark);
+// Braços articulados em ombro, cotovelo e antebraço.
+const arms=[],legs=[],armLower=[],legLower=[];
+for(const side of [-1,1]){
+ const arm=new THREE.Group();arm.position.set(side*.55,2.03,0);body.add(arm);
+ limb(arm,uniform,.155,.36,0,-.22,0);sphere(arm,uniform,.16,0,-.43,0);
+ const fore= new THREE.Group();fore.position.set(0,-.43,.015);arm.add(fore);
+ limb(fore,fabric,.125,.34,0,-.22,.015);
+ const glove=sphere(fore,detail,.12,0,-.45,.045);
+ arms.push(arm);armLower.push(fore);
+ // Coxa e canela separadas para flexão de joelho.
+ const leg=new THREE.Group();leg.position.set(side*.235,1.02,0);body.add(leg);
+ limb(leg,pants,.19,.43,0,-.24,0);sphere(leg,pants,.19,0,-.48,0);
+ const shin=new THREE.Group();shin.position.set(0,-.48,0);leg.add(shin);
+ limb(shin,fabric,.145,.42,0,-.23,0);
+ addBox(shin,0,-.5,.105,.34,.2,.54,boots);
+ addBox(shin,0,-.13,-.12,.31,.2,.28,gear);
+ legs.push(leg);legLower.push(shin);
+}
+// Rifle com coronha, carregador, cano e mira.
+const gun=new THREE.Group();gun.position.set(.28,1.79,.58);body.add(gun);
+addBox(gun,0,0,0,.16,.16,.9,M.dark);addBox(gun,0,-.13,-.08,.13,.23,.25,gear);
+addBox(gun,0,.105,.16,.08,.08,.36,M.metal);addBox(gun,0,.01,.57,.07,.07,.48,M.dark);
+addBox(gun,0,.16,-.18,.12,.1,.25,M.dark);
 player.position.set(0,heightAt(0,35),35);
 
 // Alvos de treinamento distribuídos perto do centro.
@@ -310,8 +337,7 @@ function frame(){
  const floor=heightAt(player.position.x,player.position.z);
  vertical-=18*dt;player.position.y+=vertical*dt;
  if(player.position.y<=floor){player.position.y=floor;vertical=0;grounded=true}
- legs[0].rotation.x=Math.sin(walkClock)*Math.min(1,mag)*.65;legs[1].rotation.x=-legs[0].rotation.x;
- arms[0].rotation.x=-legs[0].rotation.x*.65;arms[1].rotation.x=-legs[1].rotation.x*.65;
+ const stride=Math.sin(walkClock)*Math.min(1,mag)*(sprinting?.82:.58);\n legs[0].rotation.x=stride;legs[1].rotation.x=-stride;\n legLower[0].rotation.x=Math.max(0,-stride)*.9;legLower[1].rotation.x=Math.max(0,stride)*.9;\n arms[0].rotation.x=-stride*.42;arms[1].rotation.x=stride*.42;\n armLower[0].rotation.x=-.18;armLower[1].rotation.x=-.38;\n body.rotation.z+=(mag>.05?Math.sin(walkClock*.5)*.025:0-body.rotation.z)*Math.min(1,dt*7);\n torso.rotation.x+=(aiming?-.12:0-torso.rotation.x)*Math.min(1,dt*8);
  const target=player.position.clone().add(new THREE.Vector3(0,2,0));
  const cameraDistance=aiming?4.8:8;
  const offset=new THREE.Vector3(Math.sin(yaw)*cameraDistance, (crouching?2.65:3.3)+pitch*3,Math.cos(yaw)*cameraDistance);
