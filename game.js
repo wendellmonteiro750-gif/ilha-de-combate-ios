@@ -48,15 +48,48 @@ function buildHero(){
  capsule(rig.head,.13,.17,skin,0,-.02,0);
  // Pescoço, orelhas e traços faciais voltados para a direção do cano (-Z).
  capsule(rig.body,.105,.16,skin,0,.94,0);
+ // Cabeça com formato oval e maxilar mais definido.
+ const face=mesh(rig.head,new THREE.SphereGeometry(.27,24,20),skin,[0,.28,0]);
+ face.scale.set(.86,1.14,.92);
+ const jaw=mesh(rig.head,new THREE.SphereGeometry(.205,18,14),skin,[0,.105,-.018]);
+ jaw.scale.set(1,.67,.91);
+ // Orelhas e detalhes do rosto posicionados à frente da superfície facial.
  for(const side of [-1,1]){
-  mesh(rig.head,new THREE.SphereGeometry(.055,10,8),skin,[side*.245,.02,-.005]);
-  mesh(rig.head,new THREE.SphereGeometry(.025,8,6),mat(0x30251f),[side*.095,.30,-.235]);
-  cube(rig.head,.09,.025,.025,hair,side*.095,.345,-.225);
+  const ear=mesh(rig.head,new THREE.SphereGeometry(.058,12,10),skin,[side*.238,.015,-.005]);
+  ear.scale.set(.68,1,.62);
+  mesh(rig.head,new THREE.SphereGeometry(.027,10,8),mat(0x9d6654),[side*.248,.015,-.035]);
+  const eyeWhite=mesh(rig.head,new THREE.SphereGeometry(.034,12,10),mat(0xf0e5d7),[side*.092,.292,-.239]);
+  eyeWhite.scale.set(1,.68,.42);
+  mesh(rig.head,new THREE.SphereGeometry(.018,10,8),mat(0x49352b),[side*.092,.292,-.255]);
+  mesh(rig.head,new THREE.SphereGeometry(.009,8,6),mat(0x171717),[side*.092,.292,-.263]);
+  const brow=mesh(rig.head,new THREE.SphereGeometry(.052,12,8),hair,[side*.095,.345,-.231]);
+  brow.scale.set(1,.22,.35);
  }
- const nose=mesh(rig.head,new THREE.SphereGeometry(.045,8,7),skin,[0,.22,-.255]);nose.scale.set(.7,.8,1.1);
- mesh(rig.head,new THREE.SphereGeometry(.035,8,6),mat(0x754638),[0,.12,-.238]);
- const face=mesh(rig.head,new THREE.SphereGeometry(.27,14,12),skin,[0,.28,0]);face.scale.set(.86,1.14,.92);
- mesh(rig.head,new THREE.SphereGeometry(.278,14,9,0,Math.PI*2,0,Math.PI*.54),hair,[0,.35,0]);
+ // Nariz, narinas, boca e queixo dão leitura de rosto humano de frente.
+ const nose=mesh(rig.head,new THREE.SphereGeometry(.045,14,12),skin,[0,.222,-.267]);
+ nose.scale.set(.72,.88,1.0);
+ for(const side of [-1,1]){
+  mesh(rig.head,new THREE.SphereGeometry(.009,8,6),mat(0x70483c),[side*.018,.198,-.282]);
+ }
+ const mouth=mesh(rig.head,new THREE.SphereGeometry(.031,12,8),mat(0x754638),[0,.135,-.245]);
+ mouth.scale.set(1,.28,.38);
+ const lowerLip=mesh(rig.head,new THREE.SphereGeometry(.025,10,8),mat(0x986052),[0,.124,-.244]);
+ lowerLip.scale.set(1,.22,.3);
+ const hairCap=mesh(rig.head,new THREE.SphereGeometry(.278,20,14,0,Math.PI*2,0,Math.PI*.54),hair,[0,.35,0]);
+ hairCap.scale.set(1.02,1,.99);
+ // Camiseta com peito, abdômen e cintura menos blocados sob o colete.
+ const chest=mesh(rig.body,new THREE.SphereGeometry(1,18,14),shirt,[0,.61,-.005]);
+ chest.scale.set(.37,.30,.205);
+ const abdomen=mesh(rig.body,new THREE.SphereGeometry(1,16,12),shirt,[0,.29,.005]);
+ abdomen.scale.set(.265,.245,.19);
+ const waist=mesh(rig.body,new THREE.SphereGeometry(1,16,12),pants,[0,.02,.005]);
+ waist.scale.set(.285,.19,.205);
+ // Alças acolchoadas e bolsos com volume no colete.
+ for(const side of [-1,1]){
+  const strap=mesh(rig.body,new THREE.BoxGeometry(.105,.52,.075),mat(0x343e36),[side*.245,.56,-.245]);
+  strap.rotation.z=side*-.16;
+  cube(rig.body,.19,.16,.075,vest,side*.25,.43,-.275);
+ }
  // Two-segment legs with knee pivots and feet.
  rig.legs=[];
  for(const side of [-1,1]){
