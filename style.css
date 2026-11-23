@@ -399,3 +399,27 @@
 #crosshair.aiming{filter:drop-shadow(0 0 3px #ffe7a3)}
 #crosshair.firing{filter:drop-shadow(0 0 7px #ffd27a)}
 #crosshair.hit{filter:drop-shadow(0 0 8px #ff352b)}
+
+
+/* Controles de postura e movimentacao avançada */
+.actions{grid-template-columns:52px 76px!important;grid-template-rows:repeat(4,52px)!important;gap:6px!important}
+.actions .aim-btn{grid-column:1;grid-row:1;width:50px;height:50px}
+.actions .jump-btn{grid-column:1;grid-row:2;width:50px;height:50px}
+.actions .crouch-btn{grid-column:1;grid-row:3;width:50px;height:50px;background:radial-gradient(circle at 32% 25%,#829b86,#304c3c 72%,#17271f)!important}
+.actions .prone-btn{grid-column:1;grid-row:4;width:50px;height:50px;background:radial-gradient(circle at 32% 25%,#82918f,#35494b 72%,#172328)!important}
+.actions .reload-btn{grid-column:2;grid-row:1;width:50px;height:50px;justify-self:center}
+.actions .fire-btn{grid-column:2;grid-row:2 / span 3;width:76px;height:76px;justify-self:center;align-self:center}
+.actions .crouch-btn.active,.actions .prone-btn.active{outline:2px solid #ffe08a;outline-offset:3px;filter:brightness(1.25)}
+.actions .crouch-btn span,.actions .prone-btn span{font-size:22px;line-height:23px}
+@media (orientation:portrait) and (max-width:699px){
+ .actions{right:9px;bottom:17px;grid-template-columns:50px 72px!important;grid-template-rows:repeat(4,50px)!important;gap:5px!important}
+ .actions .aim-btn,.actions .jump-btn,.actions .crouch-btn,.actions .prone-btn{width:48px;height:48px}
+ .actions .reload-btn{width:48px;height:48px}
+ .actions .fire-btn{width:72px;height:72px}
+ .ammo-panel{bottom:230px!important}
+}
+@media (orientation:portrait) and (max-width:380px){
+ .actions{right:7px;grid-template-columns:46px 66px!important;grid-template-rows:repeat(4,46px)!important;gap:4px!important}
+ .actions .aim-btn,.actions .jump-btn,.actions .crouch-btn,.actions .prone-btn,.actions .reload-btn{width:44px;height:44px}
+ .actions .fire-btn{width:66px;height:66px}
+}
