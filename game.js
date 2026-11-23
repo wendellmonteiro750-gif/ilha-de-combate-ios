@@ -362,8 +362,13 @@ function stats(){$('ammo').textContent=ammo+' / 90'}
 function fireShot(){
  if(reloading||ammo<=0||performance.now()-lastShot<155)return;
  lastShot=performance.now();ammo--;stats();cameraRecoil=Math.min(.12,cameraRecoil+.035);cameraShake=Math.min(.08,cameraShake+.018);
- const origin=camera.position.clone(),direction=new THREE.Vector3();camera.getWorldDirection(direction);
- const ray=new THREE.Raycaster(origin,direction,0,85);const hits=ray.intersectObjects(targets,true);
+ // O disparo parte do centro da tela, exatamente sob a mira.
+ // Assim a direção do tiro acompanha o ponto para onde a câmera está apontando.
+ camera.updateMatrixWorld(true);
+ const ray=new THREE.Raycaster();
+ ray.setFromCamera(new THREE.Vector2(0,0),camera);
+ ray.far=85;
+ const hits=ray.intersectObjects(targets,true);
  if(hits.length){const target=hits[0].object;target.material=mat(0xe5a43a);$('message').textContent='ALVO ATINGIDO!';$('message').classList.add('hit');setTimeout(()=>{$('message').textContent='ÁREA DE TREINO';$('message').classList.remove('hit');target.material=mat(0xd6d1bd)},500)}
 }
 function update(dt){
