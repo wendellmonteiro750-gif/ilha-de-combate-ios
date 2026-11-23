@@ -558,7 +558,7 @@ async function createFighter(isEnemy=false,index=0){
    if(this.weaponPivot&&this.weaponSpec){
     const upper=this.bones.get('mixamorigLeftArm'),fore=this.bones.get('mixamorigLeftForeArm'),hand=this.bones.get('mixamorigLeftHand');
     if(upper&&fore&&hand){model.updateMatrixWorld(true);const target=this.weaponPivot.localToWorld(new THREE.Vector3(0,-.145,-this.weaponSpec.length*.29));
-     for(let pass=0;pass<5;pass++)for(const joint of [fore,upper]){
+     for(let pass=0;pass<8;pass++)for(const joint of [fore,upper]){
       model.updateMatrixWorld(true);const jp=joint.getWorldPosition(new THREE.Vector3()),eff=hand.getWorldPosition(new THREE.Vector3());
       const a=eff.sub(jp),b=target.clone().sub(jp);if(a.lengthSq()<1e-7||b.lengthSq()<1e-7)continue;
       a.normalize();b.normalize();const worldDelta=new THREE.Quaternion().setFromUnitVectors(a,b),pq=joint.parent.getWorldQuaternion(new THREE.Quaternion());
@@ -819,11 +819,11 @@ function animate(){
     // Transições de empunhadura: arma sobe ao mirar, baixa ao correr e acompanha o movimento.
     playerRig.weaponPivot.position.copy(playerRig.weaponBasePosition);
     const reloadBlend=reloadTimer>0?THREE.MathUtils.clamp(reloadTimer/currentWeapon().reload,0,1):0;
-    playerRig.weaponPivot.position.y+=.055*aim-.105*run-.055*reloadBlend+Math.sin(gait)*(.012*moveAmount)*(1-aim);
+    playerRig.weaponPivot.position.y+=.085*aim-.16*run-.055*reloadBlend+Math.sin(gait)*(.012*moveAmount)*(1-aim);
     playerRig.weaponPivot.position.x-=.018*aim+THREE.MathUtils.clamp(strafe/5.35,-1,1)*.012*moveAmount;
     playerRig.weaponPivot.rotation.copy(playerRig.weaponBaseRotation);
-    playerRig.weaponPivot.rotation.x-=.19*aim+.42*run+.22*reloadBlend+(playerRig.weaponKick||0);
-    playerRig.weaponPivot.rotation.z-=THREE.MathUtils.clamp(strafe/5.35,-1,1)*.055*moveAmount;
+    playerRig.weaponPivot.rotation.x-=.19*aim+.42*run+.22*reloadBlend+(playerRig.weaponKick||0);\n     // A arma acompanha a elevação vertical da mira, em vez de permanecer fixa no peito.\n     playerRig.weaponPivot.rotation.x+=THREE.MathUtils.clamp(pitch,-.78,.78)*aim*.82;
+    playerRig.weaponPivot.rotation.z-=THREE.MathUtils.clamp(strafe/5.35,-1,1)*.075*moveAmount;\n     playerRig.weaponPivot.rotation.z-=THREE.MathUtils.clamp(strafe/5.35,-1,1)*.035*aim;
     playerRig.weaponPivot.rotation.y+=.08*reloadBlend;
     playerRig.weaponPivot.rotation.y+=Math.sin(gait*.5)*.012*moveAmount*(1-aim);
    }
