@@ -88,7 +88,8 @@ function house(x,z,color){
 // Personagem humano real Quaternius: malha skinned, esqueleto completo e clips humanoides.
 const CHARACTER_URL='https://cdn.jsdelivr.net/gh/Seyamalam/blood-league-kickoff@main/public/assets/vendor/quaternius/night-striker.glb';
 const ANIMATION_URL='https://cdn.jsdelivr.net/gh/Seyamalam/blood-league-kickoff@main/public/assets/vendor/quaternius/universal-animation-library.glb';
-let characterVisual=null,characterMixer=null,characterActions=new Map(),activeCharacterClip='',characterReady=false;
+let characterVisual=null,characterMixer=null,characterActions=new Map(),activeCharacterClip='',characterReady=false,proneBlend=0,characterBaseY=0;
+const characterBaseQuaternion=new THREE.Quaternion(),characterProneQuaternion=new THREE.Quaternion(),characterProneTilt=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),-Math.PI/2);
 let weaponEquipped=true,weaponModel=null,weaponMagazine=null,reloadPoseUntil=0,firePoseUntil=0,weaponBasePosition=new THREE.Vector3(),weaponBaseRotation=new THREE.Euler(),weaponRecoil=0;
 let combatBones={upperarm_l:null,lowerarm_l:null,hand_l:null,upperarm_r:null,lowerarm_r:null,hand_r:null};
 const combatV1=new THREE.Vector3(),combatV2=new THREE.Vector3(),combatQ1=new THREE.Quaternion(),combatQ2=new THREE.Quaternion();
@@ -146,7 +147,9 @@ function setBoneWorldRotation(bone,worldRotation){
  bone.quaternion.copy(parentRotation.multiply(worldRotation));
 }
 function applyCombatWeaponPose(crouch=false,prone=false,dt=0){
- if(!weaponEquipped||!weaponModel||!characterVisual)return;
+ // Deitado, o rifle acompanha a malha inclinada como um conjunto; não aplicar
+ // IK de ombro em pé, que puxaria os braços de volta para a postura agachada.
+ if(prone||!weaponEquipped||!weaponModel||!characterVisual)return;
  const rightUpper=combatBones.upperarm_r,rightLower=combatBones.lowerarm_r,rightHand=combatBones.hand_r;
  const leftUpper=combatBones.upperarm_l,leftLower=combatBones.lowerarm_l,leftHand=combatBones.hand_l;
  if(!rightUpper||!rightLower||!rightHand||!leftUpper||!leftLower||!leftHand)return;
@@ -197,6 +200,8 @@ function createPlayerAnchor(){
   characterVisual=character.scene;
   characterVisual.name='BattleIsland_Quaternius_Human';
   characterVisual.rotation.y=Math.PI;
+  characterBaseQuaternion.copy(characterVisual.quaternion);
+  characterBaseY=characterVisual.position.y;
   characterVisual.scale.setScalar(1);
   characterVisual.traverse(node=>{
    if(node.isMesh){node.castShadow=true;node.receiveShadow=true;
@@ -331,6 +336,12 @@ function animateRig(dt,speed,sprinting,crouch,prone){
  }
  if(clip!==activeCharacterClip)playCharacterClip(clip);
  characterMixer.update(dt);
+ // Transição corporal deitado: inclina o esqueleto humano inteiro até ficar
+ // paralelo ao chão, com o rosto voltado para baixo. O blend evita a troca brusca.
+ proneBlend=THREE.MathUtils.damp(proneBlend,prone?1:0,prone?5.5:7.5,dt);
+ characterProneQuaternion.copy(characterProneTilt).multiply(characterBaseQuaternion);
+ characterVisual.quaternion.slerpQuaternions(characterBaseQuaternion,characterProneQuaternion,proneBlend);
+ characterVisual.position.y=THREE.MathUtils.lerp(characterBaseY,.12,proneBlend);
 }
 function bind(){
  const stick=$('stick'),knob=$('knob');let sid=null,rect=null;
