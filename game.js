@@ -2,7 +2,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
 import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
 const $=id=>document.getElementById(id);
 const root=$('game');
-let scene,camera,renderer,clock,hero,targets=[],yaw=0,pitch=-.12,moveX=0,moveY=0,velocityX=0,velocityZ=0,run=false,aim=false,shoot=false,pose='stand',velocityY=0,grounded=true,ammo=30,reloading=false,lastShot=0,started=false,cameraRecoil=0,cameraShake=0,stamina=100,worldBlockers=[],cameraRay=new THREE.Raycaster(),cameraDesired=new THREE.Vector3(),cameraCurrentDistance=5.6;
+let scene,camera,renderer,clock,hero,targets=[],yaw=0,pitch=-.12,moveYaw=0,stickActive=false,moveX=0,moveY=0,velocityX=0,velocityZ=0,run=false,aim=false,shoot=false,pose='stand',velocityY=0,grounded=true,ammo=30,reloading=false,lastShot=0,started=false,cameraRecoil=0,cameraShake=0,stamina=100,worldBlockers=[],cameraRay=new THREE.Raycaster(),cameraDesired=new THREE.Vector3(),cameraCurrentDistance=5.6;
 const mat=(color,roughness=.9)=>new THREE.MeshStandardMaterial({color,roughness});
 function mesh(parent,geo,material,pos){const o=new THREE.Mesh(geo,material);o.position.set(...pos);parent.add(o);o.castShadow=true;o.receiveShadow=true;return o}
 function cube(parent,w,h,d,m,x,y,z){return mesh(parent,new THREE.BoxGeometry(w,h,d),m,[x,y,z])}
@@ -334,9 +334,9 @@ function animateRig(dt,speed,sprinting,crouch,prone){
 }
 function bind(){
  const stick=$('stick'),knob=$('knob');let sid=null,rect=null;
- stick.addEventListener('pointerdown',e=>{e.preventDefault();sid=e.pointerId;stick.setPointerCapture(sid);rect=stick.getBoundingClientRect();stickMove(e)});
+ stick.addEventListener('pointerdown',e=>{e.preventDefault();sid=e.pointerId;stickActive=true;moveYaw=yaw;stick.setPointerCapture(sid);rect=stick.getBoundingClientRect();stickMove(e)});
  function stickMove(e){if(sid!==e.pointerId)return;let dx=e.clientX-(rect.left+rect.width/2),dy=e.clientY-(rect.top+rect.height/2),len=Math.hypot(dx,dy),max=43;if(len>max){dx*=max/len;dy*=max/len}moveX=dx/max;moveY=dy/max;knob.style.transform='translate('+dx+'px,'+dy+'px)'}
- function stickEnd(e){if(sid!==e.pointerId)return;sid=null;moveX=moveY=0;knob.style.transform='translate(0,0)'}
+ function stickEnd(e){if(sid!==e.pointerId)return;sid=null;stickActive=false;moveYaw=yaw;moveX=moveY=0;knob.style.transform='translate(0,0)'}
  stick.addEventListener('pointermove',stickMove);stick.addEventListener('pointerup',stickEnd);stick.addEventListener('pointercancel',stickEnd);
  const hold=(id,down,up=()=>{})=>{const b=$(id);b.addEventListener('pointerdown',e=>{e.preventDefault();b.classList.add('active');down()});['pointerup','pointercancel','pointerleave'].forEach(ev=>b.addEventListener(ev,()=>{b.classList.remove('active');up()}))};
  hold('run',()=>run=true,()=>run=false);hold('aim',()=>aim=true,()=>aim=false);hold('fire',()=>shoot=true,()=>shoot=false);
@@ -490,12 +490,12 @@ function update(dt){
  if(sprinting)stamina=Math.max(0,stamina-22*dt);else stamina=Math.min(100,stamina+14*dt);
  $('stamina').textContent='FÔLEGO '+Math.round(stamina);
  const speed=prone?.58:crouch?1.55:aim?2.35:sprinting?6.25:3.25;
- const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
- // Usa o eixo horizontal REAL da câmera: direita no joystick = direita na tela.
- const right=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,0);
- right.y=0;
- if(right.lengthSq()<.0001)right.set(Math.cos(yaw),0,-Math.sin(yaw));
- right.normalize();
+ // Direção do joystick fica independente do giro livre da câmera enquanto
+ // o jogador mantém o analógico pressionado. Assim é possível orbitar 360°
+ // e enxergar a frente do soldado sem mudar a trajetória da corrida.
+ const controlYaw=stickActive?moveYaw:yaw;
+ const forward=new THREE.Vector3(-Math.sin(controlYaw),0,-Math.cos(controlYaw));
+ const right=new THREE.Vector3(Math.cos(controlYaw),0,-Math.sin(controlYaw));
  const inputDir=forward.clone().multiplyScalar(-moveY).add(right.multiplyScalar(moveX));
  if(inputDir.length()>1)inputDir.normalize();
  // Controle 360° relativo à câmera. O modelo Quaternius tem uma
@@ -507,7 +507,7 @@ function update(dt){
  // Sem arma/mira, a orientação continua seguindo o movimento 360°.
  // Quando há arma equipada, a rotação do corpo é aplicada depois que a câmera
  // atualiza seu lookAt, usando a direção mundial real da mira.
- if(!(aim||weaponEquipped)&&inputMagnitude>.08){
+ if(!aim&&inputMagnitude>.08){
   const facing=Math.atan2(inputDir.x,inputDir.z)-Math.PI;
   const turn=THREE.MathUtils.euclideanModulo(facing-hero.rotation.y+Math.PI,Math.PI*2)-Math.PI;
   hero.rotation.y+=turn*(1-Math.exp(-dt*12));
@@ -551,7 +551,7 @@ function update(dt){
  // Rotação corporal de terceira pessoa: primeiro lê a direção horizontal
  // REAL para onde a câmera olha; depois gira o root do personagem inteiro.
  // Assim tronco, quadril e pernas acompanham a mira, não apenas os braços.
- if(aim||weaponEquipped){
+ if(aim||(weaponEquipped&&!moving)){
   // yaw é o ângulo de controle horizontal da câmera, mantido contínuo
   // durante voltas completas. Não derivar do lookAt da câmera: o offset
   // lateral da câmera distorce esse vetor e causa erro na orientação.
