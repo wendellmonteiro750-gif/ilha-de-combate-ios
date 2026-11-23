@@ -158,3 +158,5 @@ addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updat
 updateHud();camera.position.set(0,6,18);camera.lookAt(0,1,0);animate();
 
 // Operation Nine prototype build: initial branch validation.
+
+// Weapon iteration: rifle/pistol swap, distinct fire cadence and damage.
