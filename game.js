@@ -95,8 +95,29 @@ const combatV1=new THREE.Vector3(),combatV2=new THREE.Vector3(),combatQ1=new THR
 function getCombatBone(name){let found=null;characterVisual?.traverse(o=>{if(!found&&o.isBone&&o.name===name)found=o});return found}
 function chooseClip(groups,fallback){
  const names=[...characterActions.keys()];
- for(const group of groups){const found=names.find(n=>group.every(token=>n.toLowerCase().includes(token)));if(found)return found}
+ // Correspondência exata primeiro: "Crouch_Idle_Loop" nunca pode
+ // ser confundida com "Idle_Loop" por busca parcial.
+ for(const group of groups){
+  const exact=group.length===1?names.find(n=>n.toLowerCase()===group[0].toLowerCase()):null;
+  if(exact)return exact;
+ }
+ for(const group of groups){
+  const found=names.find(n=>{
+   const lower=n.toLowerCase();
+   return group.every(token=>lower.includes(token)) &&
+    !/(crouch|crawl|prone|lie|lying|kneel|sit|death)/.test(lower);
+  });
+  if(found)return found;
+ }
  return fallback;
+}
+function exactClip(...candidates){
+ const names=[...characterActions.keys()];
+ for(const candidate of candidates){
+  const found=names.find(n=>n.toLowerCase()===candidate.toLowerCase());
+  if(found)return found;
+ }
+ return null;
 }
 function solveArmIK(upper,lower,hand,targetWorld){
  if(!upper||!lower||!hand)return;
@@ -259,30 +280,23 @@ function playCharacterClip(name,restart=false){
 function animateRig(dt,speed,sprinting,crouch,prone){
  if(!characterReady||!characterMixer)return;
  const now=performance.now(),moving=speed>.22;
- // Usa primeiro as animações humanas neutras. Clips de rifle/arma foram
- // removidos daqui porque colocavam os braços numa pose baixa/agachada.
- const idle=chooseClip([['idle','loop']], 'Idle_Loop');
- const walk=chooseClip([['walk','loop'],['jog','fwd']], 'Jog_Fwd_Loop');
- const sprint=chooseClip([['sprint','loop']], 'Sprint_Loop');
- const crouchIdle=chooseClip([['crouch','idle']],idle);
- const crouchMove=chooseClip([['crouch','fwd'],['crouch','walk']],walk);
- const proneIdle=chooseClip([['prone','idle'],['lying','idle'],['lie','idle']],crouchIdle);
- const proneMove=chooseClip([['prone','crawl'],['prone','move'],['crawl','loop']],crouchMove);
- // Mantém a postura ereta também ao mirar, atirar e recarregar.
- const aimClip=idle;
- const shootClip=idle;
- const reloadClip=idle;
+ // Estados em pé usam SOMENTE clipes explicitamente nomeados para
+ // locomoção ereta. Nunca selecionar Crouch_Idle por busca parcial.
+ const idle=exactClip('Idle_Loop','Idle_Standing_Loop')||'Idle_Loop';
+ const walk=exactClip('Jog_Fwd_Loop','Walk_Fwd_Loop','Walk_Loop')||idle;
+ const sprint=exactClip('Sprint_Loop','Run_Fwd_Loop')||walk;
+ const crouchIdle=exactClip('Crouch_Idle_Loop')||idle;
+ const crouchMove=exactClip('Crouch_Fwd_Loop','Crouch_Fwd_L_Loop')||walk;
+ const proneIdle=exactClip('Prone_Idle_Loop','Crawl_Idle_Loop')||crouchIdle;
+ const proneMove=exactClip('Crawl_Fwd_Loop','Prone_Crawl_Loop')||crouchMove;
+ // Mirar, atirar e recarregar não mudam a postura das pernas ou do tronco.
  let clip=idle;
  if(prone)clip=moving?proneMove:proneIdle;
  else if(crouch)clip=moving?crouchMove:crouchIdle;
- else if(!grounded)clip=chooseClip([['jump','loop']],idle);
- else if(now<reloadPoseUntil&&weaponEquipped)clip=reloadClip;
- else if(now<firePoseUntil&&weaponEquipped)clip=shootClip;
- else if(aim&&weaponEquipped)clip=aimClip;
+ else if(!grounded)clip=exactClip('Jump_Loop','Jump_Start')||idle;
  else if(moving)clip=sprinting?sprint:walk;
  if(clip!==activeCharacterClip)playCharacterClip(clip);
  characterMixer.update(dt);
- applyCombatWeaponPose(crouch,prone,dt);
 }
 function bind(){
  const stick=$('stick'),knob=$('knob');let sid=null,rect=null;
