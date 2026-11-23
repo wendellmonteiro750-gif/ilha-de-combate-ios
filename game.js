@@ -2,7 +2,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
 import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
 const $=id=>document.getElementById(id);
 const root=$('game');
-let scene,camera,renderer,clock,hero,rig={},weapon,targets=[],realHero=null,realMixer=null,realActions={},activeRealAction='',realBones={},yaw=0,pitch=-.12,moveX=0,moveY=0,velocityX=0,velocityZ=0,locomotionSpeed=0,run=false,aim=false,shoot=false,pose='stand',proneBlend=0,velocityY=0,grounded=true,walkT=0,ammo=30,reloading=false,lastShot=0,started=false;
+let scene,camera,renderer,clock,hero,rig={},weapon,muzzleFlash,muzzleLight,weaponKick=0,reloadBlend=0,muzzleTime=0,targets=[],realHero=null,realMixer=null,realActions={},activeRealAction='',realBones={},yaw=0,pitch=-.12,moveX=0,moveY=0,velocityX=0,velocityZ=0,locomotionSpeed=0,run=false,aim=false,shoot=false,pose='stand',proneBlend=0,velocityY=0,grounded=true,walkT=0,ammo=30,reloading=false,lastShot=0,started=false;
 const mat=(color,roughness=.9)=>new THREE.MeshStandardMaterial({color,roughness});
 function mesh(parent,geo,material,pos){const o=new THREE.Mesh(geo,material);o.position.set(...pos);parent.add(o);o.castShadow=true;o.receiveShadow=true;return o}
 function cube(parent,w,h,d,m,x,y,z){return mesh(parent,new THREE.BoxGeometry(w,h,d),m,[x,y,z])}
@@ -123,9 +123,23 @@ function buildHero(){
  cube(weapon,.16,.17,.85,gun,0,0,-.22);cube(weapon,.075,.075,.7,gun,0,.02,-.92);
  cube(weapon,.13,.13,.35,vest,0,0,.38);cube(weapon,.11,.3,.18,gun,0,-.2,-.24);
  cube(weapon,.08,.07,.16,gun,0,.12,-.25);
- // Mira superior e carregador mais legíveis na silhueta.
+ // Trilho superior, alça de mira, coronha, guarda-mão e carregador detalhados.
  cube(weapon,.055,.07,.12,mat(0x111719),0,.12,-.60);
  cube(weapon,.12,.25,.13,gun,0,-.22,-.48);
+ cube(weapon,.23,.12,.30,gun,0,.015,.43);
+ cube(weapon,.09,.08,.42,mat(0x3c4542),0,.12,-.12);
+ for(let i=0;i<5;i++)cube(weapon,.19,.025,.035,mat(0x111719),0,.105,-.25-i*.105);
+ cube(weapon,.07,.045,.12,mat(0x111719),0,.19,-.52);
+ const barrel=mesh(weapon,new THREE.CylinderGeometry(.035,.045,.42,12),gun,[0,.015,-1.08]);barrel.rotation.x=Math.PI/2;
+ const muzzle=mesh(weapon,new THREE.CylinderGeometry(.055,.045,.10,12),mat(0x151a1b),[0,.015,-1.31]);muzzle.rotation.x=Math.PI/2;
+ cube(weapon,.055,.20,.10,mat(0x171d1b),0,-.18,.08);
+ // Flash e luz de disparo são ativados apenas no instante do tiro.
+ muzzleFlash=new THREE.Group();muzzleFlash.position.set(0,.015,-1.39);weapon.add(muzzleFlash);
+ const flashMat=new THREE.MeshBasicMaterial({color:0xffd36a,transparent:true,opacity:.95});
+ const flash=mesh(muzzleFlash,new THREE.ConeGeometry(.12,.42,8),flashMat,[0,0,-.20]);flash.rotation.x=-Math.PI/2;
+ const core=mesh(muzzleFlash,new THREE.SphereGeometry(.075,8,8),new THREE.MeshBasicMaterial({color:0xffffff}),[0,0,-.035]);
+ muzzleLight=new THREE.PointLight(0xffb347,0,3);muzzleLight.position.set(0,.02,-.2);muzzleFlash.add(muzzleLight);
+ muzzleFlash.visible=false;
 }
 function loadRealHero(){
  const loader=new GLTFLoader();
@@ -202,7 +216,7 @@ function bind(){
  $('jump').addEventListener('pointerdown',e=>{e.preventDefault();if(grounded&&pose!=='prone'){velocityY=6.2;grounded=false}});
  $('crouch').addEventListener('pointerdown',e=>{e.preventDefault();setPose(pose==='crouch'?'stand':'crouch')});
  $('prone').addEventListener('pointerdown',e=>{e.preventDefault();setPose(pose==='prone'?'stand':'prone')});
- $('reload').addEventListener('pointerdown',e=>{e.preventDefault();if(!reloading&&ammo<30){reloading=true;$('message').textContent='RECARREGANDO';setTimeout(()=>{ammo=30;reloading=false;stats()},1150)}});
+ $('reload').addEventListener('pointerdown',e=>{e.preventDefault();if(!reloading&&ammo<30){reloading=true;$('message').textContent='RECARREGANDO';setTimeout(()=>{ammo=30;reloading=false;stats();$('message').textContent='ÁREA DE TREINO'},1450)}});
  let drag=null;renderer.domElement.addEventListener('pointerdown',e=>{if(e.clientX>innerWidth*.38){drag={id:e.pointerId,x:e.clientX,y:e.clientY};renderer.domElement.setPointerCapture(e.pointerId)}});
  renderer.domElement.addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag.x=e.clientX;drag.y=e.clientY;yaw-=dx*.006;pitch=THREE.MathUtils.clamp(pitch+dy*.0035,-.65,.35)});
  ['pointerup','pointercancel'].forEach(ev=>renderer.domElement.addEventListener(ev,e=>{if(drag&&e.pointerId===drag.id)drag=null}));
@@ -210,7 +224,14 @@ function bind(){
 }
 function setPose(p){pose=p;$('poseLabel').textContent='POSTURA: '+(p==='stand'?'EM PÉ':p==='crouch'?'AGACHADO':'DEITADO');$('crouch').classList.toggle('active',p==='crouch');$('prone').classList.toggle('active',p==='prone')}
 function stats(){$('ammo').textContent=ammo+' / 90'}
-function fireShot(){if(reloading||ammo<=0||performance.now()-lastShot<160)return;lastShot=performance.now();ammo--;stats();weapon.rotation.x=.16;setTimeout(()=>{if(weapon)weapon.rotation.x=aim?-.04:0},65);const origin=camera.position.clone(),direction=new THREE.Vector3();camera.getWorldDirection(direction);const ray=new THREE.Raycaster(origin,direction,0,85);const hits=ray.intersectObjects(targets,true);if(hits.length){const target=hits[0].object;target.material=mat(0xe5a43a);$('message').textContent='ALVO ATINGIDO!';setTimeout(()=>{$('message').textContent='ÁREA DE TREINO';target.material=mat(0xd6d1bd)},500)}}
+function fireShot(){
+ if(reloading||ammo<=0||performance.now()-lastShot<155)return;
+ lastShot=performance.now();ammo--;stats();weaponKick=Math.min(1,weaponKick+.72);
+ muzzleTime=.075;if(muzzleFlash){muzzleFlash.visible=true;muzzleLight.intensity=2.8}
+ const origin=camera.position.clone(),direction=new THREE.Vector3();camera.getWorldDirection(direction);
+ const ray=new THREE.Raycaster(origin,direction,0,85);const hits=ray.intersectObjects(targets,true);
+ if(hits.length){const target=hits[0].object;target.material=mat(0xe5a43a);$('message').textContent='ALVO ATINGIDO!';setTimeout(()=>{$('message').textContent='ÁREA DE TREINO';target.material=mat(0xd6d1bd)},500)}
+}
 function update(dt){
  const inputMagnitude=Math.min(1,Math.hypot(moveX,moveY));
  const moving=inputMagnitude>.08;
@@ -304,15 +325,21 @@ function update(dt){
   hand.position.set(0,-foreLength,0);
   hand.rotation.set(aim?-.13:moving?Math.sin(walkT+(side===1?0:Math.PI))*.025:0,side===1?-.025:.10,side===1?-.10:.06);
  });
- // Small breathing/idle motion and recoil.
+ // Respiração, sway de mira, recuo e manipulação durante a recarga.
  rig.body.position.y+=horizontalSpeed>.12?Math.abs(gait)*.018:Math.sin(walkT*1.7)*.012;
- weapon.position.y=aim?1.58:moving?1.54:1.53;
- // Compensa a inclinação do tronco para o cano continuar apontado à frente,
- // paralelo ao chão durante a posição deitada.
- weapon.rotation.x=THREE.MathUtils.lerp(weapon.rotation.x,proneBlend*1.12+(1-proneBlend)*(aim?-.035:0),1-Math.exp(-dt*10));
- // Inclina le spalle e accompagna il fucile durante la mira e il movimento.
- rig.pelvis.rotation.y=THREE.MathUtils.lerp(rig.pelvis.rotation.y,aim?-.025*strafe:0,1-Math.exp(-dt*7));
- weapon.rotation.x=THREE.MathUtils.lerp(weapon.rotation.x,aim?-.035:proneBlend*.08,1-Math.exp(-dt*12));
+ const idleSway=Math.sin(walkT*.72)*.012;
+ const aimSway=aim?Math.sin(walkT*1.15)*.008:0;
+ weaponKick=THREE.MathUtils.damp(weaponKick,0,aim?13:8,dt);
+ reloadBlend=THREE.MathUtils.damp(reloadBlend,reloading?1:0,7,dt);
+ muzzleTime=Math.max(0,muzzleTime-dt);
+ if(muzzleFlash&&muzzleTime===0){muzzleFlash.visible=false;muzzleLight.intensity=0}
+ weapon.position.y=(aim?1.58:horizontalSpeed>.12?1.54:1.53)+idleSway+aimSway-reloadBlend*.12;
+ weapon.position.x=.28+(aim?-.035:0)+Math.sin(walkT*.9)*.006;
+ weapon.rotation.z=THREE.MathUtils.damp(weapon.rotation.z,aim?-.025*strafe:Math.sin(walkT*.8)*.008,9,dt);
+ weapon.rotation.x=THREE.MathUtils.damp(weapon.rotation.x,aim?-.035:proneBlend*.08,10,dt)-weaponKick*.19+reloadBlend*.28;
+ weapon.rotation.y=THREE.MathUtils.damp(weapon.rotation.y,Math.sin(walkT*.7)*.012+reloadBlend*.16,8,dt);
+ // Inclinação do tronco acompanha a direção lateral sem quebrar a mira.
+ rig.pelvis.rotation.y=THREE.MathUtils.damp(rig.pelvis.rotation.y,aim?-.025*strafe:0,7,dt);
  if(shoot)fireShot();
  // Shoulder camera follows the player and tightens when aiming.
  const target=hero.position.clone().add(new THREE.Vector3(0,THREE.MathUtils.lerp(crouch?1.55:2.02,.62,proneBlend),0));
