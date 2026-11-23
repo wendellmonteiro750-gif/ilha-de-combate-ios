@@ -101,7 +101,7 @@ function addPalm(x,z,s=1){
  for(let i=0;i<8;i++){const a=i*Math.PI/4,leaf=new THREE.Mesh(new THREE.ConeGeometry(.3*s,3.1*s,7),mat(i%2?0x274e34:0x315f3a));leaf.position.set(Math.sin(a)*.95*s,4.05*s,Math.cos(a)*.95*s);leaf.rotation.z=Math.cos(a)*.95;leaf.rotation.x=-Math.sin(a)*.95;leaf.castShadow=true;g.add(leaf)}
  g.position.set(x,0,z);scene.add(g);
 }
-function addHouse(x,z,rotation=0,style=0){
+function addHouse(x,z,rotation=0,style=0,twoStorey=false){
  const g=new THREE.Group();
  const palettes=[
   {wall:0xd1c4a7,trim:0xf0e5ce,roof:0x714b3d,wood:0x65452f,glass:0x6da5ad,accent:0x9a7956},
@@ -110,7 +110,7 @@ function addHouse(x,z,rotation=0,style=0){
   {wall:0xb8c3b9,trim:0xe0e2d7,roof:0x555047,wood:0x514638,glass:0x7da9ad,accent:0x788b7e}
  ];
  const p=palettes[Math.abs(style)%palettes.length],wall=mat(p.wall,.96),trim=mat(p.trim,.9),wood=mat(p.wood,.88),roof=mat(p.roof,.82),glass=new THREE.MeshStandardMaterial({color:p.glass,roughness:.16,metalness:.22}),accent=mat(p.accent,.9);
- wall.map=makeSurfaceMap('plaster');wall.map.repeat.set(2.2,1.3);wall.needsUpdate=true;roof.map=makeSurfaceMap('roof');roof.map.repeat.set(1.5,1.5);roof.needsUpdate=true;wood.map=makeSurfaceMap('wood');wood.map.repeat.set(1,1.4);wood.needsUpdate=true;
+ wall.map=makeSurfaceMap('plaster');wall.map.repeat.set(2.2,1.3);wall.bumpMap=wall.map;wall.bumpScale=.045;wall.needsUpdate=true;roof.map=makeSurfaceMap('roof');roof.map.repeat.set(1.5,1.5);roof.bumpMap=roof.map;roof.bumpScale=.035;roof.needsUpdate=true;wood.map=makeSurfaceMap('wood');wood.map.repeat.set(1,1.4);wood.bumpMap=wood.map;wood.bumpScale=.025;wood.needsUpdate=true;
  const floor=mat(style%2?0x877b68:0x9b8c73,.98),interior=mat(0xc2b69e,.96),darkWood=mat(0x59432f,.9),metal=mat(0x454b49,.58,.35);
  // Fundação elevada, paredes claras e rodapé de pedra.
  box(g,6.65,.24,5.85,mat(0x77766c),0,.12,0);
@@ -174,23 +174,42 @@ function addHouse(x,z,rotation=0,style=0){
  for(const sx of [-.27,.67])for(const sz of [-.95,-.45])box(g,.09,.75,.09,darkWood,.2+sx,.38,-.55+sz);
  box(g,1.25,.12,.32,wood,-1.65,1.18,.25);
  for(let k=0;k<3;k++)box(g,.08,.48,.3,darkWood,-2.18+k*.48,.88,.25);
+ // Segundo pavimento em casas selecionadas: paredes, laje, janelas e sacada.
+ const roofLift=twoStorey?2.78:0;
+ if(twoStorey){
+  box(g,6.18,.2,5.35,floor,0,3.12,0);
+  box(g,6.08,2.55,.22,wall,0,4.48,-2.52);box(g,6.08,2.55,.22,wall,0,4.48,2.52);
+  box(g,.22,2.55,5.05,wall,-2.92,4.48,0);box(g,.22,2.55,5.05,wall,2.92,4.48,0);
+  for(const sx of [-1,1]){
+   const wx=sx*1.52;
+   box(g,1.32,1.35,.05,glass,wx,4.55,2.66);box(g,1.48,1.5,.08,wood,wx,4.55,2.62);
+   box(g,.06,1.42,.06,trim,wx,4.55,2.7);box(g,1.35,.06,.06,trim,wx,4.55,2.7);
+   box(g,1.32,1.35,.05,glass,wx,4.55,-2.62);box(g,1.48,1.5,.08,wood,wx,4.55,-2.58);
+   box(g,.06,1.42,.06,trim,wx,4.55,-2.7);box(g,1.35,.06,.06,trim,wx,4.55,-2.7);
+  }
+  box(g,2.45,.14,1.05,wood,0,3.25,3.35);
+  for(const sx of [-1,1])box(g,.1,.95,.1,trim,sx*1.05,3.75,3.75);
+  box(g,2.15,.1,.1,wood,0,4.18,3.75);
+  // Escada externa em degraus como elemento arquitetônico visível.
+  for(let k=0;k<9;k++)box(g,1.05,.12,.38,accent,-2.15, .18+k*.27,2.85-k*.38);
+ }
  // Telhado inclinado com telhas em faixas, beirais e cumeeira.
- const roofA=new THREE.Mesh(new THREE.BoxGeometry(3.58,.2,6.15),roof);roofA.position.set(-1.52,3.16,0);roofA.rotation.z=-.48;roofA.castShadow=true;roofA.receiveShadow=true;g.add(roofA);
- const roofB=new THREE.Mesh(new THREE.BoxGeometry(3.58,.2,6.15),roof);roofB.position.set(1.52,3.16,0);roofB.rotation.z=.48;roofB.castShadow=true;roofB.receiveShadow=true;g.add(roofB);
+ const roofA=new THREE.Mesh(new THREE.BoxGeometry(3.58,.2,6.15),roof);roofA.position.set(-1.52,3.16+roofLift,0);roofA.rotation.z=-.48;roofA.castShadow=true;roofA.receiveShadow=true;g.add(roofA);
+ const roofB=new THREE.Mesh(new THREE.BoxGeometry(3.58,.2,6.15),roof);roofB.position.set(1.52,3.16+roofLift,0);roofB.rotation.z=.48;roofB.castShadow=true;roofB.receiveShadow=true;g.add(roofB);
  for(let side of [-1,1])for(let row=0;row<7;row++){
   const z=-2.7+row*.9;
-  const tile=new THREE.Mesh(new THREE.BoxGeometry(3.25,.035,.055),accent);tile.position.set(side*-1.52,3.22-Math.abs(z)*.0,z);tile.rotation.z=side*-.48;g.add(tile);
+  const tile=new THREE.Mesh(new THREE.BoxGeometry(3.25,.035,.055),accent);tile.position.set(side*-1.52,3.22+roofLift-Math.abs(z)*.0,z);tile.rotation.z=side*-.48;g.add(tile);
  }
- box(g,.22,.22,6.25,trim,0,3.98,0);
- box(g,.14,.12,6.15,metal,-3.1,2.78,0);box(g,.14,.12,6.15,metal,3.1,2.78,0);
- box(g,.62,.85,.62,accent,-1.75,3.55,-1.2);box(g,.72,.14,.72,metal,-1.75,4.02,-1.2);
+ box(g,.22,.22,6.25,trim,0,3.98+roofLift,0);
+ box(g,.14,.12,6.15,metal,-3.1,2.78+roofLift,0);box(g,.14,.12,6.15,metal,3.1,2.78+roofLift,0);
+ box(g,.62,.85,.62,accent,-1.75,3.55+roofLift,-1.2);box(g,.72,.14,.72,metal,-1.75,4.02+roofLift,-1.2);
  // Varanda, guarda-corpo e escada de acesso.
  box(g,2.5,.16,1.42,wood,0,.22,3.55);
  for(const sx of [-1,1])box(g,.12,1.05,.12,trim,sx*1.08,.78,4.12);
  box(g,2.2,.12,.12,wood,0,1.28,4.12);
  for(let k=0;k<3;k++)box(g,.12,.07,.42,accent,0,.12+k*.11,3.3+k*.14);
- g.position.set(x,0,z);g.rotation.y=rotation;scene.add(g);
- worldObstacles.push({type:'house',x,z,rotation,halfWidth:3.05,halfDepth:2.65});
+ g.scale.setScalar(1.24);g.position.set(x,0,z);g.rotation.y=rotation;scene.add(g);
+ worldObstacles.push({type:'house',x,z,rotation,halfWidth:3.78,halfDepth:3.29,twoStorey});
 }
 function addRoadNetwork(){
  // Estradas de terra batida com acostamento, conectando os pequenos bairros.
@@ -292,23 +311,23 @@ function addWorldDetail(){
  for(let i=0;i<54;i++){const a=i/9*Math.PI*2,r=205+(i%4)*18;dummy.position.set(Math.cos(a)*r,38+(i%5)*5,Math.sin(a)*r);dummy.scale.set(9+(i%3)*5,2.5+(i%2),5+(i%4)*2);dummy.rotation.y=a;dummy.updateMatrix();clouds.setMatrixAt(i,dummy.matrix)}clouds.instanceMatrix.needsUpdate=true;scene.add(clouds);
 }
 function buildWorld(){
- scene.background=new THREE.Color(0x849ba2);scene.fog=new THREE.FogExp2(0x9aa9a5,.00135);
- scene.add(new THREE.HemisphereLight(0xd8e0df,0x394338,1.28));
+ scene.background=new THREE.Color(0x8eaebd);scene.fog=new THREE.FogExp2(0xa8b7b0,.00105);
+ scene.add(new THREE.HemisphereLight(0xdce9f0,0x354235,1.38));
  const ambient=new THREE.AmbientLight(0xdce2df,.18);scene.add(ambient);
- const sun=new THREE.DirectionalLight(0xffe3c2,2.45);sun.position.set(-42,78,34);sun.castShadow=!!gameSettings.shadows&&gameSettings.quality!=='low';sun.shadow.mapSize.set(innerWidth<700?512:1024,innerWidth<700?512:1024);sun.shadow.camera.left=-165;sun.shadow.camera.right=165;sun.shadow.camera.top=165;sun.shadow.camera.bottom=-165;sun.shadow.bias=-.00018;sun.shadow.normalBias=.025;sun.shadow.radius=innerWidth<700?2:3;sun.shadow.camera.near=1;sun.shadow.camera.far=260;scene.add(sun);
+ const sun=new THREE.DirectionalLight(0xffe8ce,2.65);sun.position.set(-42,78,34);sun.castShadow=!!gameSettings.shadows&&gameSettings.quality!=='low';sun.shadow.mapSize.set(innerWidth<700?512:1024,innerWidth<700?512:1024);sun.shadow.camera.left=-165;sun.shadow.camera.right=165;sun.shadow.camera.top=165;sun.shadow.camera.bottom=-165;sun.shadow.bias=-.00018;sun.shadow.normalBias=.025;sun.shadow.radius=innerWidth<700?2:3;sun.shadow.camera.near=1;sun.shadow.camera.far=260;scene.add(sun);
  const fill=new THREE.DirectionalLight(0x9db5c4,.42);fill.position.set(55,28,-48);scene.add(fill);
- const ground=new THREE.Mesh(new THREE.PlaneGeometry(800,800),new THREE.MeshStandardMaterial({map:addTextureGround(),roughness:.96}));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+ const groundMap=addTextureGround();const groundMaterial=new THREE.MeshStandardMaterial({map:groundMap,roughness:.98});groundMaterial.bumpMap=groundMap;groundMaterial.bumpScale=.055;const ground=new THREE.Mesh(new THREE.PlaneGeometry(800,800),groundMaterial);ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
  const beach=new THREE.Mesh(new THREE.RingGeometry(119,141,192),new THREE.MeshStandardMaterial({color:0xd9c18c,roughness:.95}));beach.rotation.x=-Math.PI/2;beach.position.y=.035;scene.add(beach);
  const waterMat=new THREE.MeshStandardMaterial({color:0x168aa6,roughness:.24,metalness:.12,transparent:false});
  const water=new THREE.Mesh(new THREE.PlaneGeometry(1100,1100,1,1),waterMat);water.rotation.x=-Math.PI/2;water.position.y=-.28;scene.add(water);
  waterMat.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\\nvarying vec3 vWaterWorld;').replace('#include <begin_vertex>','#include <begin_vertex>\\n vWaterWorld=(modelMatrix*vec4(transformed,1.0)).xyz; transformed.y += sin(vWaterWorld.x*.035+vWaterWorld.z*.022)*.018 + cos(vWaterWorld.z*.04-vWaterWorld.x*.018)*.012;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\\nvarying vec3 vWaterWorld;').replace('#include <color_fragment>','#include <color_fragment>\\n float ripple=0.5+0.5*sin(vWaterWorld.x*.22+vWaterWorld.z*.16); diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.32,.72,.78),ripple*.10);');};
  for(let i=0;i<18;i++){const a=i*2.399,r=22+(i%8)*3.3;addPalm(Math.cos(a)*r,Math.sin(a)*r,.75+(i%4)*.1)}
  for(let i=0;i<34;i++){const a=i*2.399,r=52+(i%13)*5.1;addPalm(Math.cos(a)*r,Math.sin(a)*r,.85+(i%5)*.12)}
- addHouse(-12,-12,.2,0);addHouse(14,-18,-.3,1);addHouse(22,9,.8,2);addHouse(-25,15,-.5,3);
- addHouse(68,35,.4,2);addHouse(-76,-42,-.7,1);addHouse(38,-88,.2,0);addHouse(-92,72,1.1,3);addHouse(102,5,-.4,2);
+ addHouse(-12,-12,.2,0);addHouse(14,-18,-.3,1,true);addHouse(22,9,.8,2);addHouse(-25,15,-.5,3,true);
+ addHouse(68,35,.4,2,true);addHouse(-76,-42,-.7,1);addHouse(38,-88,.2,0);addHouse(-92,72,1.1,3);addHouse(102,5,-.4,2);
  // Novas casas distribuídas pela ilha para criar mais áreas de exploração.
- addHouse(42,54,.65,1);addHouse(-48,68,-.25,2);addHouse(84,-58,1.35,3);addHouse(-58,-76,.45,0);
- addHouse(6,82,-.8,2);addHouse(-104,18,.3,1);addHouse(108,78,-.55,0);addHouse(-8,-96,1.05,3);
+ addHouse(42,54,.65,1);addHouse(-48,68,-.25,2,true);addHouse(84,-58,1.35,3);addHouse(-58,-76,.45,0);
+ addHouse(6,82,-.8,2,true);addHouse(-104,18,.3,1);addHouse(108,78,-.55,0);addHouse(-8,-96,1.05,3);
  for(let i=0;i<34;i++){const a=i*2.4,r=9+(i%6)*4;const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.55+(i%4)*.22,1),mat(i%2?0x58644d:0x7b8069));rock.position.set(Math.cos(a)*r,.3,Math.sin(a)*r);rock.scale.y=.65;rock.castShadow=true;rock.receiveShadow=true;scene.add(rock)}
  addRoadNetwork();
  addSettlementDetails();
@@ -668,7 +687,7 @@ async function init(){
  renderer.shadowMap.type=THREE.PCFShadowMap;
  renderer.setScissorTest(false);
  renderer.toneMapping=THREE.ACESFilmicToneMapping;
- renderer.toneMappingExposure=1.02;
+ renderer.toneMappingExposure=1.08;
  renderer.info.autoReset=true;
  renderer.outputColorSpace=THREE.SRGBColorSpace;
  applyGraphicsSettings();
