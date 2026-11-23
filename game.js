@@ -481,6 +481,112 @@ function addRifle(rig,index=0){
  g.scale.setScalar(.68);g.position.set(.015,-.045,.035);g.rotation.set(-.08,0,0);hand.add(g);
  rig.weaponPivot=g;rig.weaponMuzzle=muzzle;rig.weaponSpec=spec;
 }
+// Fallback humano local para falhas de conexão.
+function makeHumanoidModel(){
+ const root=new THREE.Group();root.name='IlhaHumanoid_OwnModel';
+ const bones=new Map();
+ const skin=new THREE.MeshStandardMaterial({color:0xb98265,roughness:.82}),skinLight=new THREE.MeshStandardMaterial({color:0xc99173,roughness:.84});
+ const shirt=new THREE.MeshStandardMaterial({color:0x526b58,roughness:.94}),shirtDark=new THREE.MeshStandardMaterial({color:0x35483d,roughness:.92});
+ const pants=new THREE.MeshStandardMaterial({color:0x303b3d,roughness:.96}),pantsLight=new THREE.MeshStandardMaterial({color:0x46504b,roughness:.95});
+ const boots=new THREE.MeshStandardMaterial({color:0x292b2a,roughness:.88}),sole=new THREE.MeshStandardMaterial({color:0x171a1a,roughness:.95});
+ const belt=new THREE.MeshStandardMaterial({color:0x292b27,roughness:.78}),metal=new THREE.MeshStandardMaterial({color:0x9c895d,metalness:.55,roughness:.42});
+ const hair=new THREE.MeshStandardMaterial({color:0x30251f,roughness:.95}),eyes=new THREE.MeshStandardMaterial({color:0x211b18,roughness:.45});
+ const bone=(name,parent,x,y,z)=>{const b=new THREE.Bone();b.name=name;b.position.set(x,y,z);parent.add(b);bones.set(name,b);return b};
+ const ellipsoid=(parent,name,x,y,z,sx,sy,sz,material)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(1,32,24),material);m.name=name;m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m};
+ const capsule=(parent,name,length,radius,material,x=0,y=0,z=0)=>{const m=new THREE.Mesh(new THREE.CapsuleGeometry(radius,Math.max(.01,length-2*radius),10,16),material);m.name=name;m.position.set(x,y-length*.5,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m};
+ const hips=bone('mixamorigHips',root,0,.99,0);
+ ellipsoid(hips,'pelvis',0,0,0,.205,.145,.13,skin);
+ ellipsoid(hips,'combat_belt',0,-.018,.006,.218,.055,.145,belt);
+ box(hips,.1,.075,.025,metal,0,-.02,.145);
+ const spine=bone('mixamorigSpine',hips,0,.12,0);
+ // Tronco único com silhueta anatômica: cintura estreita, caixa torácica e ombros largos.
+ const torsoProfile=[
+  new THREE.Vector2(.135,-.17),new THREE.Vector2(.155,-.12),
+  new THREE.Vector2(.17,-.035),new THREE.Vector2(.158,.055),
+  new THREE.Vector2(.17,.16),new THREE.Vector2(.205,.29),
+  new THREE.Vector2(.225,.39),new THREE.Vector2(.205,.47),
+  new THREE.Vector2(.16,.50)
+ ];
+ const torsoGeometry=new THREE.LatheGeometry(torsoProfile,32);
+ torsoGeometry.scale(1,1,.68);
+ const torsoMesh=new THREE.Mesh(torsoGeometry,shirt);
+ torsoMesh.name='continuous_human_torso';torsoMesh.position.set(0,.02,0);
+ torsoMesh.castShadow=true;torsoMesh.receiveShadow=true;spine.add(torsoMesh);
+ const spine1=bone('mixamorigSpine1',spine,0,.17,0);
+ const spine2=bone('mixamorigSpine2',spine1,0,.16,0);
+ ellipsoid(spine2,'deltoid_left',-.205,.025,0,.092,.095,.092,shirt);
+ ellipsoid(spine2,'deltoid_right',.205,.025,0,.092,.095,.092,shirt);
+ ellipsoid(spine2,'trapezius',0,.105,-.035,.145,.075,.085,shirt);
+ // Gola, costuras e bolsos discretos.
+ ellipsoid(spine2,'shirt_collar',0,.12,.005,.105,.055,.105,shirtDark);
+ box(spine2,.018,.24,.012,shirtDark,0,-.005,.151);
+ for(const sx of [-1,1]){
+  box(spine2,.13,.11,.025,shirtDark,sx*.145,.025,.145);
+  box(spine2,.13,.018,.03,shirt,sx*.145,-.035,.16);
+ }
+ const neck=bone('mixamorigNeck',spine2,0,.13,0);
+ capsule(neck,'neck_mesh',.13,.052,skin,0,.025,0);
+ const head=bone('mixamorigHead',neck,0,.115,0);
+ ellipsoid(head,'head_mesh',0,.055,0,.112,.145,.105,skinLight);
+ ellipsoid(head,'nose',0,.035,.099,.025,.035,.028,skin);
+ ellipsoid(head,'jaw',0,-.025,.018,.082,.062,.078,skinLight);
+ ellipsoid(head,'mouth',0,-.012,.099,.025,.006,.006,hair);
+ ellipsoid(head,'chin',0,-.055,.071,.038,.022,.022,skin);
+ ellipsoid(head,'hair_cap',0,.145,-.012,.116,.067,.108,hair);
+ ellipsoid(head,'hair_back',0,.065,-.075,.105,.105,.06,hair);
+ // Boné tático de tecido: copa, aba frontal e costura central.
+ const capMat=new THREE.MeshStandardMaterial({color:0x354a3b,roughness:.96});
+ ellipsoid(head,'cap_crown',0,.19,-.012,.12,.075,.112,capMat);
+ const capBrim=new THREE.Mesh(new THREE.BoxGeometry(.19,.025,.15),capMat);capBrim.position.set(0,.155,.105);capBrim.rotation.x=-.08;capBrim.castShadow=true;head.add(capBrim);
+ // Mochila compacta presa às costas, com alças visíveis sobre os ombros.
+ const packMat=new THREE.MeshStandardMaterial({color:0x343f37,roughness:.98});
+ ellipsoid(spine1,'combat_backpack',0,.025,-.185,.175,.235,.095,packMat);
+ box(spine1,.19,.07,.035,shirtDark,0,-.16,-.205);
+ for(const side of [-1,1]){box(spine2,.045,.31,.035,packMat,side*.145,-.015,-.09);box(spine1,.09,.09,.035,pantsLight,side*.18,-.12,-.16)}
+ for(const side of [-1,1]){
+  ellipsoid(head,'ear',side*.112,.055,0,.022,.042,.025,skin);
+  ellipsoid(head,'eye',side*.043,.083,.091,.012,.012,.008,eyes);
+  ellipsoid(head,'brow',side*.043,.105,.091,.022,.008,.009,hair);
+  const upper=bone(side<0?'mixamorigLeftArm':'mixamorigRightArm',spine2,side*.205,.075,0);
+  ellipsoid(spine2,'shoulder',side*.205,.045,0,.09,.095,.09,shirt);
+  capsule(upper,'upper_arm',.31,.064,skin,0,-.015,0);
+  capsule(upper,'shirt_sleeve',.205,.078,shirt,0,-.015,0);
+  ellipsoid(upper,'bicep_volume',0,-.115,.008,.067,.135,.067,shirt);
+  ellipsoid(upper,'tricep_volume',0,-.13,-.035,.061,.125,.055,shirtDark);
+  const fore=bone(side<0?'mixamorigLeftForeArm':'mixamorigRightForeArm',upper,0,-.30,0);
+  capsule(fore,'forearm',.285,.052,skin,0,-.005,0);
+  capsule(fore,'forearm_sleeve',.20,.066,shirt,0,-.005,0);
+  ellipsoid(fore,'forearm_shape',0,-.105,.006,.052,.125,.052,skinLight);
+  ellipsoid(fore,'wrist',0,-.235,.004,.042,.055,.042,skin);
+  ellipsoid(fore,'sleeve_cuff',0,-.19,0,.067,.045,.067,shirtDark);
+  const hand=bone(side<0?'mixamorigLeftHand':'mixamorigRightHand',fore,0,-.275,0);
+  ellipsoid(hand,'palm',0,-.035,.005,.052,.07,.035,skin);
+  ellipsoid(hand,'knuckles',0,-.075,.018,.052,.035,.026,skinLight);
+  ellipsoid(hand,'glove_cuff',0,-.018,0,.06,.035,.042,belt);
+  for(let f=0;f<4;f++)capsule(hand,'finger',.065,.009,skin,(f-1.5)*.021,-.095,.008);
+  capsule(hand,'thumb',.06,.012,skin,side*.052,-.045,.012);
+  const upLeg=bone(side<0?'mixamorigLeftUpLeg':'mixamorigRightUpLeg',hips,side*.105,-.055,0);
+  capsule(upLeg,'thigh',.445,.095,skin,0,-.015,0);
+  capsule(upLeg,'cargo_trouser',.455,.108,pants,0,-.015,-.003);
+  ellipsoid(upLeg,'thigh_contour',0,-.19,.012,.105,.19,.105,pantsLight);
+  ellipsoid(upLeg,'outer_thigh',side*.045,-.20,-.015,.07,.16,.085,pants);
+  ellipsoid(upLeg,'cargo_pocket',side*.075,-.23,.085,.075,.11,.025,pantsLight);
+  const leg=bone(side<0?'mixamorigLeftLeg':'mixamorigRightLeg',upLeg,0,-.43,0);
+  capsule(leg,'calf',.415,.064,skin,0,-.005,0);
+  capsule(leg,'lower_trouser',.415,.078,pants,0,-.005,-.002);
+  ellipsoid(leg,'calf_contour',0,-.19,-.018,.078,.15,.085,pantsLight);
+  ellipsoid(leg,'shin_panel',0,-.20,.055,.058,.14,.025,pants);
+  ellipsoid(leg,'knee_pad',0,-.045,.066,.078,.085,.025,pantsLight);
+  const foot=bone(side<0?'mixamorigLeftFoot':'mixamorigRightFoot',leg,0,-.395,.015);
+  ellipsoid(foot,'ankle_boot',0,-.012,.025,.075,.07,.09,boots);
+  ellipsoid(foot,'boot_toe',0,-.035,.095,.082,.052,.13,boots);
+  ellipsoid(foot,'boot_sole',0,-.078,.075,.084,.018,.14,sole);
+  const toe=bone(side<0?'mixamorigLeftToeBase':'mixamorigRightToeBase',foot,0,-.01,.12);
+  ellipsoid(toe,'toe_mesh',0,0,.025,.07,.035,.055,boots);
+ }
+ root.updateMatrixWorld(true);
+ return {root,bones};
+}
 // Modelo masculino humano completo, externo, com malha skinned, texturas PBR e esqueleto Biped.
 const HUMAN_MODEL_URL='https://models.codelove.in/models/male-adult-03.glb';
 let humanModelPromise=null;
@@ -490,10 +596,19 @@ async function loadHumanModel(){
 }
 async function createFighter(isEnemy=false,index=0){
  const holder=new THREE.Group();holder.name=isEnemy?'enemy-human-character':'player-human-character';
- const gltf=await loadHumanModel();
- const model=SkeletonUtils.clone(gltf.scene);
- model.name='MaleAdult03_SkinnedHuman';
- const bones=new Map(),boneByKey=new Map();
+ let model,bones=new Map();
+ try{
+  const gltf=await loadHumanModel();
+  model=SkeletonUtils.clone(gltf.scene);
+  model.name='MaleAdult03_SkinnedHuman';
+ }catch(loadError){
+  humanModelPromise=null;
+  const local=makeHumanoidModel();
+  model=local.root;bones=local.bones;
+  model.name='LocalHumanFallback';
+  console.warn('Modelo externo indisponível; usando personagem local.',loadError);
+ }
+ const boneByKey=new Map();
  model.traverse(o=>{
   if(o.isBone){
    bones.set(o.name,o);
