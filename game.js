@@ -273,7 +273,7 @@ function addSettlementDetails(){
   for(let i=0;i<8;i++){
    const x=cx-8+i*2.3;
    box(scene, .12,1.05,.12,wood,x,.52,cz-8);worldObstacles.push({x,z:cz-8,radius:.34});
-   if(i<7)box(scene,2.3,.09,.12,wood,x+1.1,.48,cz-8);
+   if(i<7){box(scene,2.3,.09,.12,wood,x+1.1,.48,cz-8);for(let j=0;j<4;j++)worldObstacles.push({x:x+.32+j*.55,z:cz-8,radius:.34});}
    if(i<7)box(scene,2.3,.09,.12,wood,x+1.1,.82,cz-8);
   }
   for(const side of [-1,1]){
