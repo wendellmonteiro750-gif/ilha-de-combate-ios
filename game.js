@@ -253,12 +253,23 @@ function loadRealHero(){
    }
   }
   const clipNames=Object.keys(realActions);
+  // O GLB só assume o personagem se a malha corporal estiver realmente
+  // ligada a um esqueleto com quantidade razoável de ossos e clips de
+  // repouso + locomoção. Evita esconder o corpo articulado por engano.
+  let skinnedMeshes=0,usableSkeletonBones=0;
+  model.traverse(o=>{
+   if(o.isSkinnedMesh&&o.skeleton){
+    skinnedMeshes++;
+    usableSkeletonBones=Math.max(usableSkeletonBones,o.skeleton.bones.length);
+   }
+  });
   const hasWalk=clipNames.some(k=>/walk|walking|locomotion|run|running|sprint/.test(k));
   const hasIdle=clipNames.some(k=>/idle|stand|breath/.test(k));
-  if(hasWalk&&hasIdle){
+  const hasDeformableBody=skinnedMeshes>0&&usableSkeletonBones>=18;
+  if(hasWalk&&hasIdle&&hasDeformableBody){
    rig.body.visible=false;
    playRealAnimation('idle');
-   $('message').textContent='PERSONAGEM 3D COM ANIMAÇÕES CARREGADO';
+   $('message').textContent='PERSONAGEM 3D ESQUELÉTICO ANIMADO';
   }else{
    // O GLB só é usado se trouxer ao menos repouso e locomoção. Caso contrário,
    // o rig procedural assume para que o personagem nunca fique congelado.
