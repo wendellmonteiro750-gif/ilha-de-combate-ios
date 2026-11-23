@@ -159,6 +159,7 @@ function updateCombatBots(dt){
 }
  // Personagem humano real Quaternius: malha skinned, esqueleto completo e clips humanoides.
 const CHARACTER_URL='https://cdn.jsdelivr.net/gh/Seyamalam/blood-league-kickoff@main/public/assets/vendor/quaternius/night-striker.glb';
+const CUSTOM_CHARACTER_URL=new URL('./assets/military-male-03.glb',import.meta.url).href;
 const ANIMATION_URL='https://cdn.jsdelivr.net/gh/Seyamalam/blood-league-kickoff@main/public/assets/vendor/quaternius/universal-animation-library.glb';
 const ANIMATION2_URL=new URL('./assets/UAL2_Standard.glb',import.meta.url).href;
 // UAL2 Standard adicionada ao projeto para as transições IdleToLay/LayToIdle.
@@ -169,7 +170,14 @@ let proneState=false,proneTransition=null,proneTransitionUntil=0,proneActionMiss
 let weaponEquipped=true,weaponModel=null,weaponMagazine=null,reloadPoseUntil=0,firePoseUntil=0,weaponBasePosition=new THREE.Vector3(),weaponBaseRotation=new THREE.Euler(),weaponRecoil=0;
 let combatBones={upperarm_l:null,lowerarm_l:null,hand_l:null,upperarm_r:null,lowerarm_r:null,hand_r:null};
 const combatV1=new THREE.Vector3(),combatV2=new THREE.Vector3(),combatQ1=new THREE.Quaternion(),combatQ2=new THREE.Quaternion();
-function getCombatBone(name){let found=null;characterVisual?.traverse(o=>{if(!found&&o.isBone&&o.name===name)found=o});return found}
+function getCombatBone(name){
+ const customAliases={
+  upperarm_l:['Bip01 L UpperArm'],lowerarm_l:['Bip01 L Forearm'],hand_l:['Bip01 L Hand'],
+  upperarm_r:['Bip01 R UpperArm'],lowerarm_r:['Bip01 R Forearm'],hand_r:['Bip01 R Hand']
+ };
+ const names=[name,...(customAliases[name]||[])];
+ let found=null;characterVisual?.traverse(o=>{if(!found&&o.isBone&&names.includes(o.name))found=o});return found
+}
 function chooseClip(groups,fallback){
  const names=[...characterActions.keys()];
  // Correspondência exata primeiro: "Crouch_Idle_Loop" nunca pode
@@ -289,7 +297,7 @@ function createPlayerAnchor(){
  const loader=new GLTFLoader();
  $('message').textContent='CARREGANDO SOLDADO 3D';
  Promise.all([
-  loader.loadAsync(CHARACTER_URL),
+  loader.loadAsync(CUSTOM_CHARACTER_URL).then(gltf=>({...gltf,userData:{...(gltf.userData||{}),battleIslandCustom:true}})).catch(()=>loader.loadAsync(CHARACTER_URL)),
   loader.loadAsync(ANIMATION_URL),
   loader.loadAsync(ANIMATION2_URL).catch(error=>{
    console.warn('UAL2 ainda não disponível; transição de deitar será desativada:',error);
@@ -297,9 +305,20 @@ function createPlayerAnchor(){
   })
  ]).then(([character,library,library2])=>{
   characterVisual=character.scene;
-  characterVisual.name='BattleIsland_Quaternius_Human';
+  characterVisual.name=character.userData?.battleIslandCustom?'BattleIsland_MilitaryMale03':'BattleIsland_Quaternius_Human';
   characterVisual.rotation.y=Math.PI;
   characterVisual.scale.setScalar(1);
+  if(character.userData?.battleIslandCustom){
+   characterVisual.updateMatrixWorld(true);
+   const bounds=new THREE.Box3().setFromObject(characterVisual);
+   const size=bounds.getSize(new THREE.Vector3());
+   const center=bounds.getCenter(new THREE.Vector3());
+   const fit=1.78/Math.max(size.y,.001);
+   characterVisual.scale.setScalar(fit);
+   characterVisual.position.set(-center.x*fit,-bounds.min.y*fit,-center.z*fit);
+   characterVisual.updateMatrixWorld(true);
+   console.info('Modelo militar-male-03 aplicado:',{height:size.y,scale:fit});
+  }
   characterVisual.traverse(node=>{
    if(node.isMesh){node.castShadow=true;node.receiveShadow=true;
     if(node.material){const materials=Array.isArray(node.material)?node.material:[node.material];for(const material of materials){material.roughness=Math.max(.48,material.roughness??.7);material.needsUpdate=true}}
