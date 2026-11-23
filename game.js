@@ -16,7 +16,7 @@ const mats={grass:mat(0x496e3d),road:mat(0x454b4c),line:mat(0xd5c99b),concrete:m
 const ground=new THREE.Mesh(new THREE.CircleGeometry(145,128),mats.grass);ground.rotation.x=-Math.PI/2;ground.position.y=-.25;ground.receiveShadow=true;scene.add(ground);
 const water=new THREE.Mesh(new THREE.CircleGeometry(210,128),mat(0x2e7184,.28,.12));water.rotation.x=-Math.PI/2;water.position.y=-1.1;scene.add(water);
 const world=new THREE.Group();scene.add(world);
-const blockers=[],loot=[],bots=[],effects=[];
+const blockers=[],loot=[],bots=[],effects=[],buildings=[];
 function box(parent,w,h,d,material,x,y,z){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o}
 function building(x,z,w,d,h,color,type='house'){
  const g=new THREE.Group();g.position.set(x,0,z);world.add(g);
@@ -31,7 +31,8 @@ function building(x,z,w,d,h,color,type='house'){
  box(g,t,h,d*.9,wall,-w/2+t/2,h/2,0);
  box(g,t,h,d*.9,wall,w/2-t/2,h/2,0);
  // Roof is raised slightly, leaving a covered, navigable interior.
- box(g,w+.5,.3,d+.5,roof,0,h+.16,0);
+ const roofMesh=box(g,w+.5,.3,d+.5,roof,0,h+.16,0);
+buildings.push({minX:x-w/2,maxX:x+w/2,minZ:z-d/2,maxZ:z+d/2,roof:roofMesh});
  // Window frames and glass panels on both side walls.
  for(const side of [-1,1]){
   box(g,.08,h*.25,d*.25,mats.glass,side*(w/2+.045),h*.64,-d*.08);
@@ -175,25 +176,34 @@ function move(dt){
 }
 const cameraRay=new THREE.Raycaster();
 const cameraLookTarget=new THREE.Vector3(),cameraDesired=new THREE.Vector3(),cameraForward=new THREE.Vector3(),cameraSide=new THREE.Vector3();
+let activeIndoorBuilding=null;
 function cameraUpdate(dt){
  cameraForward.set(-Math.sin(yaw),0,-Math.cos(yaw));
  cameraSide.set(Math.cos(yaw),0,-Math.sin(yaw));
- cameraLookTarget.copy(hero.position).add(new THREE.Vector3(0,THREE.MathUtils.lerp(2.05,.88,poseBlend),0));
- const distance=aim?3.8:7.0,shoulder=aim?.82:1.18;
- const height=aim?2.35:THREE.MathUtils.lerp(4.0,2.25,poseBlend);
+ const indoor=buildings.find(b=>hero.position.x>b.minX+.45&&hero.position.x<b.maxX-.45&&hero.position.z>b.minZ+.45&&hero.position.z<b.maxZ-.45)||null;
+ if(indoor!==activeIndoorBuilding){
+  if(activeIndoorBuilding)activeIndoorBuilding.roof.visible=true;
+  if(indoor)indoor.roof.visible=false;
+  activeIndoorBuilding=indoor;
+ }
+ const inside=!!indoor;
+ const distance=inside?(aim?2.15:3.15):(aim?3.8:7.0);
+ const shoulder=inside?(aim?.30:.48):(aim?.82:1.18);
+ const targetHeight=inside?THREE.MathUtils.lerp(1.38,.82,poseBlend):THREE.MathUtils.lerp(2.05,.88,poseBlend);
+ cameraLookTarget.copy(hero.position).add(new THREE.Vector3(0,targetHeight,0));
+ const height=inside?(aim?1.62:2.05):(aim?2.35:THREE.MathUtils.lerp(4.0,2.25,poseBlend));
  cameraDesired.copy(hero.position).addScaledVector(cameraForward,-distance).addScaledVector(cameraSide,shoulder);
- cameraDesired.y=hero.position.y+height+Math.sin(-pitch)*distance*.52;
- // Recuo suave e limite de obstáculos para não atravessar paredes.
+ cameraDesired.y=hero.position.y+height+Math.sin(-pitch)*distance*(inside?.30:.52);
  const offset=cameraDesired.clone().sub(cameraLookTarget),length=offset.length(),direction=offset.normalize();
  cameraRay.set(cameraLookTarget,direction);cameraRay.far=length;
- const obstacle=cameraRay.intersectObjects(world.children,true).find(hit=>hit.distance>.3);
- if(obstacle)cameraDesired.copy(cameraLookTarget).addScaledVector(direction,Math.max(1.25,obstacle.distance-.42));
- camera.position.lerp(cameraDesired,1-Math.exp(-10*dt));
- const lookAhead=aim?8:3;
+ const obstacle=cameraRay.intersectObjects(world.children,true).find(hit=>hit.distance>.28);
+ if(obstacle)cameraDesired.copy(cameraLookTarget).addScaledVector(direction,Math.max(.72,obstacle.distance-.32));
+ camera.position.lerp(cameraDesired,1-Math.exp(-(inside?14:10)*dt));
+ const lookAhead=inside?(aim?5:1.35):(aim?8:3);
  const lookAt=cameraLookTarget.clone().addScaledVector(cameraForward,lookAhead);
  camera.lookAt(lookAt);
- const targetFov=aim?39:65;
- camera.fov=THREE.MathUtils.damp(camera.fov,targetFov,9,dt);camera.updateProjectionMatrix();
+ const targetFov=inside?(aim?42:59):(aim?39:65);
+ camera.fov=THREE.MathUtils.damp(camera.fov,targetFov,inside?13:9,dt);camera.updateProjectionMatrix();
 }
 let audioCtx=null;
 function sound(freq=140,duration=.07,kind='sawtooth',volume=.035){try{audioCtx ||= new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();osc.type=kind;osc.frequency.setValueAtTime(freq,audioCtx.currentTime);osc.frequency.exponentialRampToValueAtTime(Math.max(35,freq*.38),audioCtx.currentTime+duration);gain.gain.setValueAtTime(volume,audioCtx.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+duration);osc.connect(gain);gain.connect(audioCtx.destination);osc.start();osc.stop(audioCtx.currentTime+duration)}catch(e){}}
