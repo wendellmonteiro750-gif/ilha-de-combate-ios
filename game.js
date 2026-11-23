@@ -109,7 +109,7 @@ function createHumanoidRig(){
   const hand=bone(fore,key+'_Hand',0,-.37,0);joint(hand,.065,skinMat);
   const palm=mesh(hand,new THREE.BoxGeometry(.105,.13,.065),skinMat,[0,-.045,-.015]);
   arms[key]={shoulder,upper,elbow,fore,hand};
-  const thigh=bone(pelvis,key+'_Thigh',side*.13,-.08,0);joint(thigh,.105,pantsMat);boneCapsule(pelvis,.115,.43,pantsMat,-.31);
+  const thigh=bone(pelvis,key+'_Thigh',side*.13,-.08,0);joint(thigh,.105,pantsMat);boneCapsule(thigh,.115,.43,pantsMat,-.22);
   const knee=bone(thigh,key+'_Knee',0,-.51,0);joint(knee,.085,pantsMat);
   const calf=bone(knee,key+'_Calf',0,-.04,0);boneCapsule(knee,.085,.39,pantsMat,-.27);
   const ankle=bone(calf,key+'_Ankle',0,-.46,0);joint(ankle,.065,bootMat);
