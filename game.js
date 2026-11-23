@@ -228,8 +228,10 @@ function update(dt){
  const offset=new THREE.Vector3(Math.sin(yaw)*baseDist*Math.cos(pitch)+Math.cos(yaw)*shoulder,baseDist*(.30+Math.sin(-pitch)),Math.cos(yaw)*baseDist*Math.cos(pitch)-Math.sin(yaw)*shoulder);
  cameraDesired.copy(target).add(offset);
  cameraRay.set(target,offset.clone().normalize());cameraRay.far=baseDist;
- const cameraHits=cameraRay.intersectObjects(scene.children,true);
- cameraCurrentDistance=THREE.MathUtils.damp(cameraCurrentDistance,cameraHits.length?Math.max(.9,cameraHits[0].distance-.22):baseDist,18,dt);
+ // Não colidir com o próprio personagem: isso colocava a câmera dentro do corpo.
+ const cameraObstacles=scene.children.filter(object=>object!==hero);
+ const cameraHits=cameraRay.intersectObjects(cameraObstacles,true);
+ cameraCurrentDistance=THREE.MathUtils.damp(cameraCurrentDistance,cameraHits.length?Math.max(2.8,cameraHits[0].distance-.22):baseDist,18,dt);
  cameraDesired.copy(target).addScaledVector(offset.normalize(),cameraCurrentDistance);
  camera.position.lerp(cameraDesired,1-Math.exp(-dt*(aim?13:8)));
  camera.position.y+=cameraShake*.22;
