@@ -344,6 +344,7 @@ function update(dt){
  proneBlend=THREE.MathUtils.damp(proneBlend,prone?1:0,7.5,dt);
  const sprinting=run&&!crouch&&!prone&&moving&&stamina>1;
  if(sprinting)stamina=Math.max(0,stamina-22*dt);else stamina=Math.min(100,stamina+14*dt);
+ $('stamina').textContent='FÔLEGO '+Math.round(stamina);
  const speed=prone?.62:crouch?1.75:sprinting?6.1:3.15;
  // Aceleração e desaceleração progressivas: evita arrancadas e paradas instantâneas.
  const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
