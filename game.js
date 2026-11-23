@@ -126,19 +126,19 @@ function solveArmIK(upper,lower,hand,targetWorld){
  const axis=wrist.sub(shoulder).normalize();
  const currentElbow=elbow.sub(shoulder);
  currentElbow.addScaledVector(axis,-currentElbow.dot(axis));
- const shoulderLocal=characterVisual.worldToLocal(upper.getWorldPosition(new THREE.Vector3()));
+ const shoulderLocal=characterVisual.worldToLocal(shoulder.clone());
  const side=shoulderLocal.x>=0?1:-1;
- const poleLocal=new THREE.Vector3(side*.9,-.35,0);
- const poleWorld=characterVisual.localToWorld(poleLocal.add(characterVisual.worldToLocal(upper.getWorldPosition(new THREE.Vector3())))).sub(shoulder);
+ const polePoint=shoulderLocal.clone().add(new THREE.Vector3(side*.9,-.35,0));
+ const poleWorld=characterVisual.localToWorld(polePoint).sub(shoulder);
  poleWorld.addScaledVector(axis,-poleWorld.dot(axis));
  if(currentElbow.lengthSq()>1e-7&&poleWorld.lengthSq()>1e-7){
-  const twist=new THREE.Quaternion().setFromUnitVectors(currentElbow.normalize(),poleWorld.normalize());
-  const twistWorld=new THREE.Quaternion().setFromAxisAngle(axis,Math.atan2(
-   new THREE.Vector3().crossVectors(currentElbow,poleWorld).dot(axis),
-   THREE.MathUtils.clamp(currentElbow.dot(poleWorld),-1,1)
-  ));
-  const parentQ=upper.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
-  upper.quaternion.copy(parentQ.multiply(twistWorld).multiply(upper.parent.getWorldQuaternion(new THREE.Quaternion())).multiply(upper.quaternion));
+  currentElbow.normalize();poleWorld.normalize();
+  const angle=Math.atan2(new THREE.Vector3().crossVectors(currentElbow,poleWorld).dot(axis),
+   THREE.MathUtils.clamp(currentElbow.dot(poleWorld),-1,1));
+  const twistWorld=new THREE.Quaternion().setFromAxisAngle(axis,angle);
+  const parentWorld=upper.parent.getWorldQuaternion(new THREE.Quaternion());
+  const desiredWorld=twistWorld.multiply(upper.getWorldQuaternion(new THREE.Quaternion()));
+  upper.quaternion.copy(parentWorld.invert().multiply(desiredWorld));
  }
  characterVisual.updateMatrixWorld(true);
 }
