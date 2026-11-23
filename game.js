@@ -557,7 +557,7 @@ async function createFighter(isEnemy=false,index=0){
    }
    const target=this.stanceMode==='crouch'||this.stanceMode==='prone'?1:0;
    this._stanceBlend=THREE.MathUtils.damp(this._stanceBlend,target,10,dt);
-   const prone=this.proneBlend||0,crouch=this.crouchBlend||0;
+   
    const ready=this.isPlayer?1:.72,aim=THREE.MathUtils.clamp(this.weaponAimBlend||0,0,1),combatPose=Math.max(aim,THREE.MathUtils.clamp(this.weaponFireBlend||0,0,1));
    const fire=THREE.MathUtils.clamp(this.weaponFireBlend||0,0,1),run=THREE.MathUtils.clamp(this.weaponRunBlend||0,0,1),reload=THREE.MathUtils.clamp(this.reloadBlend||0,0,1);
    const firePhase=this.firePosePhase||0;
