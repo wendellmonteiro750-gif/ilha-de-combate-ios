@@ -47,15 +47,16 @@ function buildHero(){
   cube(knee,.25,.15,.38,boots,0,-.48,-.08);
   rig.legs.push({upper,knee,side});
  }
- // Arms have shoulder, elbow and wrist pivots so weapon stance can be posed.
+ // Articulated upper arms and forearms are separate joints; hands are posed onto the rifle grips.
  rig.arms=[];
  for(const side of [-1,1]){
-  const arm=new THREE.Group();arm.position.set(side*.46,.82,0);rig.body.add(arm);
-  capsule(arm,.12,.36,shirt,0,-.22,0);
-  const fore=new THREE.Group();fore.position.set(0,-.45,-.015);arm.add(fore);
-  capsule(fore,.105,.34,shirt,0,-.2,-.015);
-  const hand=new THREE.Group();hand.position.set(0,-.4,-.04);fore.add(hand);mesh(hand,new THREE.SphereGeometry(.105,9,8),glove,[0,-.04,-.035]);
-  rig.arms.push({arm,fore,hand,side});
+  const upper=new THREE.Group();rig.body.add(upper);
+  capsule(upper,.12,.39,shirt,0,-.25,0);
+  const fore=new THREE.Group();rig.body.add(fore);
+  capsule(fore,.105,.36,shirt,0,-.23,0);
+  const hand=new THREE.Group();fore.add(hand);
+  mesh(hand,new THREE.SphereGeometry(.105,10,9),glove,[0,-.045,-.035]);
+  rig.arms.push({upper,fore,hand,side});
  }
  // Rifle points along the character's forward axis (-Z).
  weapon=new THREE.Group();weapon.position.set(.2,.48,-.42);rig.body.add(weapon);
@@ -116,13 +117,33 @@ function update(dt){
   upper.rotation.x=THREE.MathUtils.lerp(upper.rotation.x,prone?0:crouch?swing*.28:swing,1-Math.exp(-dt*12));
   knee.rotation.x=THREE.MathUtils.lerp(knee.rotation.x,prone?0:crouch?.45+Math.max(0,-phase)*.18:moving?Math.max(0,-phase)*(.55+runBlend*.55):.025,1-Math.exp(-dt*12));
  });
- // Weapon-ready arms: both hands stay close to the rifle; elbows react to aim and movement.
- rig.arms.forEach(({arm,fore,side})=>{
-  const targetArmX=prone?-.18:aim?-.96:crouch?-.63:-.48;
-  const targetArmZ=side===1?-.08:.12;
-  arm.rotation.x=THREE.MathUtils.lerp(arm.rotation.x,targetArmX+(moving?Math.sin(walkT)*.035:0),1-Math.exp(-dt*11));
-  arm.rotation.z=THREE.MathUtils.lerp(arm.rotation.z,targetArmZ+(aim?strafe*.045:0),1-Math.exp(-dt*11));
-  fore.rotation.x=THREE.MathUtils.lerp(fore.rotation.x,prone?-.12:aim?-.58:-.78,1-Math.exp(-dt*11));
+ // Two-bone procedural IK: each palm is placed at a real grip point on the rifle.
+ const downAxis=new THREE.Vector3(0,-1,0);
+ rig.arms.forEach(({upper,fore,hand,side})=>{
+  const shoulder=new THREE.Vector3(side*.46,.82,0);
+  const grip=side===1
+   ? new THREE.Vector3(.27,.30,-.52)       // trigger hand
+   : new THREE.Vector3(.08,.43,-.72);      // support hand under the fore-end
+  grip.y+=crouch?-.035:0;
+  if(moving){grip.y+=Math.sin(walkT+(side===1?0:Math.PI))*.018}
+  const reach=grip.clone().sub(shoulder);
+  const distance=THREE.MathUtils.clamp(reach.length(),.08,.995);
+  const direction=reach.normalize();
+  const upperLength=.53,foreLength=.48;
+  const along=(upperLength*upperLength-foreLength*foreLength+distance*distance)/(2*distance);
+  const height=Math.sqrt(Math.max(.001,upperLength*upperLength-along*along));
+  let bend=new THREE.Vector3().crossVectors(direction,new THREE.Vector3(0,0,1));
+  if(bend.lengthSq()<.001)bend.set(1,0,0);
+  bend.normalize().multiplyScalar(side===1?1:-1);
+  const elbow=shoulder.clone().addScaledVector(direction,along).addScaledVector(bend,height);
+  const upperDir=elbow.clone().sub(shoulder).normalize();
+  const foreDir=grip.clone().sub(elbow).normalize();
+  upper.position.copy(shoulder);
+  upper.quaternion.setFromUnitVectors(downAxis,upperDir);
+  fore.position.copy(elbow);
+  fore.quaternion.setFromUnitVectors(downAxis,foreDir);
+  hand.position.set(0,-foreLength,0);
+  hand.rotation.set(aim?-.08:0,side===1?0:.12,side===1?-.12:.08);
  });
  // Small breathing/idle motion and recoil.
  rig.body.position.y+=moving?Math.abs(gait)*.018:Math.sin(walkT*1.7)*.012;
