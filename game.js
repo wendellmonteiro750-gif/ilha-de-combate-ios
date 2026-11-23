@@ -38,7 +38,7 @@ function applyGraphicsSettings(){if(!renderer)return;const q={low:{ratio:.85,sha
 function applyHudSettings(){const hud=document.querySelector('#hud');if(!hud)return;hud.style.setProperty('--hud-scale',gameSettings.hudScale/100);hud.style.setProperty('--hud-opacity',gameSettings.hudOpacity/100);const map=document.querySelector('.minimap');if(map)map.style.display=gameSettings.minimap?'':'none';}
 function initSettings(){
  const panel=document.querySelector('#settingsPanel'),open=()=>{panel.classList.add('open');panel.setAttribute('aria-hidden','false')},close=()=>{panel.classList.remove('open');panel.setAttribute('aria-hidden','true');if(hudEditing)toggleHudEditor(false)};
- document.querySelector('#openSettings').onclick=open;document.querySelector('#closeSettings').onclick=close;document.querySelector('#settingsDone').onclick=close;
+ document.querySelector('#openSettings').onclick=open;document.querySelector('#lobbySettings').onclick=open;document.querySelector('#closeSettings').onclick=close;document.querySelector('#settingsDone').onclick=close;
  panel.addEventListener('click',e=>{if(e.target===panel)close()});
  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('selected',x===b));document.querySelectorAll('[data-page]').forEach(x=>x.classList.toggle('active',x.dataset.page===b.dataset.tab))});
  const ranges={general:'general',red:'red','2x':'two','4x':'four',awm:'awm',look:'look',hudscale:'hudScale',hudopacity:'hudOpacity'};
