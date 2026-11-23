@@ -360,32 +360,47 @@ function bind(){
 function setPose(p){pose=p;$('poseLabel').textContent='POSTURA: '+(p==='stand'?'EM PÉ':p==='crouch'?'AGACHADO':'DEITADO');$('crouch').classList.toggle('active',p==='crouch');$('prone').classList.toggle('active',p==='prone')}
 function stats(){$('ammo').textContent=ammo+' / 90'}
 function showBulletTrail(start,end){
- // Rastreador luminoso com espessura real: LineBasicMaterial pode ficar
- // praticamente invisível em algumas telas mobile por ignorar linewidth.
+ // Projétil luminoso animado: sai do cano e percorre o mesmo ponto
+ // encontrado pelo raio central da mira. A cauda acompanha a ponta do tiro.
  const delta=end.clone().sub(start);
- const length=delta.length();
- if(length<.02)return;
- const center=start.clone().add(end).multiplyScalar(.5);
+ const distance=delta.length();
+ if(distance<.02)return;
  const direction=delta.normalize();
- const makeTracer=(radius,color,opacity)=>{
-  const geometry=new THREE.CylinderGeometry(radius,radius,length,8,1,false);
-  const material=new THREE.MeshBasicMaterial({color,transparent:true,opacity,depthWrite:false});
-  const tracer=new THREE.Mesh(geometry,material);
-  tracer.position.copy(center);
-  tracer.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),direction);
-  tracer.renderOrder=30;
-  scene.add(tracer);
-  return {tracer,geometry,material};
- };
- const glow=makeTracer(.027,0xffa52b,.28);
- const core=makeTracer(.009,0xfff1b0,.98);
- setTimeout(()=>{
-  for(const item of [glow,core]){
-   scene.remove(item.tracer);
-   item.geometry.dispose();
-   item.material.dispose();
+ const streakLength=Math.min(1.35,Math.max(.48,distance*.035));
+ const streakGeo=new THREE.CylinderGeometry(.012,.012,streakLength,8,1,false);
+ const streakMat=new THREE.MeshBasicMaterial({color:0xffb347,transparent:true,opacity:.96,depthWrite:false});
+ const streak=new THREE.Mesh(streakGeo,streakMat);
+ streak.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),direction);
+ streak.renderOrder=31;
+ scene.add(streak);
+ const headGeo=new THREE.SphereGeometry(.034,8,8);
+ const headMat=new THREE.MeshBasicMaterial({color:0xfff4c2,depthWrite:false});
+ const head=new THREE.Mesh(headGeo,headMat);
+ head.renderOrder=32;
+ scene.add(head);
+ const glowGeo=new THREE.SphereGeometry(.075,8,8);
+ const glowMat=new THREE.MeshBasicMaterial({color:0xff8a24,transparent:true,opacity:.42,depthWrite:false});
+ const glow=new THREE.Mesh(glowGeo,glowMat);
+ glow.renderOrder=30;
+ scene.add(glow);
+ const startedAt=performance.now();
+ const travelMs=THREE.MathUtils.clamp(distance/190*1000,65,340);
+ const animateTracer=now=>{
+  const progress=THREE.MathUtils.clamp((now-startedAt)/travelMs,0,1);
+  const tip=start.clone().addScaledVector(direction,distance*progress);
+  head.position.copy(tip);
+  glow.position.copy(tip);
+  streak.position.copy(tip).addScaledVector(direction,-streakLength*.5);
+  if(progress<1){
+   requestAnimationFrame(animateTracer);
+  }else{
+   for(const item of [streak,head,glow])scene.remove(item);
+   streakGeo.dispose();streakMat.dispose();
+   headGeo.dispose();headMat.dispose();
+   glowGeo.dispose();glowMat.dispose();
   }
- },180);
+ };
+ requestAnimationFrame(animateTracer);
 }
 function fireShot(){
  if(reloading||ammo<=0||performance.now()-lastShot<155)return;
