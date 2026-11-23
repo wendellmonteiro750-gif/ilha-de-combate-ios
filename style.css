@@ -339,3 +339,56 @@
 .loot-btn{border-radius:4px;background:linear-gradient(135deg,#ffdc82,#d77c30);clip-path:polygon(0 0,96% 0,100% 22%,100% 100%,4% 100%,0 78%)}
 @media(orientation:portrait) and (max-width:699px){.sprint-btn{left:25px;bottom:139px;width:52px;height:52px}.sprint-btn span{font-size:20px}}
 @media(max-height:500px){.sprint-btn{left:112px;bottom:13px;width:45px;height:45px}}
+
+
+/* HUD Ilha de Combate — layout mobile inspirado em battle royale, com identidade própria */
+@media (orientation:portrait) and (max-width:699px){
+  #hud{inset:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);overflow:hidden}
+  .hud-top{position:absolute;inset:0;display:block;pointer-events:none}
+  .minimap{position:absolute;left:12px;right:auto;top:12px;width:86px;height:86px;flex:0 0 86px;border:2px solid #f1e7c8;border-radius:9px;background:radial-gradient(circle,#6e9565 0 30%,#496b4e 31% 60%,#2d493e 61%);box-shadow:0 3px 12px #000c}
+  .minimap>small{font-size:7px;bottom:2px}
+  .player-card{position:absolute;right:11px;left:auto;top:12px;min-height:42px;padding:5px 8px;border-radius:7px;background:linear-gradient(110deg,#101b25ed,#233944dc);border:1px solid #e9d69a99}
+  .avatar{width:30px;height:30px;border-radius:5px}
+  .player-info b{font-size:8px}
+  .player-info small{font-size:7px}
+  .match-info{position:absolute;top:107px;left:50%;right:auto;transform:translateX(-50%);gap:5px}
+  .match-info span{min-width:55px;padding:5px 9px;border-radius:6px;background:#101d2ae8}
+  .match-info b{font-size:16px}
+  .match-info small{font-size:7px}
+  .stats{position:absolute;left:50%;right:auto;top:auto;bottom:126px;transform:translateX(-50%);display:flex;justify-content:center;gap:4px;max-width:calc(100% - 18px);width:max-content;flex-wrap:nowrap}
+  .stats span{padding:4px 5px;border-radius:5px;font-size:7px;letter-spacing:0;background:#101d2aeF;border:1px solid #ffffff55;white-space:nowrap}
+  .stats #weaponSwitch,.stats #inventoryToggle,.stats #medkit{font-size:7px;padding:4px 5px;border-radius:5px;white-space:nowrap}
+  .health-panel{position:absolute;left:13px;right:auto;top:auto;bottom:158px;width:112px;padding:5px 6px;background:#101d2aeF;border-radius:5px}
+  .health-label{font-size:8px;margin-bottom:3px}
+  .health-track{height:5px}
+  #joystick{left:14px;bottom:22px;width:108px;height:108px;border:2px solid #f1f2e5d9;background:radial-gradient(circle,#4c6878a8,#102733d9);box-shadow:inset 0 0 0 5px #ffffff12,0 4px 18px #000b}
+  #stick{left:30px;top:30px;width:44px;height:44px;background:linear-gradient(145deg,#f8ffff,#9db8c1);border:2px solid #233d47}
+  .sprint-btn{position:absolute!important;left:132px!important;right:auto!important;bottom:48px!important;width:48px!important;height:48px!important;border-radius:50%!important;display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:0!important;background:linear-gradient(145deg,#536e75,#1c333b)!important;border:1px solid #fff!important;color:#fff!important;box-shadow:0 3px 10px #000a!important}
+  .sprint-btn span{font-size:19px;line-height:20px}
+  .sprint-btn small{font-size:6px;font-weight:1000}
+  .actions{position:absolute;right:12px;bottom:18px;display:grid;grid-template-columns:54px 76px!important;grid-template-rows:54px 54px 54px!important;gap:7px!important;align-items:center}
+  .actions button{border-radius:50%!important}
+  .aim-btn{grid-column:1;grid-row:1;width:52px;height:52px}
+  .jump-btn{grid-column:1;grid-row:2;width:52px;height:52px}
+  .reload-btn{grid-column:1;grid-row:3;width:52px;height:52px}
+  .fire-btn{grid-column:2;grid-row:1 / span 3;width:76px;height:76px;align-self:center}
+  .fire-btn span{font-size:30px!important}
+  .ammo-panel{position:absolute;right:13px;left:auto;top:auto;bottom:158px;padding:4px 7px;border-radius:6px;background:#101d2aeb}
+  .ammo-panel b{font-size:20px}
+  .ammo-panel span{font-size:7px;line-height:9px}
+  #hint{bottom:3px;left:50%;max-width:34%;font-size:6px;padding:3px 5px;opacity:.88}
+  .loot-btn{right:98px;bottom:118px;font-size:7px;padding:7px 8px}
+}
+@media (orientation:portrait) and (max-width:380px){
+  .minimap{width:76px;height:76px;flex-basis:76px}
+  .player-card{max-width:138px}
+  .stats{bottom:121px;gap:3px}
+  .stats span{font-size:6px;padding:4px}
+  .stats #weaponSwitch,.stats #inventoryToggle,.stats #medkit{font-size:6px;padding:4px}
+  .actions{right:9px;grid-template-columns:50px 70px!important;grid-template-rows:50px 50px 50px!important;gap:6px!important}
+  .aim-btn,.jump-btn,.reload-btn{width:48px;height:48px}
+  .fire-btn{width:70px;height:70px}
+  .health-panel{bottom:151px;width:102px}
+  .ammo-panel{bottom:151px}
+  .sprint-btn{left:119px!important;bottom:43px!important}
+}
