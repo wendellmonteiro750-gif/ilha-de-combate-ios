@@ -467,13 +467,21 @@ function update(dt){
  const aimSwayPre=aim?Math.sin(walkT*1.15)*.008:0;
  weapon.position.y=(aim?1.58:horizontalSpeed>.12?1.54:1.53)+idleSwayPre+aimSwayPre-reloadBlend*.12;
  weapon.position.x=.28+(aim?-.035:0)+Math.sin(walkT*.9)*.006;
- // Two-bone procedural IK: each palm is placed at a real grip point on the rifle.
+  // A pose da arma é resolvida antes dos braços para que o IK siga
+ // posição e rotação reais do rifle no mesmo frame.
+ weaponKick=THREE.MathUtils.damp(weaponKick,0,aim?13:8,dt);
+ reloadBlend=THREE.MathUtils.damp(reloadBlend,reloading?1:0,7,dt);
+ weapon.rotation.z=THREE.MathUtils.damp(weapon.rotation.z,aim?-.025*strafe:Math.sin(walkT*.8)*.008,9,dt);
+ weapon.rotation.x=THREE.MathUtils.damp(weapon.rotation.x,aim?-.035:proneBlend*.08,10,dt)-weaponKick*.19+reloadBlend*.28;
+ weapon.rotation.y=THREE.MathUtils.damp(weapon.rotation.y,Math.sin(walkT*.7)*.012+reloadBlend*.16,8,dt);
+// Two-bone procedural IK: each palm is placed at a real grip point on the rifle.
  const downAxis=new THREE.Vector3(0,-1,0);
  rig.arms.forEach(({upper,fore,hand,side})=>{
   const shoulder=new THREE.Vector3(side*THREE.MathUtils.lerp(.46,.42,proneBlend),THREE.MathUtils.lerp(.82,.69,proneBlend),THREE.MathUtils.lerp(0,.02,proneBlend));
-  const grip=weapon.position.clone().add(side===1
-   ? new THREE.Vector3(0,-.20,-.18)       // right hand on the trigger grip
-   : new THREE.Vector3(0,-.02,-.40));     // left hand supporting the fore-end
+  // Pontos de empunhadura são transformados pelo espaço local da arma,
+  // respeitando também a rotação aplicada para mirar, recuar e recarregar.
+  const grip=weapon.localToWorld(new THREE.Vector3(0,side===1?-.20:-.02,side===1?-.18:-.40));
+  rig.body.worldToLocal(grip);
   grip.y+=crouch?-.035:0;
   // Cotovelos mais baixos e abertos no apoio deitado, mantendo as mãos nos punhos.
   grip.y+=proneBlend*.035;
@@ -507,13 +515,8 @@ function update(dt){
  rig.head.rotation.x=THREE.MathUtils.damp(rig.head.rotation.x,(aim?-.10:0)+breathing*.55,7,dt);
  const idleSway=Math.sin(walkT*.72)*.012;
  const aimSway=aim?Math.sin(walkT*1.15)*.008:0;
- weaponKick=THREE.MathUtils.damp(weaponKick,0,aim?13:8,dt);
- reloadBlend=THREE.MathUtils.damp(reloadBlend,reloading?1:0,7,dt);
  muzzleTime=Math.max(0,muzzleTime-dt);
  if(muzzleFlash&&muzzleTime===0){muzzleFlash.visible=false;muzzleLight.intensity=0}
- weapon.rotation.z=THREE.MathUtils.damp(weapon.rotation.z,aim?-.025*strafe:Math.sin(walkT*.8)*.008,9,dt);
- weapon.rotation.x=THREE.MathUtils.damp(weapon.rotation.x,aim?-.035:proneBlend*.08,10,dt)-weaponKick*.19+reloadBlend*.28;
- weapon.rotation.y=THREE.MathUtils.damp(weapon.rotation.y,Math.sin(walkT*.7)*.012+reloadBlend*.16,8,dt);
  // Inclinação do tronco acompanha a direção lateral sem quebrar a mira.
  rig.pelvis.rotation.y=THREE.MathUtils.damp(rig.pelvis.rotation.y,aim?-.025*strafe:0,7,dt);
  if(shoot)fireShot();
