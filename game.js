@@ -69,13 +69,15 @@ function addWorldDetail(){
 }
 function buildWorld(){
  scene.background=new THREE.Color(0x9bcbe4);scene.fog=new THREE.FogExp2(0xa9cbd0,.00155);
- scene.add(new THREE.HemisphereLight(0xe8f5ff,0x46583a,1.75));\n const ambient=new THREE.AmbientLight(0xffffff,.28);scene.add(ambient);
+ scene.add(new THREE.HemisphereLight(0xe8f5ff,0x46583a,1.75));
+ const ambient=new THREE.AmbientLight(0xffffff,.28);scene.add(ambient);
  const sun=new THREE.DirectionalLight(0xffedcf,3.5);sun.position.set(-42,78,34);sun.castShadow=true;sun.shadow.mapSize.set(innerWidth<700?1536:2048,innerWidth<700?1536:2048);sun.shadow.camera.left=-165;sun.shadow.camera.right=165;sun.shadow.camera.top=165;sun.shadow.camera.bottom=-165;sun.shadow.bias=-.00018;sun.shadow.normalBias=.025;sun.shadow.radius=innerWidth<700?2:3;sun.shadow.camera.near=1;sun.shadow.camera.far=260;scene.add(sun);
  const fill=new THREE.DirectionalLight(0x9bc8e8,.72);fill.position.set(55,28,-48);scene.add(fill);
  const ground=new THREE.Mesh(new THREE.PlaneGeometry(800,800),new THREE.MeshStandardMaterial({map:addTextureGround(),roughness:.96}));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
  const beach=new THREE.Mesh(new THREE.RingGeometry(119,141,192),new THREE.MeshStandardMaterial({color:0xd9c18c,roughness:.95}));beach.rotation.x=-Math.PI/2;beach.position.y=.035;scene.add(beach);
  const waterMat=new THREE.MeshStandardMaterial({color:0x168aa6,roughness:.24,metalness:.12,transparent:false});
- const water=new THREE.Mesh(new THREE.PlaneGeometry(1100,1100,1,1),waterMat);water.rotation.x=-Math.PI/2;water.position.y=-.28;scene.add(water);\n waterMat.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\\nvarying vec3 vWaterWorld;').replace('#include <begin_vertex>','#include <begin_vertex>\\n vWaterWorld=(modelMatrix*vec4(transformed,1.0)).xyz; transformed.y += sin(vWaterWorld.x*.035+vWaterWorld.z*.022)*.018 + cos(vWaterWorld.z*.04-vWaterWorld.x*.018)*.012;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\\nvarying vec3 vWaterWorld;').replace('#include <color_fragment>','#include <color_fragment>\\n float ripple=0.5+0.5*sin(vWaterWorld.x*.22+vWaterWorld.z*.16); diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.32,.72,.78),ripple*.10);');};
+ const water=new THREE.Mesh(new THREE.PlaneGeometry(1100,1100,1,1),waterMat);water.rotation.x=-Math.PI/2;water.position.y=-.28;scene.add(water);
+ waterMat.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\\nvarying vec3 vWaterWorld;').replace('#include <begin_vertex>','#include <begin_vertex>\\n vWaterWorld=(modelMatrix*vec4(transformed,1.0)).xyz; transformed.y += sin(vWaterWorld.x*.035+vWaterWorld.z*.022)*.018 + cos(vWaterWorld.z*.04-vWaterWorld.x*.018)*.012;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\\nvarying vec3 vWaterWorld;').replace('#include <color_fragment>','#include <color_fragment>\\n float ripple=0.5+0.5*sin(vWaterWorld.x*.22+vWaterWorld.z*.16); diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.32,.72,.78),ripple*.10);');};
  for(let i=0;i<46;i++){const a=i*2.399,r=22+(i%8)*3.3;addPalm(Math.cos(a)*r,Math.sin(a)*r,.75+(i%4)*.1)}
  for(let i=0;i<95;i++){const a=i*2.399,r=52+(i%13)*5.1;addPalm(Math.cos(a)*r,Math.sin(a)*r,.85+(i%5)*.12)}
  addHouse(-12,-12,.2);addHouse(14,-18,-.3);addHouse(22,9,.8);addHouse(-25,15,-.5);
@@ -273,9 +275,11 @@ async function init(){
  renderer.setPixelRatio(Math.min(devicePixelRatio||1,mobileQuality?1.65:2));
  renderer.setSize(innerWidth,innerHeight);
  renderer.shadowMap.enabled=true;
- renderer.shadowMap.type=THREE.PCFSoftShadowMap;\n renderer.setScissorTest(false);
+ renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+ renderer.setScissorTest(false);
  renderer.toneMapping=THREE.ACESFilmicToneMapping;
- renderer.toneMappingExposure=1.18;\n renderer.info.autoReset=true;
+ renderer.toneMappingExposure=1.18;
+ renderer.info.autoReset=true;
  renderer.outputColorSpace=THREE.SRGBColorSpace;
  renderer.setClearColor(0x9bcbe4,1);
  root.appendChild(renderer.domElement);
@@ -368,7 +372,8 @@ function updateRadar(){
  }
 }
 function animate(){
- const dt=Math.min(clock.getDelta(),.04),p=playerRig.holder;\n if(scene.fog&&scene.fog.isFogExp2){scene.fog.density=.00145+Math.sin(clock.elapsedTime*.035)*.00008;}
+ const dt=Math.min(clock.getDelta(),.04),p=playerRig.holder;
+ if(scene.fog&&scene.fog.isFogExp2){scene.fog.density=.00145+Math.sin(clock.elapsedTime*.035)*.00008;}
  worldYaw-=lookDeltaX*.0052;
  // Ajuste vertical mais controlado: evita inclinação excessiva e mantém o horizonte estável no toque.
  pitch=THREE.MathUtils.clamp(pitch-lookDeltaY*.0041,-.62,.62);
