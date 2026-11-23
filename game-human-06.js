@@ -35,14 +35,14 @@ const playerVelocity=new THREE.Vector3(),cameraLook=new THREE.Vector3(),_shotOri
 let safeRing=null,zoneElapsed=0,zoneDamageClock=0,lootItems=[];const worldObstacles=[];
 const keys={forward:0,side:0},bullets=[],enemies=[],effects=[];const bulletGeometry=new THREE.CylinderGeometry(.012,.012,.72,5),bulletMaterial=new THREE.MeshBasicMaterial({color:0xffdf91,transparent:true,opacity:.92});let dustClock=0,recoil=0,recoilPitch=0,aiming=false,aimBlend=0,hitMarkerTimer=0,fireHeld=false,fireCooldown=0,reloadTimer=0,movementMode='stand';
 const BASE='https://raw.githubusercontent.com/NoLimitNexus/game-models/main/';
-const defaultSettings={general:100,red:100,two:100,four:100,awm:100,look:100,autoFire:true,invertY:false,minimap:true,hudScale:100,hudOpacity:100,quality:'medium',shadows:false,vibration:false};
+const defaultSettings={general:100,red:100,two:100,four:100,awm:100,look:100,autoFire:true,invertY:false,minimap:true,hudScale:100,hudOpacity:100,quality:'high',shadows:true,vibration:false};
 let gameSettings={...defaultSettings};
 try{gameSettings={...defaultSettings,...JSON.parse(localStorage.getItem('ic-game-settings')||'{}')}}catch{}
 let hudEditing=false,hudDrag=null;
 function saveGameSettings(){try{localStorage.setItem('ic-game-settings',JSON.stringify(gameSettings));}catch{}}
 let adaptiveFrameTime=0,adaptiveFrameCount=0,adaptiveCheckTime=0,adaptivePixelRatio=0;
-function applyGraphicsSettings(){if(!renderer)return;const mobile=innerWidth<700;const q={low:{ratio:mobile?.68:1,shadows:false},medium:{ratio:mobile?.82:1.15,shadows:false},high:{ratio:mobile?.95:1.5,shadows:false},ultra:{ratio:mobile?1.05:1.75,shadows:true}}[gameSettings.quality]||{ratio:mobile?.68:.9,shadows:false};const cap=Math.min(devicePixelRatio||1,q.ratio);adaptivePixelRatio=mobile?Math.min(cap,adaptivePixelRatio||cap):cap;renderer.setPixelRatio(adaptivePixelRatio);renderer.shadowMap.enabled=!mobile&&!!gameSettings.shadows&&!!q.shadows;renderer.shadowMap.needsUpdate=true;renderer.setSize(innerWidth,innerHeight);}
-function adaptMobileFrameRate(frameDt){if(innerWidth>=700||!renderer)return;adaptiveFrameTime+=frameDt;adaptiveFrameCount++;adaptiveCheckTime+=frameDt;if(adaptiveCheckTime<2)return;const fps=adaptiveFrameCount/Math.max(.001,adaptiveFrameTime);const q={low:.68,medium:.82,high:.95,ultra:1.05}[gameSettings.quality]||.68;const cap=Math.min(devicePixelRatio||1,q);let next=adaptivePixelRatio;if(fps<50)next=Math.max(.52,adaptivePixelRatio-.10);else if(fps>58)next=Math.min(cap,adaptivePixelRatio+.05);if(Math.abs(next-adaptivePixelRatio)>.015){adaptivePixelRatio=next;renderer.setPixelRatio(next);renderer.setSize(innerWidth,innerHeight);}adaptiveFrameTime=0;adaptiveFrameCount=0;adaptiveCheckTime=0;}
+function applyGraphicsSettings(){if(!renderer)return;const mobile=innerWidth<700;const q={low:{ratio:mobile?.72:1,shadows:false},medium:{ratio:mobile?.90:1.2,shadows:false},high:{ratio:mobile?1.05:1.55,shadows:true},ultra:{ratio:mobile?1.2:1.85,shadows:true}}[gameSettings.quality]||{ratio:mobile?.72:.9,shadows:false};const cap=Math.min(devicePixelRatio||1,q.ratio);adaptivePixelRatio=mobile?Math.min(cap,adaptivePixelRatio||cap):cap;renderer.setPixelRatio(adaptivePixelRatio);renderer.shadowMap.enabled=!!gameSettings.shadows&&!!q.shadows;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.shadowMap.needsUpdate=true;if(scene)scene.traverse(o=>{if(o.isDirectionalLight){o.castShadow=renderer.shadowMap.enabled;if(o.shadow){const size=mobile?1024:2048;o.shadow.mapSize.set(size,size);o.shadow.needsUpdate=true;}}});renderer.setSize(innerWidth,innerHeight);}
+function adaptMobileFrameRate(frameDt){if(innerWidth>=700||!renderer)return;adaptiveFrameTime+=frameDt;adaptiveFrameCount++;adaptiveCheckTime+=frameDt;if(adaptiveCheckTime<2)return;const fps=adaptiveFrameCount/Math.max(.001,adaptiveFrameTime);const q={low:.72,medium:.90,high:1.05,ultra:1.2}[gameSettings.quality]||.72;const cap=Math.min(devicePixelRatio||1,q);let next=adaptivePixelRatio;if(fps<46)next=Math.max(.72,adaptivePixelRatio-.07);else if(fps>57)next=Math.min(cap,adaptivePixelRatio+.025);if(Math.abs(next-adaptivePixelRatio)>.015){adaptivePixelRatio=next;renderer.setPixelRatio(next);renderer.setSize(innerWidth,innerHeight);}adaptiveFrameTime=0;adaptiveFrameCount=0;adaptiveCheckTime=0;}
 function applyHudSettings(){const hud=document.querySelector('#hud');if(!hud)return;hud.style.setProperty('--hud-scale',gameSettings.hudScale/100);hud.style.setProperty('--hud-opacity',gameSettings.hudOpacity/100);const map=document.querySelector('.minimap');if(map)map.style.display=gameSettings.minimap?'':'none';}
 function initSettings(){
  const panel=document.querySelector('#settingsPanel'),open=()=>{panel.classList.add('open');panel.setAttribute('aria-hidden','false')},close=()=>{panel.classList.remove('open');panel.setAttribute('aria-hidden','true');if(hudEditing)toggleHudEditor(false)};
@@ -72,7 +72,7 @@ function mat(color,roughness=.86,metalness=0){return new THREE.MeshStandardMater
 const surfaceMaps={};
 function makeSurfaceMap(kind){
  if(surfaceMaps[kind])return surfaceMaps[kind];
- const size=256,c=document.createElement('canvas');c.width=c.height=size;const ctx=c.getContext('2d');
+ const size=512,c=document.createElement('canvas');c.width=c.height=size;const ctx=c.getContext('2d');
  if(kind==='plaster'){
   ctx.fillStyle='#b9b4a4';ctx.fillRect(0,0,size,size);
   for(let i=0;i<5200;i++){const v=105+Math.random()*115;ctx.fillStyle='rgba('+Math.floor(v)+','+Math.floor(Math.max(0,v-5))+','+Math.floor(Math.max(0,v-15))+','+(.025+Math.random()*.09)+')';ctx.fillRect(Math.random()*size,Math.random()*size,1+Math.random()*3,1+Math.random()*3)}
@@ -89,7 +89,7 @@ function makeSurfaceMap(kind){
 }
 function box(parent,w,h,d,material,x,y,z){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m}
 function addTextureGround(){
- const mobile=innerWidth<700,size=mobile?512:1024,speckles=mobile?14000:92000;
+ const mobile=innerWidth<700,size=1024,speckles=mobile?28000:92000;
  const c=document.createElement('canvas');c.width=c.height=size;const ctx=c.getContext('2d');
  const grad=ctx.createLinearGradient(0,0,size,size);grad.addColorStop(0,'#71894c');grad.addColorStop(.52,'#637c42');grad.addColorStop(1,'#536f3e');ctx.fillStyle=grad;ctx.fillRect(0,0,1024,1024);
  for(let i=0;i<speckles;i++){const x=Math.random()*size,y=Math.random()*size,v=55+Math.random()*105,a=.035+Math.random()*.16;ctx.fillStyle='rgba('+Math.floor(v*.72)+','+Math.floor(v)+','+Math.floor(v*.46)+','+a+')';ctx.beginPath();ctx.ellipse(x,y,1+Math.random()*4,.7+Math.random()*2,Math.random()*3,0,Math.PI*2);ctx.fill()}
@@ -110,7 +110,7 @@ function addHouse(x,z,rotation=0,style=0,twoStorey=false){
   {wall:0xb8c3b9,trim:0xe0e2d7,roof:0x555047,wood:0x514638,glass:0x7da9ad,accent:0x788b7e}
  ];
  const p=palettes[Math.abs(style)%palettes.length],wall=mat(p.wall,.96),trim=mat(p.trim,.9),wood=mat(p.wood,.88),roof=mat(p.roof,.82),glass=new THREE.MeshStandardMaterial({color:p.glass,roughness:.16,metalness:.22}),accent=mat(p.accent,.9);
- wall.map=makeSurfaceMap('plaster');wall.map.repeat.set(2.2,1.3);if(innerWidth>=700){wall.bumpMap=wall.map;wall.bumpScale=.045;}wall.needsUpdate=true;roof.map=makeSurfaceMap('roof');roof.map.repeat.set(1.5,1.5);if(innerWidth>=700){roof.bumpMap=roof.map;roof.bumpScale=.035;}roof.needsUpdate=true;wood.map=makeSurfaceMap('wood');wood.map.repeat.set(1,1.4);if(innerWidth>=700){wood.bumpMap=wood.map;wood.bumpScale=.025;}wood.needsUpdate=true;
+ wall.map=makeSurfaceMap('plaster');wall.map.repeat.set(2.2,1.3);{wall.bumpMap=wall.map;wall.bumpScale=innerWidth<700?.018:.045;}wall.needsUpdate=true;roof.map=makeSurfaceMap('roof');roof.map.repeat.set(1.5,1.5);{roof.bumpMap=roof.map;roof.bumpScale=innerWidth<700?.014:.035;}roof.needsUpdate=true;wood.map=makeSurfaceMap('wood');wood.map.repeat.set(1,1.4);{wood.bumpMap=wood.map;wood.bumpScale=innerWidth<700?.012:.025;}wood.needsUpdate=true;
  const floor=mat(style%2?0x877b68:0x9b8c73,.98),interior=mat(0xc2b69e,.96),darkWood=mat(0x59432f,.9),metal=mat(0x454b49,.58,.35);
  // Fundação elevada, paredes claras e rodapé de pedra.
  box(g,6.65,.24,5.85,mat(0x77766c),0,.12,0);
@@ -316,7 +316,7 @@ function buildWorld(){
  const ambient=new THREE.AmbientLight(0xdce2df,.18);scene.add(ambient);
  const sun=new THREE.DirectionalLight(0xffe8ce,2.65);sun.position.set(-42,78,34);sun.castShadow=!!gameSettings.shadows&&gameSettings.quality!=='low';sun.shadow.mapSize.set(innerWidth<700?1024:2048,innerWidth<700?1024:2048);sun.shadow.camera.left=-165;sun.shadow.camera.right=165;sun.shadow.camera.top=165;sun.shadow.camera.bottom=-165;sun.shadow.bias=-.00018;sun.shadow.normalBias=.025;sun.shadow.radius=innerWidth<700?2:3;sun.shadow.camera.near=1;sun.shadow.camera.far=260;scene.add(sun);
  const fill=new THREE.DirectionalLight(0x9db5c4,.42);fill.position.set(55,28,-48);scene.add(fill);
- const groundMap=addTextureGround();const groundMaterial=new THREE.MeshStandardMaterial({map:groundMap,roughness:.98});if(innerWidth>=700){groundMaterial.bumpMap=groundMap;groundMaterial.bumpScale=.055;}const ground=new THREE.Mesh(new THREE.PlaneGeometry(800,800),groundMaterial);ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+ const groundMap=addTextureGround();const groundMaterial=new THREE.MeshStandardMaterial({map:groundMap,roughness:.98,bumpMap:groundMap,bumpScale:innerWidth<700?.018:.055});const ground=new THREE.Mesh(new THREE.PlaneGeometry(800,800),groundMaterial);ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
  const beach=new THREE.Mesh(new THREE.RingGeometry(119,141,192),new THREE.MeshStandardMaterial({color:0xd9c18c,roughness:.95}));beach.rotation.x=-Math.PI/2;beach.position.y=.035;scene.add(beach);
  const waterMat=new THREE.MeshStandardMaterial({color:0x168aa6,roughness:.24,metalness:.12,transparent:false});
  const water=new THREE.Mesh(new THREE.PlaneGeometry(1100,1100,1,1),waterMat);water.rotation.x=-Math.PI/2;water.position.y=-.28;scene.add(water);
@@ -785,7 +785,7 @@ async function init(){
  renderer.setPixelRatio(Math.min(devicePixelRatio||1,mobileQuality?.82:1.5));
  renderer.setSize(innerWidth,innerHeight);
  renderer.shadowMap.enabled=!!gameSettings.shadows&&gameSettings.quality!=='low';
- renderer.shadowMap.type=THREE.PCFShadowMap;
+ renderer.shadowMap.type=THREE.PCFSoftShadowMap;
  renderer.setScissorTest(false);
  renderer.toneMapping=THREE.ACESFilmicToneMapping;
  renderer.toneMappingExposure=1.08;
