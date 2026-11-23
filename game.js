@@ -6,7 +6,7 @@ const scoreEl=document.querySelector('#score'),ammoEl=document.querySelector('#a
 const errorPanel=document.querySelector('#errorPanel');
 let renderer,scene,camera,clock,playerRig,worldYaw=0,pitch=-.12,ammo=30,kills=0,health=100,armor=0,medkits=1,library;
 const weapons=[{name:'FUZIL',mag:30,damage:35,rate:.13,spread:.014,reload:1.35},{name:'SMG',mag:40,damage:19,rate:.075,spread:.022,reload:1.5},{name:'PRECISÃO',mag:8,damage:90,rate:.72,spread:.002,reload:1.8}];
-let weaponIndex=0,weaponAmmo=[30,40,8],scopeLevel=0;
+let weaponIndex=0,weaponAmmo=[30,40,8],scopeLevel=0,sprintHeld=false;
 function currentWeapon(){return weapons[weaponIndex]}
 function refreshAmmo(){ammo=weaponAmmo[weaponIndex];ammoEl.textContent='MUNIÇÃO '+ammo;document.querySelector('#ammoLarge').textContent=ammo;document.querySelector('#weaponSwitch').textContent='ARMA: '+currentWeapon().name;refreshInventory()}
 function refreshInventory(){
@@ -457,6 +457,8 @@ function setupControls(){
  surface.addEventListener('pointerup',endCameraDrag);surface.addEventListener('pointercancel',endCameraDrag);
  surface.addEventListener('lostpointercapture',endCameraDrag);
  document.querySelector('#jump').onclick=()=>{playerRig.jumpV=5.8};
+ const sprintButton=document.querySelector('#sprint');
+ if(sprintButton){sprintButton.addEventListener('pointerdown',e=>{e.preventDefault();sprintHeld=true;sprintButton.classList.add('active');sprintButton.setPointerCapture(e.pointerId)});const stopSprint=()=>{sprintHeld=false;sprintButton.classList.remove('active')};sprintButton.addEventListener('pointerup',stopSprint);sprintButton.addEventListener('pointercancel',stopSprint);sprintButton.addEventListener('lostpointercapture',stopSprint)}
  document.querySelector('#aim').onclick=()=>{aiming=!aiming;document.querySelector('#aim').classList.toggle('active',aiming);document.querySelector('#crosshair')?.classList.toggle('aiming',aiming);statusEl.textContent=aiming?'MIRA PRECISA':'EM COMBATE'};
  const fireButton=document.querySelector('#fire');
  fireButton.addEventListener('pointerdown',e=>{e.preventDefault();fireHeld=true;fireButton.setPointerCapture(e.pointerId);shoot()});
@@ -510,7 +512,7 @@ function animate(){
  lookDeltaX=lookDeltaY=0;
  const forward=new THREE.Vector3(Math.sin(worldYaw),0,-Math.cos(worldYaw)),right=new THREE.Vector3(Math.cos(worldYaw),0,Math.sin(worldYaw));
  const move=forward.multiplyScalar(keys.forward).add(right.multiplyScalar(keys.side));if(move.lengthSq()>1)move.normalize();
- const targetVelocity=move.clone().multiplyScalar(aiming?2.85:5.4);playerVelocity.lerp(targetVelocity,1-Math.exp(-9*dt));p.position.addScaledVector(playerVelocity,dt);p.position.x=THREE.MathUtils.clamp(p.position.x,-124,124);p.position.z=THREE.MathUtils.clamp(p.position.z,-124,124);
+ const targetVelocity=move.clone().multiplyScalar(aiming?2.85:(sprintHeld?7.1:5.4));playerVelocity.lerp(targetVelocity,1-Math.exp(-9*dt));p.position.addScaledVector(playerVelocity,dt);p.position.x=THREE.MathUtils.clamp(p.position.x,-124,124);p.position.z=THREE.MathUtils.clamp(p.position.z,-124,124);
  if(playerVelocity.length()>.22){dustClock-=dt;if(dustClock<=0){dustClock=playerVelocity.length()>4.2?.12:.24;const foot=p.position.clone().add(new THREE.Vector3((Math.random()-.5)*.55,.12,(Math.random()-.5)*.55));for(let n=0;n<3;n++)addParticle(foot,0xc6b58a,1.1,.055,.3)}const desiredYaw=aiming?worldYaw+Math.PI:Math.atan2(playerVelocity.x,playerVelocity.z);const turn=THREE.MathUtils.euclideanModulo(desiredYaw-p.rotation.y+Math.PI,Math.PI*2)-Math.PI;p.rotation.y+=turn*Math.min(1,(aiming?14:11)*dt);play(playerRig,playerVelocity.length()>4.2?'run':'walk',playerVelocity.length()>4.2?1.08:1.02)}else{const faceYaw=worldYaw+Math.PI;const turn=THREE.MathUtils.euclideanModulo(faceYaw-p.rotation.y+Math.PI,Math.PI*2)-Math.PI;p.rotation.y+=turn*Math.min(1,(aiming||fireHeld?12:5)*dt);play(playerRig,fireHeld?'cast':'idle');}
  playerRig.jumpV=(playerRig.jumpV||0)-15*dt;p.position.y=Math.max(0,p.position.y+(playerRig.jumpV||0)*dt);if(p.position.y===0&&playerRig.jumpV<0)playerRig.jumpV=0;
  applyBodyMotion(playerRig,playerVelocity.dot(forward),playerVelocity.dot(right),dt);playerRig.update(dt);
@@ -519,7 +521,7 @@ function animate(){
  fireCooldown=Math.max(0,fireCooldown-dt);
  if(fireHeld&&fireCooldown<=0&&reloadTimer<=0)shoot();
  if(reloadTimer>0){reloadTimer-=dt;if(reloadTimer<=0){reloadTimer=0;weaponAmmo[weaponIndex]=currentWeapon().mag;refreshAmmo();document.querySelector('#reload').classList.remove('active');statusEl.textContent='PRONTO'}}
- recoil=Math.max(0,recoil-dt*.55);const forwardView=new THREE.Vector3(Math.sin(worldYaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(worldYaw)*Math.cos(pitch));const rightView=new THREE.Vector3(Math.cos(worldYaw),0,Math.sin(worldYaw));const movingBob=playerVelocity.length()>.25?Math.sin(clock.elapsedTime*(aiming?7.5:10.5))*.025*(aiming?.35:1):0;const lookTarget=p.position.clone().add(new THREE.Vector3(0,1.46+movingBob,0)).add(forwardView.clone().multiplyScalar(aiming?2.55:1.35)).add(new THREE.Vector3(0,recoil*.16,0));const cameraDistance=aiming?3.15:4.8;const shoulder=aiming?.36:.62;const desiredCamera=lookTarget.clone().add(forwardView.clone().multiplyScalar(-cameraDistance)).add(rightView.multiplyScalar(shoulder));const smooth=1-Math.exp(-(aiming?20:14)*dt);camera.position.lerp(desiredCamera,smooth);cameraLook.lerp(lookTarget,smooth);camera.lookAt(cameraLook);const wantedFov=aiming?49:66;if(Math.abs(camera.fov-wantedFov)>.1){camera.fov=THREE.MathUtils.lerp(camera.fov,wantedFov,smooth);camera.updateProjectionMatrix();}
+ recoil=Math.max(0,recoil-dt*.55);const forwardView=new THREE.Vector3(Math.sin(worldYaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(worldYaw)*Math.cos(pitch));const rightView=new THREE.Vector3(Math.cos(worldYaw),0,Math.sin(worldYaw));const movingBob=playerVelocity.length()>.25?Math.sin(clock.elapsedTime*(aiming?7.5:10.5))*.025*(aiming?.35:1):0;const lookTarget=p.position.clone().add(new THREE.Vector3(0,1.46+movingBob,0)).add(forwardView.clone().multiplyScalar(aiming?2.55:1.35)).add(new THREE.Vector3(0,recoil*.16,0));const cameraDistance=aiming?3.15:(sprintHeld?5.0:4.8);const shoulder=aiming?.36:.62;const desiredCamera=lookTarget.clone().add(forwardView.clone().multiplyScalar(-cameraDistance)).add(rightView.multiplyScalar(shoulder));const smooth=1-Math.exp(-(aiming?20:14)*dt);camera.position.lerp(desiredCamera,smooth);cameraLook.lerp(lookTarget,smooth);camera.lookAt(cameraLook);const wantedFov=aiming?49:(sprintHeld?70:66);if(Math.abs(camera.fov-wantedFov)>.1){camera.fov=THREE.MathUtils.lerp(camera.fov,wantedFov,smooth);camera.updateProjectionMatrix();}
  updateSafeZone(dt);
  if(hitMarkerTimer>0){hitMarkerTimer-=dt;if(hitMarkerTimer<=0)document.querySelector('#crosshair')?.classList.remove('hit')}updateEffects(dt);radarClock-=dt;if(radarClock<=0){radarClock=.18;updateRadar()}renderer.render(scene,camera);
 }
