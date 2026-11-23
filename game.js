@@ -29,12 +29,12 @@ const playerVelocity=new THREE.Vector3(),cameraLook=new THREE.Vector3();
 let safeRing=null,zoneElapsed=0,zoneDamageClock=0,lootItems=[];const worldObstacles=[];
 const keys={forward:0,side:0},bullets=[],enemies=[],effects=[];let dustClock=0,recoil=0,aiming=false,aimBlend=0,hitMarkerTimer=0,fireHeld=false,fireCooldown=0,reloadTimer=0,movementMode='stand';
 const BASE='https://raw.githubusercontent.com/NoLimitNexus/game-models/main/';
-const defaultSettings={general:100,red:100,two:100,four:100,awm:100,look:100,autoFire:true,invertY:false,minimap:true,hudScale:100,hudOpacity:100,quality:'high',shadows:true,vibration:false};
+const defaultSettings={general:100,red:100,two:100,four:100,awm:100,look:100,autoFire:true,invertY:false,minimap:true,hudScale:100,hudOpacity:100,quality:'low',shadows:false,vibration:false};
 let gameSettings={...defaultSettings};
 try{gameSettings={...defaultSettings,...JSON.parse(localStorage.getItem('ic-game-settings')||'{}')}}catch{}
 let hudEditing=false,hudDrag=null;
 function saveGameSettings(){try{localStorage.setItem('ic-game-settings',JSON.stringify(gameSettings));}catch{}}
-function applyGraphicsSettings(){if(!renderer)return;const q={low:{ratio:.85,shadows:false},medium:{ratio:1.1,shadows:true},high:{ratio:1.5,shadows:true},ultra:{ratio:2,shadows:true}}[gameSettings.quality]||{ratio:1.5,shadows:true};renderer.setPixelRatio(Math.min(devicePixelRatio||1,q.ratio));renderer.shadowMap.enabled=!!gameSettings.shadows&&q.shadows;renderer.shadowMap.needsUpdate=true;renderer.setSize(innerWidth,innerHeight);}
+function applyGraphicsSettings(){if(!renderer)return;const q={low:{ratio:.9,shadows:false},medium:{ratio:1,shadows:true},high:{ratio:1.2,shadows:true},ultra:{ratio:1.4,shadows:true}}[gameSettings.quality]||{ratio:1.5,shadows:true};renderer.setPixelRatio(Math.min(devicePixelRatio||1,innerWidth<700?Math.min(q.ratio,gameSettings.quality==='low'?.9:1.15):q.ratio));renderer.shadowMap.enabled=!!gameSettings.shadows&&q.shadows;renderer.shadowMap.needsUpdate=true;renderer.setSize(innerWidth,innerHeight);}
 function applyHudSettings(){const hud=document.querySelector('#hud');if(!hud)return;hud.style.setProperty('--hud-scale',gameSettings.hudScale/100);hud.style.setProperty('--hud-opacity',gameSettings.hudOpacity/100);const map=document.querySelector('.minimap');if(map)map.style.display=gameSettings.minimap?'':'none';}
 function initSettings(){
  const panel=document.querySelector('#settingsPanel'),open=()=>{panel.classList.add('open');panel.setAttribute('aria-hidden','false')},close=()=>{panel.classList.remove('open');panel.setAttribute('aria-hidden','true');if(hudEditing)toggleHudEditor(false)};
@@ -233,15 +233,15 @@ function buildWorld(){
  scene.background=new THREE.Color(0x849ba2);scene.fog=new THREE.FogExp2(0x9aa9a5,.0019);
  scene.add(new THREE.HemisphereLight(0xd8e0df,0x394338,1.15));
  const ambient=new THREE.AmbientLight(0xdce2df,.18);scene.add(ambient);
- const sun=new THREE.DirectionalLight(0xffe3c2,2.45);sun.position.set(-42,78,34);sun.castShadow=true;sun.shadow.mapSize.set(innerWidth<700?1536:2048,innerWidth<700?1536:2048);sun.shadow.camera.left=-165;sun.shadow.camera.right=165;sun.shadow.camera.top=165;sun.shadow.camera.bottom=-165;sun.shadow.bias=-.00018;sun.shadow.normalBias=.025;sun.shadow.radius=innerWidth<700?2:3;sun.shadow.camera.near=1;sun.shadow.camera.far=260;scene.add(sun);
+ const sun=new THREE.DirectionalLight(0xffe3c2,2.45);sun.position.set(-42,78,34);sun.castShadow=!!gameSettings.shadows&&gameSettings.quality!=='low';sun.shadow.mapSize.set(innerWidth<700?768:1024,innerWidth<700?768:1024);sun.shadow.camera.left=-165;sun.shadow.camera.right=165;sun.shadow.camera.top=165;sun.shadow.camera.bottom=-165;sun.shadow.bias=-.00018;sun.shadow.normalBias=.025;sun.shadow.radius=innerWidth<700?2:3;sun.shadow.camera.near=1;sun.shadow.camera.far=260;scene.add(sun);
  const fill=new THREE.DirectionalLight(0x9db5c4,.42);fill.position.set(55,28,-48);scene.add(fill);
  const ground=new THREE.Mesh(new THREE.PlaneGeometry(800,800),new THREE.MeshStandardMaterial({map:addTextureGround(),roughness:.96}));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
  const beach=new THREE.Mesh(new THREE.RingGeometry(119,141,192),new THREE.MeshStandardMaterial({color:0xd9c18c,roughness:.95}));beach.rotation.x=-Math.PI/2;beach.position.y=.035;scene.add(beach);
  const waterMat=new THREE.MeshStandardMaterial({color:0x168aa6,roughness:.24,metalness:.12,transparent:false});
  const water=new THREE.Mesh(new THREE.PlaneGeometry(1100,1100,1,1),waterMat);water.rotation.x=-Math.PI/2;water.position.y=-.28;scene.add(water);
  waterMat.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\\nvarying vec3 vWaterWorld;').replace('#include <begin_vertex>','#include <begin_vertex>\\n vWaterWorld=(modelMatrix*vec4(transformed,1.0)).xyz; transformed.y += sin(vWaterWorld.x*.035+vWaterWorld.z*.022)*.018 + cos(vWaterWorld.z*.04-vWaterWorld.x*.018)*.012;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\\nvarying vec3 vWaterWorld;').replace('#include <color_fragment>','#include <color_fragment>\\n float ripple=0.5+0.5*sin(vWaterWorld.x*.22+vWaterWorld.z*.16); diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.32,.72,.78),ripple*.10);');};
- for(let i=0;i<46;i++){const a=i*2.399,r=22+(i%8)*3.3;addPalm(Math.cos(a)*r,Math.sin(a)*r,.75+(i%4)*.1)}
- for(let i=0;i<95;i++){const a=i*2.399,r=52+(i%13)*5.1;addPalm(Math.cos(a)*r,Math.sin(a)*r,.85+(i%5)*.12)}
+ for(let i=0;i<18;i++){const a=i*2.399,r=22+(i%8)*3.3;addPalm(Math.cos(a)*r,Math.sin(a)*r,.75+(i%4)*.1)}
+ for(let i=0;i<34;i++){const a=i*2.399,r=52+(i%13)*5.1;addPalm(Math.cos(a)*r,Math.sin(a)*r,.85+(i%5)*.12)}
  addHouse(-12,-12,.2,0);addHouse(14,-18,-.3,1);addHouse(22,9,.8,2);addHouse(-25,15,-.5,3);
  addHouse(68,35,.4,2);addHouse(-76,-42,-.7,1);addHouse(38,-88,.2,0);addHouse(-92,72,1.1,3);addHouse(102,5,-.4,2);
  // Novas casas distribuídas pela ilha para criar mais áreas de exploração.
@@ -488,13 +488,13 @@ function updateEffects(dt){
 }
 async function spawnEnemy(x,z,i){const rig=await createFighter(true,i);rig.holder.position.set(x,0,z);enemies.push({rig,hp:100,alive:true,attack:0,anim:'idle'});return rig}
 async function init(){
- renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
+ renderer=new THREE.WebGLRenderer({antialias:innerWidth>=700,alpha:false,powerPreference:'high-performance',stencil:false,depth:true});
  // Perfil gráfico equilibrado: imagem mais nítida sem sobrecarregar o Safari no iPhone.
  const mobileQuality=innerWidth<700;
- renderer.setPixelRatio(Math.min(devicePixelRatio||1,mobileQuality?1.65:2));
+ renderer.setPixelRatio(Math.min(devicePixelRatio||1,mobileQuality?1:1.5));
  renderer.setSize(innerWidth,innerHeight);
- renderer.shadowMap.enabled=true;
- renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+ renderer.shadowMap.enabled=!!gameSettings.shadows&&gameSettings.quality!=='low';
+ renderer.shadowMap.type=THREE.PCFShadowMap;
  renderer.setScissorTest(false);
  renderer.toneMapping=THREE.ACESFilmicToneMapping;
  renderer.toneMappingExposure=1.02;
@@ -521,7 +521,7 @@ async function init(){
  document.querySelector('#hint').textContent='Joystick: andar • Deslize a tela: olhar ao redor • Botões: pular e atirar';
  renderer.setAnimationLoop(animate);
 }
-function resize(){if(!renderer)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio||1,innerWidth<700?1.5:1.85))}
+function resize(){if(!renderer)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);const mobile=innerWidth<700;renderer.setPixelRatio(Math.min(devicePixelRatio||1,mobile?(gameSettings.quality==='low'?.9:1.1):1.5))}
 const joy=document.querySelector('#joystick'),stick=document.querySelector('#stick');let joyId=null,cameraPointerId=null,lastPointerX=0,lastPointerY=0,lookDeltaX=0,lookDeltaY=0;
 function setJoy(e){const r=joy.getBoundingClientRect(),dx=e.clientX-r.left-r.width/2,dy=e.clientY-r.top-r.height/2,l=Math.hypot(dx,dy),k=Math.min(1,48/(l||1));keys.side=dx*k/48;keys.forward=-dy*k/48;stick.style.transform=`translate(${keys.side*48}px,${-keys.forward*48}px)`}
 function setupControls(){
@@ -651,6 +651,6 @@ function animate(){
   const wantedFov=THREE.MathUtils.lerp(sprintHeld&&!aiming?70:66,48,aimBlend);if(Math.abs(camera.fov-wantedFov)>.08){camera.fov=THREE.MathUtils.lerp(camera.fov,wantedFov,smooth);camera.updateProjectionMatrix();}
   const crosshair=document.querySelector('#crosshair');if(crosshair){const movementBloom=THREE.MathUtils.clamp(playerVelocity.length()/7.1,0,1)*(aiming?.18:.34);const bloomScale=THREE.MathUtils.clamp((aiming?.72:1)+movementBloom+recoil*.7,.68,1.55);crosshair.style.scale=String(bloomScale);}
  updateSafeZone(dt);
- if(hitMarkerTimer>0){hitMarkerTimer-=dt;if(hitMarkerTimer<=0)document.querySelector('#crosshair')?.classList.remove('hit')}updateEffects(dt);radarClock-=dt;if(radarClock<=0){radarClock=.18;updateRadar()}renderer.render(scene,camera);
+ if(hitMarkerTimer>0){hitMarkerTimer-=dt;if(hitMarkerTimer<=0)document.querySelector('#crosshair')?.classList.remove('hit')}updateEffects(dt);radarClock-=dt;if(radarClock<=0){radarClock=.35;updateRadar()}renderer.render(scene,camera);
 }
 init().catch(err=>{console.error(err);loading.style.display='none';errorPanel.style.display='grid';document.querySelector('#errorMessage').textContent='Não foi possível carregar os modelos 3D. Confira a internet e tente novamente.'});
