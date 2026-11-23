@@ -26,7 +26,7 @@ function toggleInventory(){
 function switchWeapon(){if(reloadTimer>0)return;weaponIndex=(weaponIndex+1)%weapons.length;refreshAmmo();statusEl.textContent='EQUIPADO: '+currentWeapon().name}
 
 const playerVelocity=new THREE.Vector3(),cameraLook=new THREE.Vector3();
-let safeRing=null,zoneElapsed=0,zoneDamageClock=0,lootItems=[];
+let safeRing=null,zoneElapsed=0,zoneDamageClock=0,lootItems=[];const worldObstacles=[];
 const keys={forward:0,side:0},bullets=[],enemies=[],effects=[];let dustClock=0,recoil=0,aiming=false,aimBlend=0,hitMarkerTimer=0,fireHeld=false,fireCooldown=0,reloadTimer=0,movementMode='stand';
 const BASE='https://raw.githubusercontent.com/NoLimitNexus/game-models/main/';
 
@@ -98,7 +98,7 @@ function addHouse(x,z,rotation=0,style=0){
  box(g,2.2,.12,.12,wood,0,2.35,4.05);
  // Detalhes de reboco e cantoneiras.
  for(const sx of [-1,1])box(g,.12,2.7,.12,trim,sx*2.94,1.62,2.58);
- g.position.set(x,0,z);g.rotation.y=rotation;scene.add(g);
+ g.position.set(x,0,z);g.rotation.y=rotation;scene.add(g);worldObstacles.push({x,z,radius:4.35});
 }
 function addRoadNetwork(){
  // Estradas de terra batida com acostamento, conectando os pequenos bairros.
@@ -141,7 +141,7 @@ function addSettlementDetails(){
   for(let i=0;i<5;i++)box(g,.055,3,.08,paint,-2.05+i*1.02,1.75,4.1);
   const roof=new THREE.Mesh(new THREE.BoxGeometry(10.5,.24,8.5),metal);roof.position.y=4.05;roof.castShadow=true;g.add(roof);
   for(let i=0;i<9;i++)box(g,10.2,.035,.035,paint,0,4.19,-3.7+i*.9);
-  g.position.set(x,0,z);g.rotation.y=rot;scene.add(g);
+  g.position.set(x,0,z);g.rotation.y=rot;scene.add(g);worldObstacles.push({x,z,radius:6.25});
  }
  warehouse(48,26,.35);warehouse(-64,-38,-.45);
  // Pequeno posto de abastecimento e cobertura.
@@ -156,7 +156,7 @@ function addSettlementDetails(){
   box(pump,.09,.8,.08,metal,.36,.9,-.15);
   pump.position.set(x,.2,0);station.add(pump);
  }
- station.position.set(72,-6,0);scene.add(station);
+ station.position.set(72,-6,0);scene.add(station);worldObstacles.push({x:72,z:-6,radius:5.1});
  // Cercas de madeira, postes e luminárias para marcar os assentamentos.
  for(const [cx,cz] of [[-12,-12],[22,9],[68,35],[-76,-42],[42,54]]){
   for(let i=0;i<8;i++){
@@ -401,6 +401,13 @@ async function createFighter(isEnemy=false,index=0){
  }
  addRifle(rig);scene.add(holder);await rig.playRole('idle');return rig;
 }
+function resolvePlayerObstacles(){
+ const p=playerRig.holder.position,radius=.58;
+ for(const obstacle of worldObstacles){
+  let dx=p.x-obstacle.x,dz=p.z-obstacle.z,distance=Math.hypot(dx,dz),minimum=obstacle.radius+radius;
+  if(distance<minimum){if(distance<.001){dx=1;dz=0;distance=1}const nx=dx/distance,nz=dz/distance;p.x=obstacle.x+nx*minimum;p.z=obstacle.z+nz*minimum;const into=playerVelocity.x*nx+playerVelocity.z*nz;if(into<0){playerVelocity.x-=into*nx;playerVelocity.z-=into*nz}}
+ }
+}
 function play(rig,role,speed=1){if(!rig)return;const clip=rig.lib.role(role)?.clip;if(clip&&rig.playing!==clip)rig.playRole(role,{fade:.22,speed}).catch(()=>{})}
 function setMovementMode(mode){
  movementMode=mode;sprintHeld=false;
@@ -579,7 +586,7 @@ function animate(){
   const targetVelocity=move.clone().multiplyScalar(moveSpeed);
   const acceleration=movementMode==='prone'?7:movementMode==='crouch'?8:canSprint?11:9;
   playerVelocity.lerp(targetVelocity,1-Math.exp(-acceleration*dt));
-  p.position.addScaledVector(playerVelocity,dt);p.position.x=THREE.MathUtils.clamp(p.position.x,-124,124);p.position.z=THREE.MathUtils.clamp(p.position.z,-124,124);
+  p.position.addScaledVector(playerVelocity,dt);resolvePlayerObstacles();p.position.x=THREE.MathUtils.clamp(p.position.x,-124,124);p.position.z=THREE.MathUtils.clamp(p.position.z,-124,124);
  const grounded=p.position.y<=.001;
   const moving=playerVelocity.length()>.16;
   if(moving){dustClock-=dt;if(dustClock<=0){dustClock=movementMode==='prone'?.34:playerVelocity.length()>4.2?.12:.24;const foot=p.position.clone().add(new THREE.Vector3((Math.random()-.5)*.55,.12,(Math.random()-.5)*.55));for(let n=0;n<(movementMode==='prone'?1:3);n++)addParticle(foot,0xc6b58a,1.1,.055,.3)}
