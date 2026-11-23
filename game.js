@@ -452,7 +452,7 @@ function addRifle(rig,index=0){
   }
  }
  const muzzle=new THREE.Object3D();muzzle.position.set(0,.012,spec.kind==='pistol'?-.17-barrelLen*.96:-L*.39-barrelLen*.96);g.add(muzzle);
- g.scale.setScalar(.68);g.position.set(.015,-.045,.035);g.rotation.set(-.08,0,0);hand.add(g);
+ g.scale.setScalar(.68);g.position.set(.025,-.065,.075);g.rotation.set(-.12,0,0);hand.add(g);
  rig.weaponPivot=g;rig.weaponMuzzle=muzzle;rig.weaponSpec=spec;
 }
 async function createFighter(isEnemy=false,index=0){
@@ -500,16 +500,22 @@ async function createFighter(isEnemy=false,index=0){
    const target=this.stanceMode==='crouch'||this.stanceMode==='prone'?1:0;
    this._stanceBlend=THREE.MathUtils.damp(this._stanceBlend,target,10,dt);
    const prone=this.stanceMode==='prone',crouch=this.stanceMode==='crouch';
+   const ready=this.isPlayer?1:.72,aim=THREE.MathUtils.clamp(this.weaponAimBlend||0,0,1);
+   const armReady=ready*(1-aim*.12),elbowReady=ready*(1-aim*.08);
    const pose=[
     ['mixamorigHips',prone ? .82 : crouch ? .42 : 0,0,0],
-    ['mixamorigSpine',prone ? .48 : crouch ? -.10 : 0,0,0],
-    ['mixamorigSpine1',prone ? .22 : crouch ? -.08 : 0,0,0],
+    ['mixamorigSpine',prone ? .48 : crouch ? -.10 : -.035*aim,0,0],
+    ['mixamorigSpine1',prone ? .22 : crouch ? -.08 : -.045*aim,0,0],
     ['mixamorigLeftUpLeg',prone ? -.42 : crouch ? -.52 : 0,0,0],
     ['mixamorigRightUpLeg',prone ? -.42 : crouch ? -.52 : 0,0,0],
     ['mixamorigLeftLeg',prone ? .18 : crouch ? 1.02 : 0,0,0],
     ['mixamorigRightLeg',prone ? .18 : crouch ? 1.02 : 0,0,0],
-    ['mixamorigLeftArm',prone ? -.22 : crouch ? -.08 : 0,0,0],
-    ['mixamorigRightArm',prone ? -.22 : crouch ? -.08 : 0,0,0]
+    ['mixamorigLeftArm',prone ? -.22 : crouch ? -.08 : -1.02*armReady,0,.10*armReady],
+    ['mixamorigLeftForeArm',0,0,-.08*elbowReady],
+    ['mixamorigLeftHand',.08*ready,0,0],
+    ['mixamorigRightArm',prone ? -.22 : crouch ? -.08 : -.88*armReady,0,-.10*armReady],
+    ['mixamorigRightForeArm',0,0,.06*elbowReady],
+    ['mixamorigRightHand',-.04*ready,0,0]
    ];
    for(const [name,x,y,z] of pose){
     const bone=this.bones.get(name);if(!bone)continue;
@@ -749,8 +755,9 @@ function animate(){
    const role=canSprint?'run':'walk';play(playerRig,role,canSprint?1.28:movementMode==='prone'?.48:movementMode==='crouch'?.68:aiming?.78:1.02);
   }else{
    const faceYaw=worldYaw+Math.PI,turn=THREE.MathUtils.euclideanModulo(faceYaw-p.rotation.y+Math.PI,Math.PI*2)-Math.PI;
-   p.rotation.y+=turn*Math.min(1,(aiming||fireHeld?12:5)*dt);play(playerRig,fireHeld?'cast':'idle');
+   p.rotation.y+=turn*Math.min(1,(aiming||fireHeld?12:5)*dt);play(playerRig,'idle');
   }
+  playerRig.weaponAimBlend=aimBlend;
   playerRig.jumpV=(playerRig.jumpV||0)-15*dt;p.position.y=Math.max(0,p.position.y+(playerRig.jumpV||0)*dt);if(p.position.y===0&&playerRig.jumpV<0)playerRig.jumpV=0;
   applyBodyMotion(playerRig,playerVelocity.dot(forward),playerVelocity.dot(right),dt);playerRig.update(dt);if(playerRig.weaponPivot){playerRig.weaponKick=Math.max(0,(playerRig.weaponKick||0)-dt*1.35);playerRig.weaponPivot.rotation.x=-.08-(playerRig.weaponKick||0);}
  for(const e of enemies){if(!e.alive)continue;const ep=e.rig.holder,delta=p.position.clone().sub(ep.position);const dist=delta.length();if(dist>2.3){delta.normalize();ep.position.addScaledVector(delta,1.35*dt);ep.rotation.y=Math.atan2(delta.x,delta.z);if(e.anim!=='run'){e.anim='run';play(e.rig,'run')}}else{if(e.anim!=='idle'){e.anim='idle';play(e.rig,'idle')}e.attack+=dt;if(e.attack>1.5){e.attack=0;const raw=4,blocked=Math.min(armor,raw*.5);armor-=blocked;health=Math.max(0,health-(raw-blocked));refreshVitals();statusEl.textContent='SOB ATAQUE';setTimeout(()=>{if(health>0)statusEl.textContent='PRONTO'},450)}}applyBodyMotion(e.rig,dist>2.3?1.35:0,0,dt);e.rig.update(dt);if(e.rig.weaponPivot){e.rig.weaponKick=Math.max(0,(e.rig.weaponKick||0)-dt*.9);e.rig.weaponPivot.rotation.x=-.08-(e.rig.weaponKick||0)}}
