@@ -91,6 +91,11 @@ for(const side of [-1,1]){const leg=new THREE.Group();leg.position.set(side*.19,
 const rifle=new THREE.Group();rifle.position.set(.27,.48,-.27);torso.add(rifle);
 box(rifle,.15,.14,.9,black,0,0,-.18);box(rifle,.09,.08,.55,mats.metal,0,.02,-.84);box(rifle,.12,.28,.17,black,0,-.19,-.2);box(rifle,.23,.1,.28,black,0,0,.39);box(rifle,.08,.18,.1,mats.metal,0,.13,-.32);
 const muzzle=new THREE.PointLight(0xffb34f,0,7);muzzle.position.set(0,0,-1.18);rifle.add(muzzle);
+const pistol=new THREE.Group();pistol.position.set(.27,.46,-.23);pistol.visible=false;torso.add(pistol);
+box(pistol,.16,.17,.42,black,0,0,-.12);box(pistol,.1,.07,.22,mats.metal,0,.02,-.43);box(pistol,.12,.27,.15,black,0,-.16,.02);
+let activeWeapon='RIFLE';
+function switchWeapon(){activeWeapon=activeWeapon==='RIFLE'?'PISTOLA':'RIFLE';rifle.visible=activeWeapon==='RIFLE';pistol.visible=activeWeapon==='PISTOLA';setMsg('ARMA: '+activeWeapon);sound(340,.06,'triangle',.02)}
+
 const flash=new THREE.Mesh(new THREE.ConeGeometry(.15,.55,8),new THREE.MeshBasicMaterial({color:0xffc45d}));flash.rotation.x=-Math.PI/2;flash.position.set(0,0,-1.4);flash.visible=false;rifle.add(flash);
 let yaw=0,pitch=-.16,mx=0,my=0,run=false,aim=false,pose='stand',health=100,ammo=30,reserve=120,shooting=false,lastShot=0,reloading=false,gameStarted=false,score=0;
 const ray=new THREE.Raycaster(),tmp=new THREE.Vector3(),clock=new THREE.Clock();
@@ -117,7 +122,7 @@ function sound(freq=140,duration=.07,kind='sawtooth',volume=.035){try{audioCtx |
 function hitEffect(point,color=0xffd27a){const p=new THREE.Mesh(new THREE.SphereGeometry(.13,8,8),new THREE.MeshBasicMaterial({color}));p.position.copy(point);scene.add(p);effects.push({o:p,t:.22})}
 function shoot(){
  if(!gameStarted||reloading||ammo<=0)return;
- const now=performance.now();if(now-lastShot<115)return;lastShot=now;ammo--;
+ const now=performance.now();if(now-lastShot<(activeWeapon==='RIFLE'?115:220))return;lastShot=now;ammo--;
  flash.visible=true;muzzle.intensity=4;sound(115,.095,'sawtooth',.055);
  setTimeout(()=>{flash.visible=false;muzzle.intensity=0},65);
  rifle.position.z=-.215;setTimeout(()=>rifle.position.z=-.27,75);
@@ -126,7 +131,7 @@ function shoot(){
  let distance=80;
  if(hits.length&&hits[0].distance<115){
   distance=hits[0].distance;const hit=hits[0],bot=live.find(b=>{let node=hit.object;while(node&&node!==b.g)node=node.parent;return node===b.g});
-  if(bot){bot.hp-=34;hitEffect(hit.point,0xffb85c);setMsg('ACERTO CONFIRMADO');$('message').classList.add('hit');setTimeout(()=>$('message').classList.remove('hit'),180);if(bot.hp<=0){bot.alive=false;bot.g.visible=false;score++;setMsg('INIMIGO ELIMINADO')}}
+  if(bot){bot.hp-=activeWeapon==='RIFLE'?34:22;hitEffect(hit.point,0xffb85c);setMsg('ACERTO CONFIRMADO');$('message').classList.add('hit');setTimeout(()=>$('message').classList.remove('hit'),180);if(bot.hp<=0){bot.alive=false;bot.g.visible=false;score++;setMsg('INIMIGO ELIMINADO')}}
  }
  const end=origin.clone().addScaledVector(direction,Math.min(distance,80));
  const geo=new THREE.BufferGeometry().setFromPoints([origin,end]);
@@ -141,6 +146,7 @@ function start(){gameStarted=true;health=100;ammo=30;reserve=120;score=0;hero.po
 $('play').addEventListener('click',start);
 $('fire').addEventListener('pointerdown',e=>{e.preventDefault();shooting=true;shoot()});['pointerup','pointercancel','pointerleave'].forEach(t=>$('fire').addEventListener(t,()=>shooting=false));
 $('reload').addEventListener('pointerdown',e=>{e.preventDefault();reload()});
+$('swap').addEventListener('pointerdown',e=>{e.preventDefault();switchWeapon()});
 $('run').addEventListener('pointerdown',()=>run=true);['pointerup','pointercancel','pointerleave'].forEach(t=>$('run').addEventListener(t,()=>run=false));
 $('jump').addEventListener('pointerdown',()=>{if(gameStarted&&pose==='stand'){hero.position.y+=.7;setTimeout(()=>hero.position.y=0,420)}});
 $('crouch').addEventListener('pointerdown',()=>{pose=pose==='crouch'?'stand':'crouch';updateHud()});
