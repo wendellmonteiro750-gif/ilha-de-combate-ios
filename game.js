@@ -496,12 +496,23 @@ async function createFighter(isEnemy=false,index=0){
   _stanceApplied:[],
   _ikRestore:[],
   _stanceBlend:0,
+  gaitPhase:0,
   update(dt){
    for(const item of this._ikRestore)item.bone.quaternion.copy(item.quaternion);
    this._ikRestore.length=0;
    for(const item of this._stanceApplied)this.bones.get(item.name)?.quaternion.multiply(item.inverse);
    this._stanceApplied.length=0;
    mixer.update(dt);
+   const locomotion=THREE.MathUtils.clamp(this.locomotionBlend||0,0,1);
+   this.gaitPhase=(this.gaitPhase||0)+dt*(this.sprintBlend?13.5:8.5)*(.25+locomotion*.75);
+   const gait=Math.sin(this.gaitPhase),opposite=Math.sin(this.gaitPhase+Math.PI);
+   const crouchFactor=this.stanceMode==='crouch'?.42:this.stanceMode==='prone'?.08:1;
+   const gaitAmount=locomotion*crouchFactor*(this.sprintBlend?.34:.19);
+   for(const [name,angle] of [['mixamorigLeftUpLeg',gait*.24],['mixamorigRightUpLeg',opposite*.24],['mixamorigLeftLeg',Math.max(0,-gait)*.28],['mixamorigRightLeg',Math.max(0,-opposite)*.28]]){
+    const bone=this.bones.get(name);if(!bone||gaitAmount<.001)continue;
+    const delta=new THREE.Quaternion().setFromEuler(new THREE.Euler(angle*gaitAmount,0,0,'XYZ'));
+    bone.quaternion.multiply(delta);this._stanceApplied.push({name,inverse:delta.clone().invert()});
+   }
    const target=this.stanceMode==='crouch'||this.stanceMode==='prone'?1:0;
    this._stanceBlend=THREE.MathUtils.damp(this._stanceBlend,target,10,dt);
    const prone=this.stanceMode==='prone',crouch=this.stanceMode==='crouch';
@@ -733,6 +744,7 @@ function shoot(){
  if(ammo<=0){statusEl.textContent=reserveAmmo[weaponIndex]>0?'RECARREGUE':'SEM MUNIÇÃO';fireHeld=false;burstRemaining=0;return}
  ammo--;weaponAmmo[weaponIndex]=ammo;refreshAmmo();
  fireCooldown=currentWeapon().rate*(aiming?.86:1);
+ playerRig.weaponKick=Math.min(.24,(playerRig.weaponKick||0)+(currentWeapon().kind==='sniper'?.16:.095));
  const dir=new THREE.Vector3();camera.getWorldDirection(dir);
  const movement=THREE.MathUtils.clamp(playerVelocity.length()/7.1,0,1);
  const aimAccuracy=aiming?Math.max(.1,.22-scopeLevel*.028):1;
@@ -796,6 +808,8 @@ function animate(){
   playerRig.weaponAimBlend=aimBlend;
    playerRig.weaponFireBlend=THREE.MathUtils.damp(playerRig.weaponFireBlend||0,fireHeld?1:THREE.MathUtils.clamp(recoil*5,0,1),14,dt);
    playerRig.runBlend=canSprint?1:0;
+   playerRig.sprintBlend=canSprint?1:0;
+   playerRig.locomotionBlend=THREE.MathUtils.clamp(playerVelocity.length()/5.35,0,1);
    playerRig.weaponRunBlend=THREE.MathUtils.damp(playerRig.weaponRunBlend||0,canSprint?1:0,9,dt);
    if(playerRig.weaponPivot&&playerRig.weaponBasePosition&&playerRig.weaponBaseRotation){
     const moveAmount=THREE.MathUtils.clamp(playerVelocity.length()/5.35,0,1);
@@ -804,11 +818,13 @@ function animate(){
     const aim=aimBlend,run=playerRig.weaponRunBlend;
     // Transições de empunhadura: arma sobe ao mirar, baixa ao correr e acompanha o movimento.
     playerRig.weaponPivot.position.copy(playerRig.weaponBasePosition);
-    playerRig.weaponPivot.position.y+=.055*aim-.105*run+Math.sin(gait)*.006*moveAmount*(1-aim);
+    const reloadBlend=reloadTimer>0?THREE.MathUtils.clamp(reloadTimer/currentWeapon().reload,0,1):0;
+    playerRig.weaponPivot.position.y+=.055*aim-.105*run-.055*reloadBlend+Math.sin(gait)*(.012*moveAmount)*(1-aim);
     playerRig.weaponPivot.position.x-=.018*aim+THREE.MathUtils.clamp(strafe/5.35,-1,1)*.012*moveAmount;
     playerRig.weaponPivot.rotation.copy(playerRig.weaponBaseRotation);
-    playerRig.weaponPivot.rotation.x-=.13*aim+.34*run+(playerRig.weaponKick||0);
-    playerRig.weaponPivot.rotation.z-=THREE.MathUtils.clamp(strafe/5.35,-1,1)*.035*moveAmount;
+    playerRig.weaponPivot.rotation.x-=.19*aim+.42*run+.22*reloadBlend+(playerRig.weaponKick||0);
+    playerRig.weaponPivot.rotation.z-=THREE.MathUtils.clamp(strafe/5.35,-1,1)*.055*moveAmount;
+    playerRig.weaponPivot.rotation.y+=.08*reloadBlend;
     playerRig.weaponPivot.rotation.y+=Math.sin(gait*.5)*.012*moveAmount*(1-aim);
    }
   playerRig.jumpV=(playerRig.jumpV||0)-15*dt;p.position.y=Math.max(0,p.position.y+(playerRig.jumpV||0)*dt);if(p.position.y===0&&playerRig.jumpV<0)playerRig.jumpV=0;
