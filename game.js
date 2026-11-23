@@ -33,18 +33,40 @@ function buildHero(){
  rig.body=new THREE.Group();rig.body.position.y=1.03;hero.add(rig.body);
  rig.pelvis=new THREE.Group();rig.pelvis.position.set(0,0,0);rig.body.add(rig.pelvis);
  cube(rig.pelvis,.48,.3,.34,pants,0,-.08,0);
- cube(rig.body,.76,.88,.42,shirt,0,.48,0);cube(rig.body,.79,.56,.45,vest,0,.5,-.015);
+ // Tórax com volume anatômico, ombros e equipamento tático.
+ capsule(rig.body,.265,.49,shirt,0,.49,0).scale.set(1.42,1.18,.82);
+ cube(rig.body,.79,.48,.43,vest,0,.50,-.025);
+ for(const side of [-1,1]){
+  const shoulder=mesh(rig.body,new THREE.SphereGeometry(.17,12,10),vest,[side*.43,.77,0]);
+  shoulder.scale.set(1,.88,.95);
+  cube(rig.body,.16,.25,.12,mat(0x34443d),side*.22,.48,-.245);
+  cube(rig.body,.19,.14,.12,mat(0x59634e),side*.30,.26,-.255);
+ }
+ cube(rig.body,.69,.09,.44,mat(0x343b35),0,.13,-.015);
+ for(const side of [-1,1])cube(rig.body,.19,.18,.12,mat(0x59634e),side*.24,.20,-.255);
  rig.head=new THREE.Group();rig.head.position.set(0,1.08,0);rig.body.add(rig.head);
  capsule(rig.head,.13,.17,skin,0,-.02,0);
+ // Pescoço, orelhas e traços faciais voltados para a direção do cano (-Z).
+ capsule(rig.body,.105,.16,skin,0,.94,0);
+ for(const side of [-1,1]){
+  mesh(rig.head,new THREE.SphereGeometry(.055,10,8),skin,[side*.245,.02,-.005]);
+  mesh(rig.head,new THREE.SphereGeometry(.025,8,6),mat(0x30251f),[side*.095,.30,-.235]);
+  cube(rig.head,.09,.025,.025,hair,side*.095,.345,-.225);
+ }
+ const nose=mesh(rig.head,new THREE.SphereGeometry(.045,8,7),skin,[0,.22,-.255]);nose.scale.set(.7,.8,1.1);
+ mesh(rig.head,new THREE.SphereGeometry(.035,8,6),mat(0x754638),[0,.12,-.238]);
  const face=mesh(rig.head,new THREE.SphereGeometry(.27,14,12),skin,[0,.28,0]);face.scale.set(.86,1.14,.92);
  mesh(rig.head,new THREE.SphereGeometry(.278,14,9,0,Math.PI*2,0,Math.PI*.54),hair,[0,.35,0]);
  // Two-segment legs with knee pivots and feet.
  rig.legs=[];
  for(const side of [-1,1]){
   const upper=new THREE.Group();upper.position.set(side*.22,-.18,0);rig.body.add(upper);
-  capsule(upper,.15,.42,pants,0,-.27,0);
+  capsule(upper,.155,.43,pants,0,-.27,0);
+  mesh(upper,new THREE.SphereGeometry(.125,10,8),mat(0x394b5a),[0,-.49,-.005]);
   const knee=new THREE.Group();knee.position.set(0,-.52,0);upper.add(knee);capsule(knee,.115,.39,pants,0,-.23,.015);
-  cube(knee,.25,.15,.38,boots,0,-.48,-.08);
+  mesh(knee,new THREE.SphereGeometry(.125,10,8),mat(0x59634e),[0,-.34,-.105]);
+  cube(knee,.27,.16,.39,boots,0,-.48,-.08);
+  cube(knee,.25,.10,.18,mat(0x343a38),0,-.49,-.245);
   rig.legs.push({upper,knee,side});
  }
  // Articulated upper arms and forearms are separate joints; hands are posed onto the rifle grips.
@@ -54,8 +76,12 @@ function buildHero(){
   capsule(upper,.12,.29,shirt,0,-.265,0);
   const fore=new THREE.Group();rig.body.add(fore);
   capsule(fore,.105,.27,shirt,0,-.24,0);
+  mesh(fore,new THREE.SphereGeometry(.112,10,8),vest,[0,-.43,-.005]);
   const hand=new THREE.Group();fore.add(hand);
   mesh(hand,new THREE.SphereGeometry(.105,10,9),glove,[0,-.045,-.035]);
+  for(let finger=0;finger<3;finger++){
+   capsule(hand,.022,.055,glove,-.045+finger*.045,-.105,-.075);
+  }
   rig.arms.push({upper,fore,hand,side});
  }
  // Rifle points along the character's forward axis (-Z).
@@ -63,6 +89,9 @@ function buildHero(){
  cube(weapon,.16,.17,.85,gun,0,0,-.22);cube(weapon,.075,.075,.7,gun,0,.02,-.92);
  cube(weapon,.13,.13,.35,vest,0,0,.38);cube(weapon,.11,.3,.18,gun,0,-.2,-.24);
  cube(weapon,.08,.07,.16,gun,0,.12,-.25);
+ // Mira superior e carregador mais legíveis na silhueta.
+ cube(weapon,.055,.07,.12,mat(0x111719),0,.12,-.60);
+ cube(weapon,.12,.25,.13,gun,0,-.22,-.48);
 }
 function bind(){
  const stick=$('stick'),knob=$('knob');let sid=null,rect=null;
@@ -109,7 +138,8 @@ function update(dt){
  rig.body.position.y=THREE.MathUtils.lerp(rig.body.position.y,prone?.28:crouch?.72:1.03,1-Math.exp(-dt*9));
  rig.body.rotation.x=THREE.MathUtils.lerp(rig.body.rotation.x,prone?-Math.PI/2:aim?-.09:0,1-Math.exp(-dt*10));
  rig.body.rotation.z=THREE.MathUtils.lerp(rig.body.rotation.z,aim?-.035*strafe:-.10*strafe,1-Math.exp(-dt*8));
- rig.head.rotation.x=THREE.MathUtils.lerp(rig.head.rotation.x,prone?.08:aim?-.06:0,1-Math.exp(-dt*8));
+ rig.head.rotation.x=THREE.MathUtils.lerp(rig.head.rotation.x,prone?.08:aim?-.10: moving?-.025:Math.sin(walkT*1.7)*.012,1-Math.exp(-dt*8));
+ rig.head.rotation.y=THREE.MathUtils.lerp(rig.head.rotation.y,aim?0:strafe*.035,1-Math.exp(-dt*7));
  // Alternating stride, knee bend and planted-foot motion.
  rig.legs.forEach(({upper,knee,side})=>{
   const phase=side===1?gait:opposite;
@@ -143,11 +173,13 @@ function update(dt){
   fore.position.copy(elbow);
   fore.quaternion.setFromUnitVectors(downAxis,foreDir);
   hand.position.set(0,-foreLength,0);
-  hand.rotation.set(aim?-.08:0,side===1?0:.12,side===1?-.12:.08);
+  hand.rotation.set(aim?-.13:moving?Math.sin(walkT+(side===1?0:Math.PI))*.025:0,side===1?-.025:.10,side===1?-.10:.06);
  });
  // Small breathing/idle motion and recoil.
  rig.body.position.y+=moving?Math.abs(gait)*.018:Math.sin(walkT*1.7)*.012;
- weapon.position.y=aim?.53:.50;
+ weapon.position.y=aim?.55:moving?.51:.50;
+ // Inclina le spalle e accompagna il fucile durante la mira e il movimento.
+ rig.pelvis.rotation.y=THREE.MathUtils.lerp(rig.pelvis.rotation.y,aim?-.025*strafe:0,1-Math.exp(-dt*7));
  weapon.rotation.x=THREE.MathUtils.lerp(weapon.rotation.x,aim?-.035:0,1-Math.exp(-dt*12));
  if(shoot)fireShot();
  // Shoulder camera follows the player and tightens when aiming.
