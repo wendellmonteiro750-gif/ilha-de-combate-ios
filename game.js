@@ -40,13 +40,141 @@ function addPalm(x,z,s=1){
  for(let i=0;i<8;i++){const a=i*Math.PI/4,leaf=new THREE.Mesh(new THREE.ConeGeometry(.3*s,3.1*s,7),mat(i%2?0x28643c:0x397c46));leaf.position.set(Math.sin(a)*.95*s,4.05*s,Math.cos(a)*.95*s);leaf.rotation.z=Math.cos(a)*.95;leaf.rotation.x=-Math.sin(a)*.95;leaf.castShadow=true;g.add(leaf)}
  g.position.set(x,0,z);scene.add(g);
 }
-function addHouse(x,z,rotation=0){
- const g=new THREE.Group(),wall=mat(0xc8b28d),wood=mat(0x694b35),roof=mat(0x813d2d),glass= new THREE.MeshStandardMaterial({color:0x83b8bd,roughness:.25,metalness:.1});
- box(g,5.2,2.8,4.4,wall,0,1.4,0);box(g,1,.1,4.5,wood,0,2.78,0);
- const roofMesh=new THREE.Mesh(new THREE.ConeGeometry(4,1.65,4),roof);roofMesh.position.y=3.5;roofMesh.rotation.y=Math.PI/4;roofMesh.castShadow=true;g.add(roofMesh);
- box(g,.9,1.8,.16,wood,0,.9,2.24);
- for(const sx of [-1,1]){box(g,.86,.7,.12,wood,sx*1.55,1.8,2.25);box(g,.7,.55,.035,glass,sx*1.55,1.8,2.31)}
+function addHouse(x,z,rotation=0,style=0){
+ const g=new THREE.Group();
+ const palettes=[
+  {wall:0xc9b995,trim:0xeee0bd,roof:0x704638,wood:0x654832,glass:0x80b9c4},
+  {wall:0xb8c0b2,trim:0xe0dfce,roof:0x45515a,wood:0x594b3c,glass:0x83b9c5},
+  {wall:0xd0a779,trim:0xf0d1a5,roof:0x79513a,wood:0x63432e,glass:0x83b6bd},
+  {wall:0x9fada2,trim:0xd8d9c8,roof:0x554d43,wood:0x514638,glass:0x8ab8bd}
+ ];
+ const p=palettes[Math.abs(style)%palettes.length],wall=mat(p.wall,.94),trim=mat(p.trim,.88),wood=mat(p.wood,.9),roof=mat(p.roof,.78),glass=new THREE.MeshStandardMaterial({color:p.glass,roughness:.22,metalness:.12});
+ // Fundação, piso e paredes em módulos: a fachada deixa portas e janelas legíveis.
+ box(g,6.5,.22,5.7,mat(0x777467),0,.11,0);
+ box(g,6.05,.16,5.25,mat(0x9b8d72),0,.29,0);
+ box(g,6.05,2.65,.22,wall,0,1.62,-2.52);
+ box(g,.22,2.65,5.05,wall,-2.92,1.62,0);
+ box(g,.22,2.65,5.05,wall,2.92,1.62,0);
+ // Fachada frontal com abertura central para a porta.
+ box(g,1.8,2.65,.22,wall,-2.02,1.62,2.52);
+ box(g,1.8,2.65,.22,wall,2.02,1.62,2.52);
+ box(g,2.2,.72,.22,wall,0,2.59,2.52);
+ // Porta, moldura, maçaneta e degraus.
+ box(g,1.12,2.12,.12,wood,0,1.36,2.64);
+ box(g,.94,1.94,.035,mat(0x806044),0,1.36,2.72);
+ const knob=new THREE.Mesh(new THREE.SphereGeometry(.045,8,8),mat(0xd4b36a,.32,.7));knob.position.set(.36,1.35,2.77);g.add(knob);
+ box(g,1.55,.16,.48,trim,0,.12,2.92);box(g,1.85,.13,.58,mat(0x817c6c),0,.07,3.12);
+ // Janelas com peitoris, caixilhos e vidro.
+ for(const sx of [-1,1]){
+  box(g,1.05,.92,.08,wood,sx*2.02,1.78,2.66);
+  box(g,.87,.73,.035,glass,sx*2.02,1.8,2.71);
+  box(g,.07,.82,.045,trim,sx*2.02,1.8,2.74);
+  box(g,1.0,.07,.045,trim,sx*2.02,1.8,2.74);
+  box(g,1.22,.12,.22,wood,sx*2.02,1.28,2.75);
+  box(g,1.2,.12,.18,trim,sx*2.02,2.31,2.68);
+  // Persianas simples e reforços de fachada.
+  for(let k=0;k<3;k++)box(g,1.0,.035,.055,wood,sx*2.02,1.55+k*.18,2.75);
+ }
+ // Telhado de duas águas, beirais e cumeeira.
+ const roofA=new THREE.Mesh(new THREE.BoxGeometry(3.55,.18,6.15),roof);
+ roofA.position.set(-1.52,3.12,0);roofA.rotation.z=-.48;roofA.castShadow=true;roofA.receiveShadow=true;g.add(roofA);
+ const roofB=new THREE.Mesh(new THREE.BoxGeometry(3.55,.18,6.15),roof);
+ roofB.position.set(1.52,3.12,0);roofB.rotation.z=.48;roofB.castShadow=true;roofB.receiveShadow=true;g.add(roofB);
+ box(g,.2,.2,6.2,trim,0,3.94,0);
+ // Calha, chaminé, unidade de ventilação e detalhes externos.
+ box(g,.12,.12,5.9,mat(0x4a4b46,.55,.25),-3.05,2.78,0);
+ box(g,.12,.12,5.9,mat(0x4a4b46,.55,.25),3.05,2.78,0);
+ box(g,.62,.85,.62,mat(0x806f5b),-1.75,3.55,-1.2);
+ box(g,.72,.14,.72,mat(0x4a4a45),-1.75,4.02,-1.2);
+ box(g,.72,.42,.34,mat(0xc5c9c1,.65,.2),2.2,2.75,-1.75);
+ for(let k=0;k<4;k++)box(g,.55,.025,.36,mat(0x59615e,.6,.3),2.2,2.62+k*.07,-1.75);
+ // Pequena varanda lateral com pilares.
+ box(g,2.3,.16,1.35,wood,0,.22,3.55);
+ for(const sx of [-1,1])box(g,.12,2.25,.12,trim,sx*1.02,1.3,4.05);
+ box(g,2.2,.12,.12,wood,0,2.35,4.05);
+ // Detalhes de reboco e cantoneiras.
+ for(const sx of [-1,1])box(g,.12,2.7,.12,trim,sx*2.94,1.62,2.58);
  g.position.set(x,0,z);g.rotation.y=rotation;scene.add(g);
+}
+function addRoadNetwork(){
+ // Estradas de terra batida com acostamento, conectando os pequenos bairros.
+ const roadMat=mat(0x887c62,.98),edgeMat=mat(0xb5a17a,.98),trackMat=mat(0x655b49,1);
+ const paths=[
+  [[-112,58],[-78,38],[-42,18],[-8,2],[28,-10],[65,-28],[108,-58]],
+  [[-82,-88],[-55,-54],[-25,-25],[5,4],[35,42],[62,76],[94,102]],
+  [[-105,4],[-68,0],[-32,-4],[8,-3],[48,5],[88,18]]
+ ];
+ for(const pts of paths){
+  const curve=new THREE.CatmullRomCurve3(pts.map(([x,z])=>new THREE.Vector3(x,.045,z)));
+  const road=new THREE.Mesh(new THREE.TubeGeometry(curve,100,3.15,8,false),roadMat);
+  road.scale.y=.08;road.receiveShadow=true;scene.add(road);
+  const left=new THREE.Mesh(new THREE.TubeGeometry(curve,100,3.55,8,false),edgeMat);
+  left.scale.y=.025;left.position.y=-.025;left.receiveShadow=true;scene.add(left);
+  // Marcas de rodas sutis ao longo do caminho.
+  for(let t=.08;t<.96;t+=.075){
+   const pt=curve.getPoint(t),tan=curve.getTangent(t),angle=Math.atan2(tan.x,tan.z);
+   for(const side of [-1,1]){
+    const rut=new THREE.Mesh(new THREE.BoxGeometry(.16,.018,2.2),trackMat);
+    rut.position.set(pt.x+Math.cos(angle)*side*1.25,.075,pt.z-Math.sin(angle)*side*1.25);
+    rut.rotation.y=angle;scene.add(rut);
+   }
+  }
+ }
+}
+function addSettlementDetails(){
+ const concrete=mat(0x777d79,.95),metal=mat(0x3d494d,.52,.58),wood=mat(0x76563a,.9),paint=mat(0xd5c6a0,.88);
+ // Galpão industrial com portas largas e telhado metálico.
+ function warehouse(x,z,rot=0){
+  const g=new THREE.Group();
+  box(g,10,.24,8,concrete,0,.12,0);
+  box(g,10,3.8,.28,mat(0x777f7d),0,2,-3.85);
+  box(g,.28,3.8,7.7,mat(0x68716f),-4.85,2,0);
+  box(g,.28,3.8,7.7,mat(0x68716f),4.85,2,0);
+  box(g,2.1,3.8,.28,mat(0x777f7d),-3.95,2,3.85);
+  box(g,2.1,3.8,.28,mat(0x777f7d),3.95,2,3.85);
+  box(g,5.7,.18,.34,metal,0,3.92,3.9);
+  box(g,5.2,3.1,.12,metal,0,1.75,4.02);
+  for(let i=0;i<5;i++)box(g,.055,3,.08,paint,-2.05+i*1.02,1.75,4.1);
+  const roof=new THREE.Mesh(new THREE.BoxGeometry(10.5,.24,8.5),metal);roof.position.y=4.05;roof.castShadow=true;g.add(roof);
+  for(let i=0;i<9;i++)box(g,10.2,.035,.035,paint,0,4.19,-3.7+i*.9);
+  g.position.set(x,0,z);g.rotation.y=rot;scene.add(g);
+ }
+ warehouse(48,26,.35);warehouse(-64,-38,-.45);
+ // Pequeno posto de abastecimento e cobertura.
+ const station=new THREE.Group();
+ box(station,8,.22,6,concrete,0,.12,0);
+ const canopy=box(station,9,.22,6.5,mat(0xb6b7a9,.55,.25),0,4.1,0);
+ for(const x of [-3.7,3.7])for(const z of [-2.5,2.5])box(station,.2,4,.2,metal,x,2,z);
+ for(const x of [-2.2,0,2.2]){
+  const pump=new THREE.Group();
+  box(pump,.82,1.35,.65,mat(0xe0dfd2,.55,.18),0,.72,0);
+  box(pump,.66,.35,.08,mat(0x263b42,.35,.35),0,1.02,.36);
+  box(pump,.09,.8,.08,metal,.36,.9,-.15);
+  pump.position.set(x,.2,0);station.add(pump);
+ }
+ station.position.set(72,-6,0);scene.add(station);
+ // Cercas de madeira, postes e luminárias para marcar os assentamentos.
+ for(const [cx,cz] of [[-12,-12],[22,9],[68,35],[-76,-42],[42,54]]){
+  for(let i=0;i<8;i++){
+   const x=cx-8+i*2.3;
+   box(scene, .12,1.05,.12,wood,x,.52,cz-8);
+   if(i<7)box(scene,2.3,.09,.12,wood,x+1.1,.48,cz-8);
+   if(i<7)box(scene,2.3,.09,.12,wood,x+1.1,.82,cz-8);
+  }
+  for(const side of [-1,1]){
+   const pole=new THREE.Group();
+   box(pole,.12,3.4,.12,metal,0,1.7,0);box(pole,.8,.12,.12,metal,.32,3.25,0);
+   const lamp=new THREE.Mesh(new THREE.SphereGeometry(.16,10,8),new THREE.MeshBasicMaterial({color:0xffe1a1}));
+   lamp.position.set(.68,3.2,0);pole.add(lamp);
+   pole.position.set(cx+side*10,0,cz+7);scene.add(pole);
+  }
+ }
+ // Caixas, barris e paletes decorativos junto aos galpões.
+ for(const [x,z] of [[43,30],[51,31],[-60,-42],[-68,-34],[70,-2],[74,-2]]){
+  const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.34,.34,1.05,12),mat(0x596d68,.55,.5));
+  barrel.position.set(x,.53,z);barrel.castShadow=true;scene.add(barrel);
+  box(scene,.95,.72,.9,wood,x+1.5,.36,z+.6);
+ }
 }
 function addWorldDetail(){
  // Vegetação em instâncias: mais densidade visual com poucas chamadas de desenho.
@@ -80,12 +208,14 @@ function buildWorld(){
  waterMat.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\\nvarying vec3 vWaterWorld;').replace('#include <begin_vertex>','#include <begin_vertex>\\n vWaterWorld=(modelMatrix*vec4(transformed,1.0)).xyz; transformed.y += sin(vWaterWorld.x*.035+vWaterWorld.z*.022)*.018 + cos(vWaterWorld.z*.04-vWaterWorld.x*.018)*.012;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\\nvarying vec3 vWaterWorld;').replace('#include <color_fragment>','#include <color_fragment>\\n float ripple=0.5+0.5*sin(vWaterWorld.x*.22+vWaterWorld.z*.16); diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.32,.72,.78),ripple*.10);');};
  for(let i=0;i<46;i++){const a=i*2.399,r=22+(i%8)*3.3;addPalm(Math.cos(a)*r,Math.sin(a)*r,.75+(i%4)*.1)}
  for(let i=0;i<95;i++){const a=i*2.399,r=52+(i%13)*5.1;addPalm(Math.cos(a)*r,Math.sin(a)*r,.85+(i%5)*.12)}
- addHouse(-12,-12,.2);addHouse(14,-18,-.3);addHouse(22,9,.8);addHouse(-25,15,-.5);
- addHouse(68,35,.4);addHouse(-76,-42,-.7);addHouse(38,-88,.2);addHouse(-92,72,1.1);addHouse(102,5,-.4);
+ addHouse(-12,-12,.2,0);addHouse(14,-18,-.3,1);addHouse(22,9,.8,2);addHouse(-25,15,-.5,3);
+ addHouse(68,35,.4,2);addHouse(-76,-42,-.7,1);addHouse(38,-88,.2,0);addHouse(-92,72,1.1,3);addHouse(102,5,-.4,2);
  // Novas casas distribuídas pela ilha para criar mais áreas de exploração.
- addHouse(42,54,.65);addHouse(-48,68,-.25);addHouse(84,-58,1.35);addHouse(-58,-76,.45);
- addHouse(6,82,-.8);addHouse(-104,18,.3);addHouse(108,78,-.55);addHouse(-8,-96,1.05);
+ addHouse(42,54,.65,1);addHouse(-48,68,-.25,2);addHouse(84,-58,1.35,3);addHouse(-58,-76,.45,0);
+ addHouse(6,82,-.8,2);addHouse(-104,18,.3,1);addHouse(108,78,-.55,0);addHouse(-8,-96,1.05,3);
  for(let i=0;i<34;i++){const a=i*2.4,r=9+(i%6)*4;const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.55+(i%4)*.22,1),mat(i%2?0x58644d:0x7b8069));rock.position.set(Math.cos(a)*r,.3,Math.sin(a)*r);rock.scale.y=.65;rock.castShadow=true;rock.receiveShadow=true;scene.add(rock)}
+ addRoadNetwork();
+ addSettlementDetails();
  addWorldDetail();
  addCombatLandmarks();
  addSafeZone();addLootDrops();
