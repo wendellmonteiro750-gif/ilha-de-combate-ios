@@ -129,7 +129,7 @@ function applyCombatWeaponPose(crouch,prone,dt){
  const height=prone?.56:crouch?1.02:1.28;
  const forward=prone?.72:aim?.58:.48;
  weaponModel.position.set(.19,height,forward);
- weaponModel.rotation.y=Math.PI;
+ weaponModel.rotation.y=Math.PI-.62;
  if(performance.now()<firePoseUntil)weaponModel.rotation.x=THREE.MathUtils.damp(weaponModel.rotation.x,.055,22,dt);
  else weaponModel.rotation.x=THREE.MathUtils.damp(weaponModel.rotation.x,0,15,dt);
  characterVisual.updateMatrixWorld(true);
@@ -180,7 +180,7 @@ function createCombatWeapon(){
  // Low-poly but proportionate carbine: stock, receiver, handguard, barrel,
  // muzzle, magazine, pistol grip, top rail, sights and optic.
  weaponModel=new THREE.Group();weaponModel.name='Rifle_3D_Attachment';characterVisual.add(weaponModel);
- weaponModel.position.set(.19,1.28,.48);weaponModel.rotation.set(0,Math.PI,0);
+ weaponModel.position.set(.12,1.24,.42);weaponModel.rotation.set(0,Math.PI-.62,0);
  weaponModel.scale.setScalar(.86);weaponModel.visible=weaponEquipped;
  const receiver=mat(0x202722,.42),steel=mat(0x68716b,.3),polymer=mat(0x303832,.68);
  const dark=mat(0x111713,.52),glass=new THREE.MeshStandardMaterial({color:0x263b3b,metalness:.65,roughness:.18});
