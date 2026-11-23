@@ -348,7 +348,7 @@ function bind(){
   drag.x=e.clientX;drag.y=e.clientY;
   const sensitivity=aim?.0052:.0075;
   yaw-=dx*sensitivity;
-  pitch=THREE.MathUtils.clamp(pitch+dy*(aim?.0038:.0046),-.78,.48);
+  pitch=THREE.MathUtils.clamp(pitch-dy*(aim?.0038:.0046),-.78,.48);
  },{passive:false});
  const endCameraDrag=e=>{if(drag&&e.pointerId===drag.id)drag=null};
  window.addEventListener('pointerup',endCameraDrag);
