@@ -36,7 +36,7 @@ function switchWeapon(){if(reloadTimer>0)return;weaponIndex=(weaponIndex+1)%weap
 
 const playerVelocity=new THREE.Vector3(),cameraLook=new THREE.Vector3(),_shotOrigin=new THREE.Vector3();
 let safeRing=null,zoneElapsed=0,zoneDamageClock=0,lootItems=[];const worldObstacles=[];
-const keys={forward:0,side:0},bullets=[],enemies=[],effects=[];const bulletGeometry=new THREE.CylinderGeometry(.012,.012,.72,5),bulletMaterial=new THREE.MeshBasicMaterial({color:0xffdf91,transparent:true,opacity:.92});let dustClock=0,recoil=0,aiming=false,aimBlend=0,hitMarkerTimer=0,fireHeld=false,fireCooldown=0,reloadTimer=0,movementMode='stand';
+const keys={forward:0,side:0},bullets=[],enemies=[],effects=[];const bulletGeometry=new THREE.CylinderGeometry(.012,.012,.72,5),bulletMaterial=new THREE.MeshBasicMaterial({color:0xffdf91,transparent:true,opacity:.92});let dustClock=0,recoil=0,aiming=false,aimBlend=0,hitMarkerTimer=0,fireHeld=false,fireCooldown=0,reloadTimer=0,firePoseTimer=0,movementMode='stand';
 const BASE='https://raw.githubusercontent.com/NoLimitNexus/game-models/main/';
 const defaultSettings={general:100,red:100,two:100,four:100,awm:100,look:100,autoFire:true,invertY:false,minimap:true,hudScale:100,hudOpacity:100,quality:'low',shadows:false,vibration:false};
 let gameSettings={...defaultSettings};
@@ -517,7 +517,9 @@ async function createFighter(isEnemy=false,index=0){
    this._stanceBlend=THREE.MathUtils.damp(this._stanceBlend,target,10,dt);
    const prone=this.stanceMode==='prone',crouch=this.stanceMode==='crouch';
    const ready=this.isPlayer?1:.72,aim=THREE.MathUtils.clamp(this.weaponAimBlend||0,0,1),combatPose=Math.max(aim,THREE.MathUtils.clamp(this.weaponFireBlend||0,0,1));
-   const armReady=ready*(1-aim*.12),elbowReady=ready*(1-aim*.08);
+   const readyTarget=this.isPlayer?(this.runBlend? .16 : Math.max(.58,aim,THREE.MathUtils.clamp(this.weaponFireBlend||0,0,1))):.62;
+   this.weaponReadyBlend=THREE.MathUtils.damp(this.weaponReadyBlend??.58,readyTarget,12,dt);
+   const armReady=1,elbowReady=1;
    const pose=[
     ['mixamorigHips',prone ? .82 : crouch ? .42 : -(this.jumpBlend||0)*.16,0,0],
     ['mixamorigSpine',prone ? .48 : crouch ? -.10 : -.28*combatPose-(this.jumpBlend||0)*.08,0,0],
@@ -541,7 +543,7 @@ async function createFighter(isEnemy=false,index=0){
     const torsoPose=/mixamorig(Spine(1|2)?|Neck|Head)$/.test(name),poseAmount=torsoPose?combatPose:this._stanceBlend;
     const delta=new THREE.Quaternion().setFromEuler(new THREE.Euler(x*(torsoPose?1:this._stanceBlend),y*(torsoPose?1:this._stanceBlend),z*(torsoPose?1:this._stanceBlend),'XYZ'));
     const armPose=/mixamorig(Left|Right)(Arm|ForeArm|Hand)$/.test(name);
-    const poseBlend=armPose?1:poseAmount;
+    const poseBlend=armPose?this.weaponReadyBlend:poseAmount;
     if(poseBlend>0){
      const applied=new THREE.Quaternion().slerp(delta,poseBlend);
      bone.quaternion.multiply(applied);
@@ -747,7 +749,7 @@ function shoot(){
  if(ammo<=0){statusEl.textContent=reserveAmmo[weaponIndex]>0?'RECARREGUE':'SEM MUNIÇÃO';fireHeld=false;burstRemaining=0;return}
  ammo--;weaponAmmo[weaponIndex]=ammo;refreshAmmo();
  fireCooldown=currentWeapon().rate*(aiming?.86:1);
- playerRig.weaponKick=Math.min(.24,(playerRig.weaponKick||0)+(currentWeapon().kind==='sniper'?.16:.095));
+ firePoseTimer=.42;playerRig.weaponKick=Math.min(.28,(playerRig.weaponKick||0)+(weaponIndex===2?.17:weaponIndex===3?.14:weaponIndex===4?.045:.095));
  const dir=new THREE.Vector3();camera.getWorldDirection(dir);
  const movement=THREE.MathUtils.clamp(playerVelocity.length()/7.1,0,1);
  const aimAccuracy=aiming?Math.max(.1,.22-scopeLevel*.028):1;
@@ -791,7 +793,7 @@ function animate(){
  lookDeltaX=lookDeltaY=0;
  const forward=new THREE.Vector3(Math.sin(worldYaw),0,-Math.cos(worldYaw)),right=new THREE.Vector3(Math.cos(worldYaw),0,Math.sin(worldYaw));
  const move=forward.clone().multiplyScalar(keys.forward).add(right.clone().multiplyScalar(keys.side));if(move.lengthSq()>1)move.normalize();
- const canSprint=sprintHeld&&keys.forward>.22&&!aiming&&movementMode==='stand';
+ const canSprint=sprintHeld&&keys.forward>.22&&!aiming&&!fireHeld&&firePoseTimer<=0&&movementMode==='stand';
   const moveSpeed=movementMode==='prone'?.95:movementMode==='crouch'?1.85:aiming?2.65:canSprint?7.1:5.35;
   const targetVelocity=move.clone().multiplyScalar(moveSpeed);
   const acceleration=movementMode==='prone'?7:movementMode==='crouch'?8:canSprint?11:9;
@@ -806,12 +808,12 @@ function animate(){
    const airborne=p.position.y>.04,role=airborne?'jump':canSprint?'run':'walk';const gaitSpeed=airborne?1:canSprint?1.38:movementMode==='prone'?.48:movementMode==='crouch'?.62:aiming?.76:THREE.MathUtils.clamp(playerVelocity.length()/3.9,.78,1.28);play(playerRig,role,gaitSpeed);
   }else{
    const faceYaw=worldYaw+Math.PI,turn=THREE.MathUtils.euclideanModulo(faceYaw-p.rotation.y+Math.PI,Math.PI*2)-Math.PI;
-   p.rotation.y+=turn*Math.min(1,(aiming||fireHeld?12:5)*dt);play(playerRig,p.position.y>.04?'jump':'idle');
+   p.rotation.y+=turn*Math.min(1,(aiming||fireHeld||firePoseTimer>0?12:5)*dt);play(playerRig,p.position.y>.04?'jump':'idle');
   }
-  playerRig.weaponAimBlend=aimBlend;
-    playerRig.aimPitch=pitch*aimBlend;
+  playerRig.weaponAimBlend=THREE.MathUtils.damp(playerRig.weaponAimBlend||0,Math.max(aimBlend,firePoseTimer>0?.82:0),14,dt);
+    playerRig.aimPitch=pitch*playerRig.weaponAimBlend;
     playerRig.reloadBlend=reloadTimer>0?THREE.MathUtils.clamp(reloadTimer/currentWeapon().reload,0,1):0;
-   playerRig.weaponFireBlend=THREE.MathUtils.damp(playerRig.weaponFireBlend||0,fireHeld?1:THREE.MathUtils.clamp(recoil*5,0,1),14,dt);
+   playerRig.weaponFireBlend=THREE.MathUtils.damp(playerRig.weaponFireBlend||0,Math.max(fireHeld?1:0,firePoseTimer>0?.92:0,THREE.MathUtils.clamp(recoil*3.2,0,.48)),14,dt);
    playerRig.runBlend=canSprint?1:0;
    playerRig.sprintBlend=canSprint?1:0;
    playerRig.locomotionBlend=THREE.MathUtils.clamp(playerVelocity.length()/5.35,0,1);
@@ -820,7 +822,7 @@ function animate(){
     const moveAmount=THREE.MathUtils.clamp(playerVelocity.length()/5.35,0,1);
     const strafe=playerVelocity.dot(right);
     const gait=clock.elapsedTime*(canSprint?13:aiming?7:9);
-    const aim=aimBlend,run=playerRig.weaponRunBlend;
+    const aim=playerRig.weaponAimBlend,run=playerRig.weaponRunBlend;
     // Transições de empunhadura: arma sobe ao mirar, baixa ao correr e acompanha o movimento.
     playerRig.weaponPivot.position.copy(playerRig.weaponBasePosition);
     const reloadBlend=reloadTimer>0?THREE.MathUtils.clamp(reloadTimer/currentWeapon().reload,0,1):0;
@@ -840,7 +842,7 @@ function animate(){
   applyBodyMotion(playerRig,playerVelocity.dot(forward),playerVelocity.dot(right),dt);playerRig.update(dt);if(playerRig.weaponPivot)playerRig.weaponKick=Math.max(0,(playerRig.weaponKick||0)-dt*1.35);
  for(const e of enemies){if(!e.alive)continue;const ep=e.rig.holder,delta=p.position.clone().sub(ep.position);const dist=delta.length();if(dist>2.3){delta.normalize();ep.position.addScaledVector(delta,1.35*dt);ep.rotation.y=Math.atan2(delta.x,delta.z);if(e.anim!=='run'){e.anim='run';play(e.rig,'run')}}else{if(e.anim!=='idle'){e.anim='idle';play(e.rig,'idle')}e.attack+=dt;if(e.attack>1.5){e.attack=0;const raw=4,blocked=Math.min(armor,raw*.5);armor-=blocked;health=Math.max(0,health-(raw-blocked));refreshVitals();statusEl.textContent='SOB ATAQUE';setTimeout(()=>{if(health>0)statusEl.textContent='PRONTO'},450)}}applyBodyMotion(e.rig,dist>2.3?1.35:0,0,dt);e.rig.update(dt);if(e.rig.weaponPivot){e.rig.weaponKick=Math.max(0,(e.rig.weaponKick||0)-dt*.9);e.rig.weaponPivot.rotation.x=-.08-(e.rig.weaponKick||0)}}
  for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];b.mesh.position.addScaledVector(b.dir,72*dt);b.life-=dt;let hit=false;for(const e of enemies){if(e.alive){const base=e.rig.holder.position,head=base.clone().add(new THREE.Vector3(0,1.72,0)),torso=base.clone().add(new THREE.Vector3(0,.96,0));const headHit=b.mesh.position.distanceTo(head)<.42,bodyHit=b.mesh.position.distanceTo(torso)<.72;if(headHit||bodyHit){const falloff=Math.max(.52,1-(b.travelled/Math.max(1,b.range))*.42),dealt=b.damage*falloff*(headHit?2.15:1);e.hp-=dealt;hitMarkerTimer=.18;document.querySelector('#crosshair')?.classList.add('hit');burst(b.mesh.position,headHit?16:10,headHit?0xffe16b:0xffa34d,4.8);statusEl.textContent=headHit?'TIRO NA CABEÇA!':'ACERTO';hit=true;if(e.hp<=0){e.alive=false;burst(e.rig.holder.position.clone().add(new THREE.Vector3(0,1,0)),22,0xffd06b,5);scene.remove(e.rig.holder);e.rig.dispose();kills++;scoreEl.textContent=String(kills);document.querySelector('#remainingEnemies').textContent=String(enemies.filter(x=>x.alive).length)}break}}}b.travelled+=72*dt;if(hit||b.life<=0||b.travelled>=b.range){scene.remove(b.mesh);bullets.splice(i,1)}}
- fireCooldown=Math.max(0,fireCooldown-dt);
+ fireCooldown=Math.max(0,fireCooldown-dt);firePoseTimer=Math.max(0,firePoseTimer-dt);
  if(burstRemaining>0&&fireCooldown<=0&&reloadTimer<=0){shoot();burstRemaining--;}
  else if(gameSettings.autoFire&&fireMode==='AUTO'&&fireHeld&&fireCooldown<=0&&reloadTimer<=0&&currentWeapon().modes.includes('AUTO'))shoot();
  if(reloadTimer>0){reloadTimer-=dt;if(reloadTimer<=0){reloadTimer=0;const need=currentWeapon().mag-weaponAmmo[weaponIndex],loaded=Math.min(need,reserveAmmo[weaponIndex]);weaponAmmo[weaponIndex]+=loaded;reserveAmmo[weaponIndex]-=loaded;refreshAmmo();document.querySelector('#reload').classList.remove('active');statusEl.textContent='PRONTO'}}
