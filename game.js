@@ -498,21 +498,24 @@ function makeHumanoidModel(){
  ellipsoid(hips,'combat_belt',0,-.018,.006,.218,.055,.145,belt);
  box(hips,.1,.075,.025,metal,0,-.02,.145);
  const spine=bone('mixamorigSpine',hips,0,.12,0);
- capsule(spine,'abdomen',.28,.115,skin,0,-.01,0);
- ellipsoid(spine,'shirt_waist',0,-.015,0,.205,.15,.137,shirt);
+ // Tronco único com silhueta anatômica: cintura estreita, caixa torácica e ombros largos.
+ const torsoProfile=[
+  new THREE.Vector2(.135,-.17),new THREE.Vector2(.155,-.12),
+  new THREE.Vector2(.17,-.035),new THREE.Vector2(.158,.055),
+  new THREE.Vector2(.17,.16),new THREE.Vector2(.205,.29),
+  new THREE.Vector2(.225,.39),new THREE.Vector2(.205,.47),
+  new THREE.Vector2(.16,.50)
+ ];
+ const torsoGeometry=new THREE.LatheGeometry(torsoProfile,32);
+ torsoGeometry.scale(1,1,.68);
+ const torsoMesh=new THREE.Mesh(torsoGeometry,shirt);
+ torsoMesh.name='continuous_human_torso';torsoMesh.position.set(0,.02,0);
+ torsoMesh.castShadow=true;torsoMesh.receiveShadow=true;spine.add(torsoMesh);
  const spine1=bone('mixamorigSpine1',spine,0,.17,0);
- ellipsoid(spine1,'chest',0,.045,0,.235,.205,.135,skin);
- ellipsoid(spine1,'shirt_torso',0,.035,-.002,.238,.222,.145,shirt);
- ellipsoid(spine1,'left_pectoral',-.105,.075,.105,.125,.105,.052,shirt);
- ellipsoid(spine1,'right_pectoral',.105,.075,.105,.125,.105,.052,shirt);
- ellipsoid(spine,'oblique_left',-.145,-.015,.012,.065,.12,.105,shirtDark);
- ellipsoid(spine,'oblique_right',.145,-.015,.012,.065,.12,.105,shirtDark);
  const spine2=bone('mixamorigSpine2',spine1,0,.16,0);
- ellipsoid(spine2,'upper_chest',0,.015,0,.225,.14,.13,skin);
- ellipsoid(spine2,'shirt_upper',0,.015,0,.232,.15,.14,shirt);
- ellipsoid(spine2,'deltoid_left',-.205,.025,0,.105,.105,.105,shirt);
- ellipsoid(spine2,'deltoid_right',.205,.025,0,.105,.105,.105,shirt);
- ellipsoid(spine2,'trapezius',0,.105,-.035,.16,.09,.095,shirt);
+ ellipsoid(spine2,'deltoid_left',-.205,.025,0,.092,.095,.092,shirt);
+ ellipsoid(spine2,'deltoid_right',.205,.025,0,.092,.095,.092,shirt);
+ ellipsoid(spine2,'trapezius',0,.105,-.035,.145,.075,.085,shirt);
  // Gola, costuras e bolsos discretos.
  ellipsoid(spine2,'shirt_collar',0,.12,.005,.105,.055,.105,shirtDark);
  box(spine2,.018,.24,.012,shirtDark,0,-.005,.151);
