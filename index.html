@@ -6,6 +6,10 @@
 <meta name="theme-color" content="#14251f">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Battle Island">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icon.svg">
 <title>Battle Island — Treinamento</title>
 <link rel="stylesheet" href="./style.css?v=freefire-hud-48">
 </head>
@@ -36,9 +40,10 @@
  <button class="control fire" id="fire" aria-label="Atirar">✦</button>
  <div class="ff-extra"><span>✚</span><span>◉</span><span>▣</span></div>
 </div>
-<div id="lobby"><div class="lobby-card"><div class="eyebrow">OPERAÇÃO • ILHA TROPICAL</div><h1>BATTLE<br><em>ISLAND</em></h1><p>Prepare seu equipamento. Entre na zona de treinamento e domine o campo de combate.</p><button id="play">INICIAR MISSÃO&nbsp; →</button><small>CAMPO DE TREINAMENTO • MODO TERCEIRA PESSOA</small></div></div>
+<div id="lobby"><div class="lobby-card"><div class="eyebrow">OPERAÇÃO • ILHA TROPICAL</div><h1>BATTLE<br><em>ISLAND</em></h1><p>Prepare seu equipamento. Entre na zona de treinamento e domine o campo de combate.</p><button id="play">INICIAR MISSÃO&nbsp; →</button><small>CAMPO DE TREINAMENTO • MODO TERCEIRA PESSOA</small><p class="install-hint">NO IPHONE: SAFARI → COMPARTILHAR → ADICIONAR À TELA DE INÍCIO</p></div></div>
 <div id="error" hidden></div>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
-<script type="module" src="./game.js?v=procedural-prone-49"></script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js").catch(error=>console.warn("Cache offline indisponível:",error)));}</script>
+<script type="module" src="./game.js?v=ios-safari-50"></script>
 </body>
 </html>
