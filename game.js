@@ -19,19 +19,22 @@ const world=new THREE.Group();scene.add(world);
 const blockers=[],loot=[],bots=[],effects=[],buildings=[],cameraOccluders=[];
 function box(parent,w,h,d,material,x,y,z){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o}
 function building(x,z,w,d,h,color,type='house'){
- const g=new THREE.Group();g.position.set(x,0,z);world.add(g);cameraOccluders.push(g);
+ const g=new THREE.Group();g.position.set(x,0,z);world.add(g);
  const wall=mat(color),trim=mat(0xd0c4a5),roof=type==='warehouse'?mat(0x3c4848,.7,.25):mats.roof;
  // Camera collision must detect wall faces from inside buildings too.
  wall.side=THREE.DoubleSide;
  // Walkable shell: floor, four wall runs and a real doorway (front is +Z).
  box(g,w,.16,d,mat(0x8f826b),0,.08,0);
  const t=.34,doorW=Math.min(2.1,w*.24),sideW=(w-doorW)/2;
- box(g,sideW,h,d,wall,-(doorW+sideW)/2,h/2,d/2-t/2);
- box(g,sideW,h,d,wall,(doorW+sideW)/2,h/2,d/2-t/2);
- box(g,doorW,h*.22,t,wall,0,h*.89,d/2);
- box(g,w,h,d*.08,wall,0,h/2,-d/2+d*.04);
- box(g,t,h,d*.9,wall,-w/2+t/2,h/2,0);
- box(g,t,h,d*.9,wall,w/2-t/2,h/2,0);
+ const cameraWalls=[];
+ cameraWalls.push(box(g,sideW,h,d,wall,-(doorW+sideW)/2,h/2,d/2-t/2));
+ cameraWalls.push(box(g,sideW,h,d,wall,(doorW+sideW)/2,h/2,d/2-t/2));
+ cameraWalls.push(box(g,doorW,h*.22,t,wall,0,h*.89,d/2));
+ cameraWalls.push(box(g,w,h,d*.08,wall,0,h/2,-d/2+d*.04));
+ cameraWalls.push(box(g,t,h,d*.9,wall,-w/2+t/2,h/2,0));
+ cameraWalls.push(box(g,t,h,d*.9,wall,w/2-t/2,h/2,0));
+ // Só paredes entram na colisão da câmera; piso, telhado, janelas e móveis não provocam zoom.
+ cameraOccluders.push(...cameraWalls);
  // Roof is raised slightly, leaving a covered, navigable interior.
  const roofMesh=box(g,w+.5,.3,d+.5,roof,0,h+.16,0);
 buildings.push({minX:x-w/2,maxX:x+w/2,minZ:z-d/2,maxZ:z+d/2,roof:roofMesh});
@@ -105,12 +108,12 @@ function loadSoldierModel(){
   });
   // Evita tocar todos os clips importados simultaneamente: root motion/escala pode causar zoom aparente. O rig usa animação procedural.
   torso.visible=false;soldierLoadState='loaded';setMsg('PERSONAGEM 3D ORIGINAL CARREGADO');
- },undefined,error=>{soldierLoadState='fallback';console.warn('GLB não encontrado; mantendo personagem provisório.',error)});
+ },undefined,error=>{soldierLoadState='fallback';setMsg('PERSONAGEM PROVISÓRIO — MODELO 3D ORIGINAL AUSENTE');console.warn('GLB não encontrado; mantendo personagem provisório.',error)});
 }
 function animateSoldierRig(dt){
  if(!soldierModel)return;
  if(soldierMixer)soldierMixer.update(dt);
- const moving=Math.abs(mx)+Math.abs(my)>.08,phase=performance.now()*.008*(run?1.5:1),stride=moving?Math.sin(phase)*(run?.62:.34):0;
+ const moving=gameStarted&&Math.abs(mx)+Math.abs(my)>.08,phase=walkPhase,stride=moving?Math.sin(phase)*(run?.62:.34):0;
  const blend=poseBlend||0,idle=Math.sin(performance.now()*.0022),aimBlend=aim?1:0;
  reloadAnim=Math.max(0,reloadAnim-.72*dt);recoilAnim=Math.max(0,recoilAnim-5.5*dt);
  const reloadPose=Math.sin((1-reloadAnim)*Math.PI)*.8;
@@ -234,7 +237,7 @@ function cameraUpdate(dt){
  // Colisão apenas com paredes/edificações; nunca com vegetação ou objetos pequenos.
  const offset=cameraDesired.clone().sub(cameraLookTarget),length=offset.length(),direction=offset.normalize();
  cameraRay.set(cameraLookTarget,direction);cameraRay.near=.10;cameraRay.far=length;
- const obstacle=cameraRay.intersectObjects(cameraOccluders,true).find(hit=>hit.distance>.18);
+ const obstacle=cameraRay.intersectObjects(cameraOccluders,false).find(hit=>hit.distance>.18);
  if(obstacle){
   const safeDistance=Math.max(2.15,obstacle.distance-.32);
   cameraDesired.copy(cameraLookTarget).addScaledVector(direction,Math.min(length,safeDistance));
