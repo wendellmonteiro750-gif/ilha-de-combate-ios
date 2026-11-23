@@ -14,7 +14,7 @@ function init(){
  scene.add(new THREE.HemisphereLight(0xeaf5ff,0x46513a,1.85));
  const fill=new THREE.DirectionalLight(0xb9d9ff,.72);fill.position.set(18,14,-24);scene.add(fill);
  const sun=new THREE.DirectionalLight(0xffe5c2,3.0);sun.position.set(-20,32,16);sun.castShadow=true;sun.shadow.mapSize.set(mobileProfile?1536:3072,mobileProfile?1536:3072);sun.shadow.camera.near=1;sun.shadow.camera.far=90;sun.shadow.radius=mobileProfile?2:3;sun.shadow.camera.left=-45;sun.shadow.camera.right=45;sun.shadow.camera.top=45;sun.shadow.camera.bottom=-45;sun.shadow.bias=-0.00018;scene.add(sun);
- buildIsland();buildHero();loadRealHero();bind();addEventListener('resize',resize);clock=new THREE.Clock();animate();
+ buildIsland();buildHero();bind();addEventListener('resize',resize);clock=new THREE.Clock();animate();
 }
 function buildIsland(){
  const waterMat=new THREE.MeshStandardMaterial({color:0x237e9a,roughness:.24,metalness:.12});
