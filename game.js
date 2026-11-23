@@ -540,11 +540,13 @@ async function createFighter(isEnemy=false,index=0){
    ];
    for(const [name,x,y,z] of pose){
     const bone=this.bones.get(name);if(!bone)continue;
-    const torsoPose=/mixamorig(Spine(1|2)?|Neck|Head)$/.test(name),poseAmount=torsoPose?combatPose:this._stanceBlend;
-    const delta=new THREE.Quaternion().setFromEuler(new THREE.Euler(x*(torsoPose?1:this._stanceBlend),y*(torsoPose?1:this._stanceBlend),z*(torsoPose?1:this._stanceBlend),'XYZ'));
+    const torsoPose=/mixamorig(Spine(1|2)?|Neck|Head)$/.test(name);
     const armPose=/mixamorig(Left|Right)(Arm|ForeArm|Hand)$/.test(name);
-    const poseBlend=armPose?this.weaponReadyBlend:poseAmount;
+    const poseBlend=armPose?this.weaponReadyBlend:torsoPose?combatPose:this._stanceBlend;
     if(poseBlend>0){
+     // Blend the full authored angle. Previously stanceBlend was zero while standing,
+     // cancelling the weapon-ready arm pose even when weaponReadyBlend was active.
+     const delta=new THREE.Quaternion().setFromEuler(new THREE.Euler(x,y,z,'XYZ'));
      const applied=new THREE.Quaternion().slerp(delta,poseBlend);
      bone.quaternion.multiply(applied);
      this._stanceApplied.push({name,inverse:applied.clone().invert()});
