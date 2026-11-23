@@ -16,7 +16,7 @@ function init(){
  scene.add(new THREE.HemisphereLight(0xeaf5ff,0x46513a,1.85));
  const fill=new THREE.DirectionalLight(0xb9d9ff,.72);fill.position.set(18,14,-24);scene.add(fill);
  const sun=new THREE.DirectionalLight(0xffe5c2,3.0);sun.position.set(-20,32,16);sun.castShadow=true;sun.shadow.mapSize.set(mobileProfile?1536:3072,mobileProfile?1024:3072);sun.shadow.camera.near=1;sun.shadow.camera.far=90;sun.shadow.radius=mobileProfile?2:3;sun.shadow.camera.left=-45;sun.shadow.camera.right=45;sun.shadow.camera.top=45;sun.shadow.camera.bottom=-45;sun.shadow.bias=-0.00018;scene.add(sun);
- buildIsland();createPlayerAnchor();battleSystems=new BattleSystems(THREE,scene,hero,(message)=>{$('message').textContent=message});battleSystems.onHeal=amount=>{playerHealth=Math.min(100,playerHealth+amount);$('health').textContent='VIDA '+playerHealth;$('playerCounter').textContent=playerHealth};battleSystems.onZoneDamage=amount=>{playerHealth=Math.max(0,playerHealth-amount);$('health').textContent='VIDA '+Math.round(playerHealth);$('playerCounter').textContent=Math.round(playerHealth);if(playerHealth<=0)battleSystems.end(false)};battleSystems.getKills=()=>eliminations;battleSystems.onAmmo=amount=>{ammoReserve+=amount;stats()};battleSystems.onWeaponChange=w=>{ammo=w.mag;ammoReserve=Math.max(ammoReserve,w.reserve);stats()};bind();addEventListener('resize',resize);addEventListener('orientationchange',()=>setTimeout(resize,180));if(window.visualViewport)window.visualViewport.addEventListener('resize',resize);clock=new THREE.Clock();animate();
+ buildIsland();createPlayerAnchor();battleSystems=new BattleSystems(THREE,scene,hero,(message)=>{$('message').textContent=message},worldBlockers);battleSystems.onHeal=amount=>{playerHealth=Math.min(100,playerHealth+amount);$('health').textContent='VIDA '+playerHealth;$('playerCounter').textContent=playerHealth};battleSystems.onZoneDamage=amount=>{playerHealth=Math.max(0,playerHealth-amount);$('health').textContent='VIDA '+Math.round(playerHealth);$('playerCounter').textContent=Math.round(playerHealth);if(playerHealth<=0)battleSystems.end(false)};battleSystems.getKills=()=>eliminations;battleSystems.onAmmo=amount=>{ammoReserve+=amount;stats()};battleSystems.onWeaponChange=w=>{ammo=w.mag;ammoReserve=Math.max(ammoReserve,w.reserve);stats()};bind();addEventListener('resize',resize);addEventListener('orientationchange',()=>setTimeout(resize,180));if(window.visualViewport)window.visualViewport.addEventListener('resize',resize);clock=new THREE.Clock();animate();
 }
 function buildIsland(){
  const waterMat=new THREE.MeshStandardMaterial({color:0x237e9a,roughness:.24,metalness:.12});
@@ -677,7 +677,7 @@ function update(dt){
  velocityZ=THREE.MathUtils.damp(velocityZ,targetVZ,accel,dt);
  const nextX=hero.position.x+velocityX*dt,nextZ=hero.position.z+velocityZ*dt;
  let blocked=false;
- for(const b of worldBlockers){const dx=nextX-b.x,dz=nextZ-b.z,min=b.r+.42;if(dx*dx+dz*dz<min*min){blocked=true;break}}
+ for(const b of worldBlockers){const dx=nextX-b.x,dz=nextZ-b.z;if(b.w!==undefined&&b.d!==undefined){if(Math.abs(dx)<b.w/2+.42&&Math.abs(dz)<b.d/2+.42){blocked=true;break}}else{const min=b.r+.42;if(dx*dx+dz*dz<min*min){blocked=true;break}}}
  if(!blocked){hero.position.x=nextX;hero.position.z=nextZ}else{velocityX*=.18;velocityZ*=.18}
  hero.position.x=THREE.MathUtils.clamp(hero.position.x,-100,100);
  hero.position.z=THREE.MathUtils.clamp(hero.position.z,-100,100);
