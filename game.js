@@ -525,7 +525,10 @@ async function createFighter(isEnemy=false,index=0){
    const pose=[
     ['mixamorigHips',prone ? .82 : crouch ? .42 : -(this.jumpBlend||0)*.16,0,0],
     ['mixamorigSpine',prone ? .48 : crouch ? -.10 : -.28*combatPose-(this.jumpBlend||0)*.08,0,0],
-    ['mixamorigSpine1',prone ? .22 : crouch ? -.08 : -.20*combatPose-(this.jumpBlend||0)*.04,0,0],\n     ['mixamorigSpine2',prone ? .10 : crouch ? -.04 : -.12*combatPose,0,0],\n     ['mixamorigNeck',0,0,0],\n     ['mixamorigHead',-(this.aimPitch||0)*.32,0,0],
+    ['mixamorigSpine1',prone ? .22 : crouch ? -.08 : -.20*combatPose-(this.jumpBlend||0)*.04,0,0],
+     ['mixamorigSpine2',prone ? .10 : crouch ? -.04 : -.12*combatPose,0,0],
+     ['mixamorigNeck',0,0,0],
+     ['mixamorigHead',-(this.aimPitch||0)*.32,0,0],
     ['mixamorigLeftUpLeg',prone ? -.42 : crouch ? -.52 : -(this.jumpBlend||0)*.34,0,0],
     ['mixamorigRightUpLeg',prone ? -.42 : crouch ? -.52 : -(this.jumpBlend||0)*.28,0,0],
     ['mixamorigLeftLeg',prone ? .18 : crouch ? 1.02 : (this.jumpBlend||0)*.62,0,0],
@@ -809,7 +812,9 @@ function animate(){
    const faceYaw=worldYaw+Math.PI,turn=THREE.MathUtils.euclideanModulo(faceYaw-p.rotation.y+Math.PI,Math.PI*2)-Math.PI;
    p.rotation.y+=turn*Math.min(1,(aiming||fireHeld?12:5)*dt);play(playerRig,p.position.y>.04?'jump':'idle');
   }
-  playerRig.weaponAimBlend=aimBlend;\n    playerRig.aimPitch=pitch*aimBlend;\n    playerRig.reloadBlend=reloadTimer>0?THREE.MathUtils.clamp(reloadTimer/currentWeapon().reload,0,1):0;
+  playerRig.weaponAimBlend=aimBlend;
+    playerRig.aimPitch=pitch*aimBlend;
+    playerRig.reloadBlend=reloadTimer>0?THREE.MathUtils.clamp(reloadTimer/currentWeapon().reload,0,1):0;
    playerRig.weaponFireBlend=THREE.MathUtils.damp(playerRig.weaponFireBlend||0,fireHeld?1:THREE.MathUtils.clamp(recoil*5,0,1),14,dt);
    playerRig.runBlend=canSprint?1:0;
    playerRig.sprintBlend=canSprint?1:0;
