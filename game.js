@@ -498,10 +498,14 @@ function update(dt){
  // ou para trás sem perder a direção da mira.
  // Ao mirar, o corpo inteiro acompanha a direção horizontal da câmera,
  // mesmo parado. Sem mirar, mantém a rotação de movimento 360° já aprovada.
- if(aim||inputMagnitude>.08){
-  const facing=aim?yaw:Math.atan2(inputDir.x,inputDir.z)-Math.PI;
+ // Com a arma equipada, o corpo inteiro acompanha a direção horizontal
+ // da mira, mesmo quando o jogador apenas arrasta a câmera e está parado.
+ // Sem arma e sem mirar, preserva a orientação 360° baseada no movimento.
+ if(aim||weaponEquipped||inputMagnitude>.08){
+  const followsAim=aim||weaponEquipped;
+  const facing=followsAim?yaw:Math.atan2(inputDir.x,inputDir.z)-Math.PI;
   const turn=THREE.MathUtils.euclideanModulo(facing-hero.rotation.y+Math.PI,Math.PI*2)-Math.PI;
-  hero.rotation.y+=turn*(1-Math.exp(-dt*(aim?15:12)));
+  hero.rotation.y+=turn*(1-Math.exp(-dt*(followsAim?15:12)));
  }
  const targetVX=inputDir.x*speed*inputMagnitude;
  const targetVZ=inputDir.z*speed*inputMagnitude;
