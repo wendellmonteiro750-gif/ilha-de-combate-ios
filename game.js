@@ -133,21 +133,54 @@ function animateSoldierRig(dt){
  apply('Bip01 R Calf',Math.max(0,stride)*.72);
 }
 loadSoldierModel();
-const skin=mat(0x9a6c50),uniform=mat(0x34483c),pants=mat(0x303b36),armor=mat(0x4b5a4c),black=mat(0x1c2524,.42,.25);
-function ell(p,x,y,z,sx,sy,sz,m){const o=new THREE.Mesh(new THREE.SphereGeometry(1,16,12),m);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.castShadow=true;p.add(o);return o}
-// Corpo articulado procedural, com peças separadas para transições de animação.
-ell(torso,0,.42,0,.36,.42,.23,uniform);ell(torso,0,.42,-.05,.38,.32,.24,armor);
-ell(torso,0,.88,0,.2,.25,.19,skin);ell(torso,0,1.15,0,.22,.27,.2,skin);
-ell(torso,0,1.34,0,.25,.17,.23,mat(0x26372f));box(torso,.34,.055,.12,black,0,1.31,-.19);
-box(torso,.43,.55,.22,mat(0x293c32),0,.47,.27);
-for(const side of [-1,1]){box(torso,.13,.22,.12,mat(0x6e7950),side*.31,.37,-.02);box(torso,.12,.16,.1,black,side*.2,.05,-.19)}
+const skin=mat(0x98694f),uniform=mat(0x35483b),pants=mat(0x303b35),armor=mat(0x4b5948),black=mat(0x1c2424,.42,.25),cloth=mat(0x66704d),pouch=mat(0x29372d),bootMat=mat(0x202724),helmetMat=mat(0x344437),metalDetail=mat(0x8b927e,.45,.45);
+function ell(p,x,y,z,sx,sy,sz,m){const o=new THREE.Mesh(new THREE.SphereGeometry(1,16,12),m);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.castShadow=true;o.receiveShadow=true;p.add(o);return o}
+function capsulePart(p,a,b,r,m){const v1=new THREE.Vector3(...a),v2=new THREE.Vector3(...b),d=v2.clone().sub(v1),o=new THREE.Mesh(new THREE.CapsuleGeometry(r,Math.max(.01,d.length()-r*2),4,8),m);o.position.copy(v1.add(v2).multiplyScalar(.5));o.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());o.castShadow=true;p.add(o);return o}
+// Soldado tático provisório: uniforme camuflado, colete modular, capacete, mochila e equipamento.
+ell(torso,0,.42,0,.36,.42,.23,uniform);
+ell(torso,0,.43,-.035,.385,.34,.245,armor);
+ell(torso,0,.88,0,.105,.14,.12,skin);
+ell(torso,0,1.13,0,.205,.245,.19,skin);
+ell(torso,0,1.34,0,.255,.17,.23,helmetMat);
+ell(torso,0,1.43,-.015,.235,.12,.22,helmetMat);
+ell(torso,0,1.30,-.185,.205,.055,.035,black);
+box(torso,.34,.045,.075,metalDetail,0,1.31,-.218);
+ell(torso,-.09,1.15,-.176,.035,.025,.018,black);ell(torso,.09,1.15,-.176,.035,.025,.018,black);
+// Colete frontal, gola, placas e fitas
+box(torso,.43,.48,.105,armor,0,.47,-.205);
+box(torso,.28,.27,.035,cloth,0,.52,-.266);
+box(torso,.08,.42,.025,black,0,.47,-.291);
+for(const side of [-1,1]){
+ box(torso,.14,.23,.105,cloth,side*.31,.37,-.015);
+ box(torso,.13,.16,.12,pouch,side*.2,.06,-.22);
+ box(torso,.13,.13,.11,pouch,side*.34,.23,-.12);
+ box(torso,.12,.13,.11,pouch,side*.34,.43,-.12);
+ box(torso,.045,.36,.035,black,side*.17,.48,-.278);
+ ell(torso,side*.39,.69,-.01,.14,.15,.14,armor);
+}
+// Mochila compacta e alças
+box(torso,.32,.48,.19,pouch,0,.48,.235);
+box(torso,.28,.12,.2,cloth,0,.72,.235);
+for(const side of [-1,1])box(torso,.055,.48,.045,cloth,side*.16,.49,.13);
+// Cinto, fivela e coldre
+box(torso,.48,.09,.29,black,0,.08,0);box(torso,.12,.09,.035,metalDetail,0,.08,-.16);
+box(torso,.14,.27,.14,pouch,.34,.02,.08);
 const limbs=[];
 for(const side of [-1,1]){
  const leg=new THREE.Group();leg.position.set(side*.19,-.12,0);torso.add(leg);
- ell(leg,0,-.28,0,.14,.32,.15,pants);ell(leg,0,-.61,-.04,.11,.28,.12,pants);
- ell(leg,0,-.42,-.11,.125,.13,.06,armor);box(leg,.23,.14,.36,black,0,-.84,-.1);
+ ell(leg,0,-.28,0,.145,.32,.15,pants);
+ ell(leg,0,-.61,-.04,.115,.28,.12,pants);
+ ell(leg,0,-.42,-.11,.13,.13,.065,armor);
+ box(leg,.24,.15,.37,bootMat,0,-.84,-.105);
+ box(leg,.22,.055,.34,black,0,-.91,-.1);
+ box(leg,.25,.16,.055,cloth,0,-.43,-.14);
+ box(leg,.13,.12,.035,pouch,0,-.22,-.13);
  const arm=new THREE.Group();arm.position.set(side*.39,.72,0);torso.add(arm);
- ell(arm,0,-.2,0,.12,.26,.12,uniform);ell(arm,0,-.48,-.05,.09,.23,.1,uniform);ell(arm,0,-.55,-.07,.095,.09,.09,black);
+ ell(arm,0,-.2,0,.13,.26,.13,uniform);
+ ell(arm,0,-.48,-.05,.10,.23,.105,uniform);
+ ell(arm,0,-.55,-.07,.10,.09,.095,black);
+ ell(arm,0,-.29,-.01,.14,.12,.14,armor);
+ box(arm,.12,.08,.12,cloth,0,-.18,-.105);
  limbs.push({g:leg,side,leg:true},{g:arm,side,leg:false});
 }
 const rifle=new THREE.Group();rifle.position.set(.27,.48,-.27);torso.add(rifle);
