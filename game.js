@@ -603,7 +603,7 @@ async function createFighter(isEnemy=false,index=0){
  addRifle(rig);scene.add(holder);await rig.playRole('idle');return rig;
 }
 function getHouseAtPosition(position){
- for(const o of worldObstacles){if(o.type!=='house')continue;const dx=position.x-o.x,dz=position.z-o.z,c=Math.cos(o.rotation),sn=Math.sin(o.rotation),lx=dx*c-dz*sn,lz=dx*sn+dz*c;if(Math.abs(lx)<2.48&&Math.abs(lz)<2.12)return {obstacle:o,lx,lz,c,sn};}
+ for(const o of worldObstacles){if(o.type!=='house')continue;const dx=position.x-o.x,dz=position.z-o.z,c=Math.cos(o.rotation),sn=Math.sin(o.rotation),lx=dx*c-dz*sn,lz=dx*sn+dz*c;if(Math.abs(lx)<3.05&&Math.abs(lz)<2.62)return {obstacle:o,lx,lz,c,sn};}
  return null;
 }
 function resolvePlayerObstacles(){
@@ -848,7 +848,7 @@ function animate(){
    // Dentro de construções, aproxima e limita a câmera ao espaço interno para não atravessar paredes/telhado.
    const dx=desiredCamera.x-interior.obstacle.x,dz=desiredCamera.z-interior.obstacle.z;
    let lx=dx*interior.c-dz*interior.sn,lz=dx*interior.sn+dz*interior.c;
-   lx=THREE.MathUtils.clamp(lx,-2.48,2.48);lz=THREE.MathUtils.clamp(lz,-2.12,2.12);
+   lx=THREE.MathUtils.clamp(lx,-3.0,3.0);lz=THREE.MathUtils.clamp(lz,-2.55,2.55);
    desiredCamera.set(interior.obstacle.x+lx*interior.c+lz*interior.sn,THREE.MathUtils.clamp(desiredCamera.y,.42,2.42),interior.obstacle.z-lx*interior.sn+lz*interior.c);
   }
   const smooth=1-Math.exp(-15*dt);camera.position.lerp(desiredCamera,smooth);cameraLook.lerp(lookTarget,smooth);camera.lookAt(cameraLook);
