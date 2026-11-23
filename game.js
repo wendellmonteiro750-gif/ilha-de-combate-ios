@@ -89,7 +89,7 @@ function house(x,z,color){
 const CHARACTER_URL='https://cdn.jsdelivr.net/gh/Seyamalam/blood-league-kickoff@main/public/assets/vendor/quaternius/night-striker.glb';
 const ANIMATION_URL='https://cdn.jsdelivr.net/gh/Seyamalam/blood-league-kickoff@main/public/assets/vendor/quaternius/universal-animation-library.glb';
 let characterVisual=null,characterMixer=null,characterActions=new Map(),activeCharacterClip='',characterReady=false;
-let weaponEquipped=true,weaponModel=null,reloadPoseUntil=0,firePoseUntil=0;
+let weaponEquipped=true,weaponModel=null,weaponMagazine=null,reloadPoseUntil=0,firePoseUntil=0,weaponBasePosition=new THREE.Vector3(),weaponBaseRotation=new THREE.Euler(),weaponRecoil=0;
 let combatBones={upperarm_l:null,lowerarm_l:null,hand_l:null,upperarm_r:null,lowerarm_r:null,hand_r:null};
 const combatV1=new THREE.Vector3(),combatV2=new THREE.Vector3(),combatQ1=new THREE.Quaternion(),combatQ2=new THREE.Quaternion();
 function getCombatBone(name){let found=null;characterVisual?.traverse(o=>{if(!found&&o.isBone&&o.name===name)found=o});return found}
@@ -121,8 +121,9 @@ function exactClip(...candidates){
 }
 function solveArmIK(upper,lower,hand,targetWorld){
  if(!upper||!lower||!hand)return;
- // CCD moves the wrist to the grip without stretching the arm.
- for(let iteration=0;iteration<12;iteration++){
+ // CCD IK aproxima a mão ao apoio sem esticar os ossos e preserva
+ // a direção natural do cotovelo da animação-base.
+ for(let iteration=0;iteration<16;iteration++){
   for(const joint of [lower,upper]){
    characterVisual.updateMatrixWorld(true);
    const jointPos=joint.getWorldPosition(new THREE.Vector3());
@@ -132,34 +133,10 @@ function solveArmIK(upper,lower,hand,targetWorld){
    if(combatV1.lengthSq()<1e-8||combatV2.lengthSq()<1e-8)continue;
    combatV1.normalize();combatV2.normalize();
    const delta=combatQ1.setFromUnitVectors(combatV1,combatV2);
-   const worldQ=joint.getWorldQuaternion(combatQ2);
-   const desiredWorld=delta.multiply(worldQ);
+   const desiredWorld=delta.multiply(joint.getWorldQuaternion(combatQ2));
    const parentQ=joint.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
    joint.quaternion.copy(parentQ.multiply(desiredWorld));
   }
- }
- // Pole-vector correction keeps the elbow bent outward instead of twisting
- // around the arm axis. This is the missing part of a natural two-hand hold.
- characterVisual.updateMatrixWorld(true);
- const shoulder=upper.getWorldPosition(new THREE.Vector3());
- const elbow=lower.getWorldPosition(new THREE.Vector3());
- const wrist=hand.getWorldPosition(new THREE.Vector3());
- const axis=wrist.sub(shoulder).normalize();
- const currentElbow=elbow.sub(shoulder);
- currentElbow.addScaledVector(axis,-currentElbow.dot(axis));
- const shoulderLocal=characterVisual.worldToLocal(shoulder.clone());
- const side=shoulderLocal.x>=0?1:-1;
- const polePoint=shoulderLocal.clone().add(new THREE.Vector3(side*.9,-.35,0));
- const poleWorld=characterVisual.localToWorld(polePoint).sub(shoulder);
- poleWorld.addScaledVector(axis,-poleWorld.dot(axis));
- if(currentElbow.lengthSq()>1e-7&&poleWorld.lengthSq()>1e-7){
-  currentElbow.normalize();poleWorld.normalize();
-  const angle=Math.atan2(new THREE.Vector3().crossVectors(currentElbow,poleWorld).dot(axis),
-   THREE.MathUtils.clamp(currentElbow.dot(poleWorld),-1,1));
-  const twistWorld=new THREE.Quaternion().setFromAxisAngle(axis,angle);
-  const parentWorld=upper.parent.getWorldQuaternion(new THREE.Quaternion());
-  const desiredWorld=twistWorld.multiply(upper.getWorldQuaternion(new THREE.Quaternion()));
-  upper.quaternion.copy(parentWorld.invert().multiply(desiredWorld));
  }
  characterVisual.updateMatrixWorld(true);
 }
@@ -169,25 +146,33 @@ function setBoneWorldRotation(bone,worldRotation){
  bone.quaternion.copy(parentRotation.multiply(worldRotation));
 }
 function applyCombatWeaponPose(crouch=false,prone=false,dt=0){
- // Rifle ancorado no espaço do tronco; as duas mãos são resolvidas até
- // pontos de contato reais no punho e no guarda-mão. Assim a arma não
- // fica solta à frente do corpo nem depende de uma pose militar fixa.
  if(!weaponEquipped||!weaponModel||!characterVisual)return;
- const rightUpper=combatBones.upperarm_r,rightLower=combatBones.lowerarm_r,rightHand=combatBones.hand_r;
- const leftUpper=combatBones.upperarm_l,leftLower=combatBones.lowerarm_l,leftHand=combatBones.hand_l;
- if(!rightUpper||!rightLower||!rightHand||!leftUpper||!leftLower||!leftHand)return;
+ const upper=combatBones.upperarm_l,lower=combatBones.lowerarm_l,hand=combatBones.hand_l;
+ if(!upper||!lower||!hand)return;
  characterVisual.updateMatrixWorld(true);
  weaponModel.updateMatrixWorld(true);
- // O ponto do punho fica dentro da empunhadura; a mão esquerda apoia
- // a parte dianteira do guarda-mão. Os pontos acompanham a arma escalada.
- const rightGrip=weaponModel.localToWorld(new THREE.Vector3(0,-.105,.075));
- const leftGrip=weaponModel.localToWorld(new THREE.Vector3(0,.005,-.53));
- // Recalcula depois do mixer em cada frame: a animação continua controlando
- // pernas e tronco, enquanto os braços terminam com as mãos na arma.
- solveArmIK(rightUpper,rightLower,rightHand,rightGrip);
- solveArmIK(leftUpper,leftLower,leftHand,leftGrip);
+ const now=performance.now();
+ let supportPoint=new THREE.Vector3(0,.005,-.53);
+ if(reloading&&reloadPoseUntil>0){
+  const progress=THREE.MathUtils.clamp(1-(reloadPoseUntil-now)/1450,0,1);
+  const magPoint=new THREE.Vector3(0,-.18,-.16);
+  if(progress<.34)supportPoint.lerpVectors(new THREE.Vector3(0,.005,-.53),magPoint,progress/.34);
+  else if(progress<.68)supportPoint.copy(magPoint);
+  else supportPoint.lerpVectors(magPoint,new THREE.Vector3(0,.005,-.53),(progress-.68)/.32);
+ }
+ solveArmIK(upper,lower,hand,weaponModel.localToWorld(supportPoint));
+ const recoilTarget=now<firePoseUntil?.045:0;
+ weaponRecoil=THREE.MathUtils.damp(weaponRecoil,recoilTarget,now<firePoseUntil?28:12,dt);
+ weaponModel.position.copy(weaponBasePosition);
+ weaponModel.position.y-=weaponRecoil;
+ weaponModel.rotation.copy(weaponBaseRotation);
+ weaponModel.rotation.x+=weaponRecoil*.42;
+ if(weaponMagazine){
+  const p=reloading?THREE.MathUtils.clamp(1-Math.abs((now-(reloadPoseUntil-950))/380),0,1):0;
+  weaponMagazine.position.y=-.18-.13*p;
+  weaponMagazine.rotation.x=.12*p;
+ }
 }
-
 function createPlayerAnchor(){
  hero=new THREE.Group();hero.position.set(0,0,0);scene.add(hero);
  const loader=new GLTFLoader();
@@ -244,7 +229,7 @@ function createCombatWeapon(){
  cube(weaponModel,.105,.025,.16,dark,0,.063,.205);
  // Pistol grip and magazine
  cube(weaponModel,.072,.19,.09,polymer,0,-.145,.075);
- cube(weaponModel,.078,.205,.12,dark,0,-.18,-.16);
+ weaponMagazine=cube(weaponModel,.078,.205,.12,dark,0,-.18,-.16);
  cube(weaponModel,.082,.025,.125,steel,0,-.29,-.16);
  // Top Picatinny rail, rear/front sights and compact optic
  cube(weaponModel,.055,.025,.40,dark,0,.105,-.25);
@@ -273,6 +258,18 @@ function createCombatWeapon(){
  const proportionalScale=(bodyHeight>0&&rifleLength>0)?targetLength/rifleLength:.56;
  const finalScale=THREE.MathUtils.clamp(proportionalScale,.42,.62);
  weaponModel.scale.setScalar(finalScale);
+ // Alinha o ponto de empunhadura à mão dominante e faz o rifle acompanhá-la.
+ const dominantHand=combatBones.hand_r;
+ if(dominantHand){
+  characterVisual.updateMatrixWorld(true);
+  const handLocal=characterVisual.worldToLocal(dominantHand.getWorldPosition(new THREE.Vector3()));
+  const gripOffset=new THREE.Vector3(0,-.105,.075).multiplyScalar(finalScale).applyQuaternion(weaponModel.quaternion);
+  weaponModel.position.copy(handLocal.sub(gripOffset));
+  characterVisual.updateMatrixWorld(true);
+  dominantHand.attach(weaponModel);
+ }
+ weaponBasePosition.copy(weaponModel.position);
+ weaponBaseRotation.copy(weaponModel.rotation);
  weaponModel.userData.bodyHeight=bodyHeight;
  weaponModel.userData.targetLength=targetLength;
  weaponModel.userData.proportionalScale=finalScale;
@@ -310,6 +307,13 @@ function animateRig(dt,speed,sprinting,crouch,prone){
  else if(crouch)clip=moving?crouchMove:crouchIdle;
  else if(!grounded)clip=exactClip('Jump_Loop','Jump_Start')||idle;
  else if(moving)clip=sprinting?sprint:walk;
+ // Prioriza clips de combate caso existam na biblioteca; sem eles, mantém
+ // a locomoção original e aplica suporte de mão, recuo e recarga procedural.
+ if(!crouch&&!prone&&!moving){
+  if(reloading)clip=exactClip('Rifle_Reload_Loop','Rifle_Reload','Reload_Rifle')||clip;
+  else if(performance.now()<firePoseUntil)clip=exactClip('Rifle_Fire_Loop','Rifle_Fire','Fire_Rifle')||clip;
+  else if(aim)clip=exactClip('Rifle_Aim_Loop','Rifle_Aiming_Loop','Aim_Rifle_Loop')||clip;
+ }
  if(clip!==activeCharacterClip)playCharacterClip(clip);
  characterMixer.update(dt);
  applyCombatWeaponPose(crouch,prone,dt);
