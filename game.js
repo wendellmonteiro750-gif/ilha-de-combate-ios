@@ -21,6 +21,8 @@ function box(parent,w,h,d,material,x,y,z){const o=new THREE.Mesh(new THREE.BoxGe
 function building(x,z,w,d,h,color,type='house'){
  const g=new THREE.Group();g.position.set(x,0,z);world.add(g);
  const wall=mat(color),trim=mat(0xd0c4a5),roof=type==='warehouse'?mat(0x3c4848,.7,.25):mats.roof;
+ // Camera collision must detect wall faces from inside buildings too.
+ wall.side=THREE.DoubleSide;
  // Walkable shell: floor, four wall runs and a real doorway (front is +Z).
  box(g,w,.16,d,mat(0x8f826b),0,.08,0);
  const t=.34,doorW=Math.min(2.1,w*.24),sideW=(w-doorW)/2;
@@ -196,10 +198,19 @@ function cameraUpdate(dt){
  cameraDesired.copy(hero.position).addScaledVector(cameraForward,-distance).addScaledVector(cameraSide,shoulder);
  cameraDesired.y=hero.position.y+height+Math.sin(-pitch)*distance*(inside?.30:.52);
  const offset=cameraDesired.clone().sub(cameraLookTarget),length=offset.length(),direction=offset.normalize();
- cameraRay.set(cameraLookTarget,direction);cameraRay.far=length;
- const obstacle=cameraRay.intersectObjects(world.children,true).find(hit=>hit.distance>.28);
- if(obstacle)cameraDesired.copy(cameraLookTarget).addScaledVector(direction,Math.max(.72,obstacle.distance-.32));
- camera.position.lerp(cameraDesired,1-Math.exp(-(inside?14:10)*dt));
+ cameraRay.set(cameraLookTarget,direction);cameraRay.near=.08;cameraRay.far=length;
+ // Clamp the camera before the first wall/obstacle hit, leaving a small safety gap.
+ const obstacle=cameraRay.intersectObjects(world.children,true).find(hit=>hit.distance>.12);
+ if(obstacle){
+  const safeDistance=Math.max(.18,obstacle.distance-.42);
+  cameraDesired.copy(cameraLookTarget).addScaledVector(direction,Math.min(length,safeDistance));
+ }
+ const smoothing=1-Math.exp(-(inside?20:14)*dt);
+ camera.position.lerp(cameraDesired,smoothing);
+ // Never allow smoothing to leave the camera beyond the collision-safe point.
+ const safeOffset=cameraDesired.clone().sub(cameraLookTarget);
+ const currentOffset=camera.position.clone().sub(cameraLookTarget);
+ if(currentOffset.length()>safeOffset.length())camera.position.copy(cameraLookTarget).addScaledVector(safeOffset.normalize(),safeOffset.length());
  const lookAhead=inside?(aim?.85:.48):(aim?8:3);
  const lookAt=cameraLookTarget.clone().addScaledVector(cameraForward,lookAhead);
  camera.lookAt(lookAt);
