@@ -564,6 +564,12 @@ function animateRig(dt,speed,sprinting,crouch,prone){
   characterMixer.update(dt);
   return;
  }
+ if(['freefall','parachute'].includes(battleSystems?.phase)){
+  const falling=exactClip('Fall_Loop','FreeFall_Loop','Jump_Loop','Jump_Start')||idle;
+  if(falling!==activeCharacterClip)playCharacterClip(falling);
+  characterMixer.update(dt);
+  return;
+ }
  let clip=idle;
  if(crouch)clip=moving?crouchMove:crouchIdle;
  else if(!grounded)clip=exactClip('Jump_Loop','Jump_Start')||idle;
@@ -733,6 +739,10 @@ function showMuzzleFlash(position,direction){
 function update(dt){
  updateCombatBots(dt);
  battleSystems?.update(dt,moveX,moveY,bots.filter(b=>b.userData.alive).length);
+ const dropPhase=['plane','freefall','parachute'].includes(battleSystems?.phase);
+ // O sistema de voo já controla o personagem durante a entrada na partida.
+ // Evita que o controlador terrestre aplique uma segunda velocidade no mesmo frame.
+ if(dropPhase){moveX=0;moveY=0;velocityX=0;velocityZ=0;}
  const inputMagnitude=Math.min(1,Math.hypot(moveX,moveY));
  const moving=inputMagnitude>.08;
  const crouch=pose==='crouch',prone=pose==='prone';
