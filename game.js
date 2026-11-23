@@ -1,10 +1,14 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-import { Character, Library, catalogFromFiles } from './character.js';
+import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
+import * as SkeletonUtils from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/utils/SkeletonUtils.js';
 
 const root=document.querySelector('#game'),loading=document.querySelector('#loading'),statusEl=document.querySelector('#status');
 const scoreEl=document.querySelector('#score'),ammoEl=document.querySelector('#ammo'),healthEl=document.querySelector('#health');
 const errorPanel=document.querySelector('#errorPanel');
-let renderer,scene,camera,clock,playerRig,worldYaw=0,pitch=-.12,ammo=30,kills=0,health=100,armor=0,medkits=1,library;
+let renderer,scene,camera,clock,playerRig,worldYaw=0,pitch=-.12,ammo=30,kills=0,health=100,armor=0,medkits=1;
+const HUMAN_MODEL_URL='https://raw.githubusercontent.com/memoriesrohit/avatar-studio/main/models/andre_casual.glb';
+let humanModelPromise=null;
+const HUMAN_ROLE_CLIPS={idle:'Idle',walk:'Walk',run:'Walk',cast:'Boxing',hit:'Argue'};
 const weapons=[{name:'FUZIL',mag:30,damage:35,rate:.13,spread:.014,reload:1.35},{name:'SMG',mag:40,damage:19,rate:.075,spread:.022,reload:1.5},{name:'PRECISÃO',mag:8,damage:90,rate:.72,spread:.002,reload:1.8}];
 let weaponIndex=0,weaponAmmo=[30,40,8],scopeLevel=0,sprintHeld=false;
 function currentWeapon(){return weapons[weaponIndex]}
@@ -37,7 +41,7 @@ function addTextureGround(){
 }
 function addPalm(x,z,s=1){
  const g=new THREE.Group();const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.12*s,.24*s,4.2*s,12),mat(0x79543a));trunk.position.y=2.1*s;trunk.rotation.z=-.08;trunk.castShadow=true;g.add(trunk);
- for(let i=0;i<8;i++){const a=i*Math.PI/4,leaf=new THREE.Mesh(new THREE.ConeGeometry(.3*s,3.1*s,7),mat(i%2?0x28643c:0x397c46));leaf.position.set(Math.sin(a)*.95*s,4.05*s,Math.cos(a)*.95*s);leaf.rotation.z=Math.cos(a)*.95;leaf.rotation.x=-Math.sin(a)*.95;leaf.castShadow=true;g.add(leaf)}
+ for(let i=0;i<8;i++){const a=i*Math.PI/4,leaf=new THREE.Mesh(new THREE.ConeGeometry(.3*s,3.1*s,7),mat(i%2?0x274e34:0x315f3a));leaf.position.set(Math.sin(a)*.95*s,4.05*s,Math.cos(a)*.95*s);leaf.rotation.z=Math.cos(a)*.95;leaf.rotation.x=-Math.sin(a)*.95;leaf.castShadow=true;g.add(leaf)}
  g.position.set(x,0,z);scene.add(g);
 }
 function addHouse(x,z,rotation=0,style=0){
@@ -180,10 +184,10 @@ function addWorldDetail(){
  // Vegetação em instâncias: mais densidade visual com poucas chamadas de desenho.
  const dummy=new THREE.Object3D();
  const grassGeo=new THREE.ConeGeometry(.075,.62,4);
- const grassMat=new THREE.MeshStandardMaterial({color:0x6d9146,roughness:1});
+ const grassMat=new THREE.MeshStandardMaterial({color:0x526d43,roughness:1});
  const grass=new THREE.InstancedMesh(grassGeo,grassMat,950);
  let n=0;for(let i=0;i<950;i++){const a=Math.random()*Math.PI*2,r=8+Math.random()*111,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.hypot(x,z)>120)continue;dummy.position.set(x,.25,z);dummy.rotation.set((Math.random()-.5)*.18,Math.random()*Math.PI,0);const h=.55+Math.random()*.9;dummy.scale.set(.7,h,.7);dummy.updateMatrix();grass.setMatrixAt(n++,dummy.matrix)}grass.count=n;grass.instanceMatrix.needsUpdate=true;scene.add(grass);
- const bushGeo=new THREE.IcosahedronGeometry(1,1),bushMat=new THREE.MeshStandardMaterial({color:0x315c36,roughness:1});
+ const bushGeo=new THREE.IcosahedronGeometry(1,1),bushMat=new THREE.MeshStandardMaterial({color:0x294b32,roughness:1});
  const bushes=new THREE.InstancedMesh(bushGeo,bushMat,145);n=0;
  for(let i=0;i<145;i++){const a=Math.random()*Math.PI*2,r=12+Math.random()*105;dummy.position.set(Math.cos(a)*r,.55,Math.sin(a)*r);const q=.45+Math.random()*.8;dummy.scale.set(q*.9,q*.65,q);dummy.rotation.set(Math.random()*.3,Math.random()*6,Math.random()*.3);dummy.updateMatrix();bushes.setMatrixAt(n++,dummy.matrix)}bushes.count=n;bushes.instanceMatrix.needsUpdate=true;bushes.castShadow=true;scene.add(bushes);
  // Pedras maiores na costa para quebrar o horizonte plano.
@@ -196,11 +200,11 @@ function addWorldDetail(){
  for(let i=0;i<54;i++){const a=i/9*Math.PI*2,r=205+(i%4)*18;dummy.position.set(Math.cos(a)*r,38+(i%5)*5,Math.sin(a)*r);dummy.scale.set(9+(i%3)*5,2.5+(i%2),5+(i%4)*2);dummy.rotation.y=a;dummy.updateMatrix();clouds.setMatrixAt(i,dummy.matrix)}clouds.instanceMatrix.needsUpdate=true;scene.add(clouds);
 }
 function buildWorld(){
- scene.background=new THREE.Color(0x9bcbe4);scene.fog=new THREE.FogExp2(0xa9cbd0,.00155);
- scene.add(new THREE.HemisphereLight(0xe8f5ff,0x46583a,1.75));
- const ambient=new THREE.AmbientLight(0xffffff,.28);scene.add(ambient);
- const sun=new THREE.DirectionalLight(0xffedcf,3.5);sun.position.set(-42,78,34);sun.castShadow=true;sun.shadow.mapSize.set(innerWidth<700?1536:2048,innerWidth<700?1536:2048);sun.shadow.camera.left=-165;sun.shadow.camera.right=165;sun.shadow.camera.top=165;sun.shadow.camera.bottom=-165;sun.shadow.bias=-.00018;sun.shadow.normalBias=.025;sun.shadow.radius=innerWidth<700?2:3;sun.shadow.camera.near=1;sun.shadow.camera.far=260;scene.add(sun);
- const fill=new THREE.DirectionalLight(0x9bc8e8,.72);fill.position.set(55,28,-48);scene.add(fill);
+ scene.background=new THREE.Color(0x849ba2);scene.fog=new THREE.FogExp2(0x9aa9a5,.0019);
+ scene.add(new THREE.HemisphereLight(0xd8e0df,0x394338,1.15));
+ const ambient=new THREE.AmbientLight(0xdce2df,.18);scene.add(ambient);
+ const sun=new THREE.DirectionalLight(0xffe3c2,2.45);sun.position.set(-42,78,34);sun.castShadow=true;sun.shadow.mapSize.set(innerWidth<700?1536:2048,innerWidth<700?1536:2048);sun.shadow.camera.left=-165;sun.shadow.camera.right=165;sun.shadow.camera.top=165;sun.shadow.camera.bottom=-165;sun.shadow.bias=-.00018;sun.shadow.normalBias=.025;sun.shadow.radius=innerWidth<700?2:3;sun.shadow.camera.near=1;sun.shadow.camera.far=260;scene.add(sun);
+ const fill=new THREE.DirectionalLight(0x9db5c4,.42);fill.position.set(55,28,-48);scene.add(fill);
  const ground=new THREE.Mesh(new THREE.PlaneGeometry(800,800),new THREE.MeshStandardMaterial({map:addTextureGround(),roughness:.96}));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
  const beach=new THREE.Mesh(new THREE.RingGeometry(119,141,192),new THREE.MeshStandardMaterial({color:0xd9c18c,roughness:.95}));beach.rotation.x=-Math.PI/2;beach.position.y=.035;scene.add(beach);
  const waterMat=new THREE.MeshStandardMaterial({color:0x168aa6,roughness:.24,metalness:.12,transparent:false});
@@ -313,7 +317,7 @@ function addCombatLandmarks(){
  tower.position.set(-42,0,-35);scene.add(tower);
 }
 function addRifle(rig){
- const hand=rig.bones.get('handslotr')||rig.bones.get('handslot.r');if(!hand)return;
+ const hand=rig.bones.get('mixamorigRightHand')||rig.bones.get('RightHand')||rig.bones.get('handslotr')||rig.bones.get('handslot.r');if(!hand)return;
  const gun=new THREE.Group();
  const steel=new THREE.MeshStandardMaterial({color:0x303941,roughness:.34,metalness:.82});
  const dark=new THREE.MeshStandardMaterial({color:0x11171b,roughness:.62,metalness:.28});
@@ -342,19 +346,60 @@ function addRifle(rig){
  gun.scale.setScalar(.92);gun.position.set(.02,-.02,.12);gun.rotation.x=-.06;hand.add(gun);
 }
 async function createFighter(isEnemy=false,index=0){
- const shirt=['#344b42','#6b4934','#394d66','#6a3831','#4a5140','#5a4939'][index%6];
- const rig=await Character.create(library,{parts:{hair:'hair_short',top:'top_long',bottom:'bottom_trousers',boots:'boots_tall',hat:'hat_cap',back:'back_pack'},colors:{skin:isEnemy?'#c28b68':'#d5a078',hair:'#292321',shirt:isEnemy?shirt:'#263e4a',trousers:'#343b43',boots:'#292725',hat:isEnemy?'#46564b':'#344c60',pack:'#554733',linen:'#b5a27f'}});
- rig.setHeight(1.82);
- // Capacete e viseira presos ao osso da cabeça, sem alterar o esqueleto das animações.
- const head=rig.bones.get('head')||rig.bones.get('Head');
- if(head){
-  const helmet=new THREE.Group(),shell=new THREE.Mesh(new THREE.SphereGeometry(.235,18,14),new THREE.MeshStandardMaterial({color:isEnemy?0x4b554b:0x344b52,roughness:.58,metalness:.12}));
-  shell.scale.set(1.08,.78,1.08);shell.position.y=.055;helmet.add(shell);
-  const brim=new THREE.Mesh(new THREE.BoxGeometry(.34,.045,.29),new THREE.MeshStandardMaterial({color:0x1c292d,roughness:.5}));brim.position.set(0,-.025,-.16);helmet.add(brim);
-  const strap=new THREE.Mesh(new THREE.TorusGeometry(.205,.018,6,20,Math.PI),new THREE.MeshStandardMaterial({color:0x242a29,roughness:.9}));strap.rotation.z=Math.PI;strap.position.y=-.06;helmet.add(strap);
-  head.add(helmet);
+ if(!humanModelPromise)humanModelPromise=new GLTFLoader().loadAsync(HUMAN_MODEL_URL);
+ const source=await humanModelPromise;
+ const model=SkeletonUtils.clone(source.scene),holder=new THREE.Group();holder.add(model);
+ model.updateMatrixWorld(true);
+ const bounds=new THREE.Box3().setFromObject(model),height=Math.max(.1,bounds.max.y-bounds.min.y);
+ holder.scale.setScalar(1.82/height);model.position.y=-bounds.min.y;
+ const bones=new Map(),palette=['#35483d','#5a4938','#3c4b5d','#4c3d35','#4b5144','#51443b'],outfitColor=isEnemy?palette[index%palette.length]:'#35463f';
+ model.traverse(o=>{
+  if(o.isBone)bones.set(o.name,o);
+  if(o.isMesh){
+   o.castShadow=true;o.receiveShadow=true;o.frustumCulled=false;
+   const label=(o.name+' '+(o.material?.name||'')).toLowerCase();
+   if(/outfit|shirt|jacket|top|trouser|pants|shoe/.test(label)){
+    if(Array.isArray(o.material))o.material=o.material.map(m=>{const c=m.clone();c.color.multiply(new THREE.Color(outfitColor));return c});
+    else if(o.material){o.material=o.material.clone();o.material.color.multiply(new THREE.Color(outfitColor))}
+   }
+  }
+ });
+ const mixer=new THREE.AnimationMixer(model),actions=new Map();
+ for(const clip of source.animations)actions.set(clip.name,mixer.clipAction(clip));
+ let current=null,playing='';
+ const rig={
+  holder,root:model,bones,
+  lib:{role(role){return {clip:HUMAN_ROLE_CLIPS[role]||'Idle',loop:true}}},
+  get playing(){return playing},
+  playRole(role,opts={}){
+   const clip=HUMAN_ROLE_CLIPS[role]||'Idle',next=actions.get(clip)||actions.get('Idle');
+   if(!next)return Promise.resolve(false);
+   const speed=opts.speed||1;
+   if(current===next){next.timeScale=speed;return Promise.resolve(true)}
+   next.reset();next.enabled=true;next.setEffectiveWeight(1);next.timeScale=speed;next.setLoop(THREE.LoopRepeat,Infinity);next.play();
+   if(current)next.crossFadeFrom(current,opts.fade??.2,false);
+   current=next;playing=clip;return Promise.resolve(true);
+  },
+  update(dt){mixer.update(dt)},
+  setHeight(h){const b=new THREE.Box3().setFromObject(model),v=b.max.y-b.min.y;if(v>0){holder.scale.setScalar(h/v);model.position.y=-b.min.y}}
+ };
+ const torso=bones.get('mixamorigSpine2')||bones.get('mixamorigSpine1')||bones.get('mixamorigSpine');
+ if(torso){
+  const vest=new THREE.Group(),fabric=new THREE.MeshStandardMaterial({color:isEnemy?0x343d36:0x303a35,roughness:.94}),plate=new THREE.MeshStandardMaterial({color:0x202a29,roughness:.76,metalness:.12}),pouch=new THREE.MeshStandardMaterial({color:isEnemy?0x514637:0x66543a,roughness:.95});
+  const make=(w,h,d,m,x,y,z)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;vest.add(o)};
+  make(.43,.48,.18,fabric,0,.02,.045);make(.34,.31,.035,plate,0,.025,.145);
+  for(const x of [-.15,0,.15])make(.085,.12,.065,pouch,x,-.17,.17);
+  for(const x of [-.22,.22])make(.075,.39,.09,fabric,x,.02,.02);
+  make(.12,.07,.2,plate,0,.24,.04);torso.add(vest);
  }
- addRifle(rig);scene.add(rig.holder);await rig.playRole('idle');return rig;
+ const head=bones.get('mixamorigHead')||bones.get('Head');
+ if(head){
+  const helmet=new THREE.Group(),shell=new THREE.Mesh(new THREE.SphereGeometry(.145,24,16),new THREE.MeshStandardMaterial({color:isEnemy?0x454d43:0x35443f,roughness:.72,metalness:.08}));
+  shell.scale.set(1.12,.76,1.1);shell.position.y=.095;helmet.add(shell);
+  const rim=new THREE.Mesh(new THREE.TorusGeometry(.145,.012,8,28),new THREE.MeshStandardMaterial({color:0x1b2422,roughness:.8}));
+  rim.position.y=.04;rim.rotation.x=Math.PI/2;helmet.add(rim);head.add(helmet);
+ }
+ addRifle(rig);scene.add(holder);await rig.playRole('idle');return rig;
 }
 function play(rig,role,speed=1){if(!rig)return;const clip=rig.lib.role(role)?.clip;if(clip&&rig.playing!==clip)rig.playRole(role,{fade:.22,speed}).catch(()=>{})}
 function applyBodyMotion(rig,forwardSpeed,lateralSpeed,dt){
@@ -408,14 +453,14 @@ async function init(){
  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
  renderer.setScissorTest(false);
  renderer.toneMapping=THREE.ACESFilmicToneMapping;
- renderer.toneMappingExposure=1.18;
+ renderer.toneMappingExposure=1.02;
  renderer.info.autoReset=true;
  renderer.outputColorSpace=THREE.SRGBColorSpace;
  renderer.setClearColor(0x9bcbe4,1);
  root.appendChild(renderer.domElement);
  scene=new THREE.Scene();clock=new THREE.Clock();buildWorld();camera=new THREE.PerspectiveCamera(68,innerWidth/innerHeight,.1,900);camera.position.set(.7,2.35,4.8);cameraLook.set(0,1.45,-1.2);camera.lookAt(cameraLook);
  loading.textContent='CARREGANDO PERSONAGEM 3D…';
- const catalog=await catalogFromFiles(BASE);catalog.animations=catalog.animations.filter(a=>['General','Movement Basic','Movement Advanced','Combat Ranged'].includes(a.group));library=new Library(catalog);
+ loading.textContent='CARREGANDO OPERADOR HUMANO 3D…';
  playerRig=await createFighter(false,0);playerRig.holder.position.set(0,0,0);playerRig.holder.rotation.y=Math.PI;
  // Mantém a cabeça visível: a câmera agora acompanha o personagem em terceira pessoa.
  const spots=[[62,18],[-70,36],[18,78],[-42,-88],[98,-52]];
