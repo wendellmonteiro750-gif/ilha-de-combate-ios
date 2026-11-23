@@ -351,7 +351,7 @@ function refreshVitals(){
  healthEl.textContent='VIDA '+health;document.querySelector('#healthValue').textContent=health;refreshInventory();
  document.querySelector('#healthFill').style.width=health+'%';
  document.querySelector('#armorText').textContent='COLETE '+Math.round(armor);
- document.querySelector('#medkit').textContent='✚ KIT ('+medkits+')';
+ document.querySelector('#medkit').textContent='✚';document.querySelector('#medkit').title='Kit médico: '+medkits+' restante(s)';document.querySelector('#medkit').setAttribute('aria-label','Kit médico: '+medkits+' restante(s)');
 }
 function useMedkit(){
  if(medkits<=0||health>=100)return;
