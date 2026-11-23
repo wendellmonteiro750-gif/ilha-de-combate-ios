@@ -223,6 +223,20 @@ function createCombatWeapon(){
  cube(weaponModel,.018,.025,.035,steel,.061,-.045,.12);
  cube(weaponModel,.018,.025,.035,steel,-.061,-.045,-.62);
  cube(weaponModel,.075,.012,.09,steel,0,-.105,-.015);
+ // Escala proporcional ao corpo: carabina real costuma medir cerca de metade
+ // da altura do combatente. Mede a malha humana e a extensão real do rifle.
+ weaponModel.scale.setScalar(1);
+ characterVisual.updateMatrixWorld(true);
+ weaponModel.updateMatrixWorld(true);
+ const bodyBounds=new THREE.Box3().setFromObject(characterVisual);
+ const bodyHeight=bodyBounds.getSize(new THREE.Vector3()).y;
+ const rifleBounds=new THREE.Box3().setFromObject(weaponModel);
+ const rifleLength=rifleBounds.getSize(new THREE.Vector3()).z;
+ const targetLength=bodyHeight*.48;
+ const proportionalScale=(bodyHeight>0&&rifleLength>0)?targetLength/rifleLength:.62;
+ weaponModel.scale.setScalar(THREE.MathUtils.clamp(proportionalScale,.48,.72));
+ weaponModel.userData.bodyHeight=bodyHeight;
+ weaponModel.userData.targetLength=targetLength;
 }
 function setWeaponMode(equipped){
  weaponEquipped=equipped;
