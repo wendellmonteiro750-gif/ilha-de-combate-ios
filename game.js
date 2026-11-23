@@ -586,7 +586,7 @@ function makeHumanoidModel(){
  return {root,bones};
 }
 // Modelo masculino humano completo, externo, com malha skinned, texturas PBR e esqueleto Biped.
-const HUMAN_MODEL_URL='https://models.codelove.in/models/male-adult-03.glb';
+const HUMAN_MODEL_URL='https://models.codelove.in/models/military-male-01.glb';
 let humanModelPromise=null,humanSkeletonUtils=null;
 async function loadHumanModel(){
  if(!humanModelPromise)humanModelPromise=(async()=>{
@@ -605,13 +605,11 @@ async function createFighter(isEnemy=false,index=0){
  try{
   const gltf=await loadHumanModel();
   model=humanSkeletonUtils.clone(gltf.scene);
-  model.name='MaleAdult03_SkinnedHuman';
+  model.name='MaleSoldier01_SkinnedHuman';
  }catch(loadError){
   humanModelPromise=null;
-  const local=makeHumanoidModel();
-  model=local.root;bones=local.bones;
-  model.name='LocalHumanFallback';
-  console.warn('Modelo externo indisponível; usando personagem local.',loadError);
+  console.error('Não foi possível carregar o novo operador 3D.',loadError);
+  throw new Error('O novo operador 3D não carregou. Verifique a conexão e tente novamente.');
  }
  const boneByKey=new Map();
  model.traverse(o=>{
