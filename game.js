@@ -607,8 +607,9 @@ function applyBodyMotion(rig,forwardSpeed,lateralSpeed,dt){
  const run=THREE.MathUtils.clamp(Math.hypot(forwardSpeed,lateralSpeed)/5.4,0,1);
  const stance=rig.stanceMode==='prone' ? -.10 : rig.stanceMode==='crouch' ? -.035 : 0;
  const firing=rig.isPlayer?THREE.MathUtils.clamp(rig.weaponFireBlend||0,0,1):0;
- const targetPitch=-run*(rig.runBlend ? .105 : .045)+stance+firing*.17;
- const targetRoll=THREE.MathUtils.clamp(-lateralSpeed*.018,-.07,.07);
+ const aiming=rig.isPlayer?THREE.MathUtils.clamp(rig.weaponAimBlend||0,0,1):0;
+ const targetPitch=-run*(rig.runBlend ? .105 : .045)+stance+firing*.17+aiming*.055;
+ const targetRoll=THREE.MathUtils.clamp(-lateralSpeed*.024,-.095,.095);
  const blend=1-Math.exp(-8*dt);
  holder.rotation.x=THREE.MathUtils.lerp(holder.rotation.x,targetPitch,blend);
  holder.rotation.z=THREE.MathUtils.lerp(holder.rotation.z,targetRoll,blend);
@@ -797,9 +798,18 @@ function animate(){
    playerRig.runBlend=canSprint?1:0;
    playerRig.weaponRunBlend=THREE.MathUtils.damp(playerRig.weaponRunBlend||0,canSprint?1:0,9,dt);
    if(playerRig.weaponPivot&&playerRig.weaponBasePosition&&playerRig.weaponBaseRotation){
-    playerRig.weaponPivot.position.copy(playerRig.weaponBasePosition).add(new THREE.Vector3(0,-.045*playerRig.weaponRunBlend,0));
+    const moveAmount=THREE.MathUtils.clamp(playerVelocity.length()/5.35,0,1);
+    const strafe=playerVelocity.dot(right);
+    const gait=clock.elapsedTime*(canSprint?13:aiming?7:9);
+    const aim=aimBlend,run=playerRig.weaponRunBlend;
+    // Transições de empunhadura: arma sobe ao mirar, baixa ao correr e acompanha o movimento.
+    playerRig.weaponPivot.position.copy(playerRig.weaponBasePosition);
+    playerRig.weaponPivot.position.y+=.055*aim-.105*run+Math.sin(gait)*.006*moveAmount*(1-aim);
+    playerRig.weaponPivot.position.x-=.018*aim+THREE.MathUtils.clamp(strafe/5.35,-1,1)*.012*moveAmount;
     playerRig.weaponPivot.rotation.copy(playerRig.weaponBaseRotation);
-    playerRig.weaponPivot.rotation.x-=.32*playerRig.weaponRunBlend+(playerRig.weaponKick||0);
+    playerRig.weaponPivot.rotation.x-=.13*aim+.34*run+(playerRig.weaponKick||0);
+    playerRig.weaponPivot.rotation.z-=THREE.MathUtils.clamp(strafe/5.35,-1,1)*.035*moveAmount;
+    playerRig.weaponPivot.rotation.y+=Math.sin(gait*.5)*.012*moveAmount*(1-aim);
    }
   playerRig.jumpV=(playerRig.jumpV||0)-15*dt;p.position.y=Math.max(0,p.position.y+(playerRig.jumpV||0)*dt);if(p.position.y===0&&playerRig.jumpV<0)playerRig.jumpV=0;
    playerRig.jumpBlend=THREE.MathUtils.clamp(p.position.y/.82,0,1);
