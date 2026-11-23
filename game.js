@@ -220,7 +220,7 @@ function createPlayerAnchor(){
   characterMixer=new THREE.AnimationMixer(characterVisual);
   for(const clip of library.animations)characterActions.set(clip.name,characterMixer.clipAction(clip));
   // UAL2 Standard é o pacote oficial complementar da Quaternius. Ele traz
-  // IdleToLay e LayToIdle, ausentes na UAL1 Standard que estava no jogo.
+  // LayToIdle; usamos o mesmo clipe ao contrário para a entrada no chão.
   for(const clip of library2.animations)characterActions.set(clip.name,characterMixer.clipAction(clip));
   if(!characterActions.has('IdleToLay')||!characterActions.has('LayToIdle')){
    console.error('UAL2 carregada sem os clips IdleToLay/LayToIdle',library2.animations.map(c=>c.name));
@@ -317,6 +317,7 @@ function playCharacterClip(name,restart=false){
  const previous=characterActions.get(activeCharacterClip);
  if(previous!==next){
   if(previous)previous.fadeOut(.14);
+  next.timeScale=1;
   next.setLoop(THREE.LoopRepeat,Infinity);
   next.clampWhenFinished=false;
   next.reset().fadeIn(.14).play();
@@ -324,7 +325,11 @@ function playCharacterClip(name,restart=false){
  activeCharacterClip=name;
 }
 function playProneTransition(name,now){
- const clipName=exactClip(name);
+ // O pacote gratuito UAL2 Standard não traz IdleToLay, mas inclui
+ // LayToIdle completo. Para deitar, reproduzimos LayToIdle ao contrário;
+ // para levantar, reproduzimos o mesmo movimento no sentido normal.
+ const reverse= name==='IdleToLay';
+ const clipName=exactClip(reverse?'LayToIdle':name);
  if(!clipName){
   proneActionMissing=true;
   console.error('Animação de postura não encontrada:',name,'Clipes disponíveis:',[...characterActions.keys()]);
@@ -338,12 +343,15 @@ function playProneTransition(name,now){
  if(previous&&previous!==next)previous.fadeOut(.12);
  next.enabled=true;
  next.reset();
+ next.time=reverse?next.getClip().duration:0;
+ next.timeScale=reverse?-1:1;
+ next.paused=false;
  next.setEffectiveWeight(1);
  next.setLoop(THREE.LoopOnce,1);
  next.clampWhenFinished=true;
  next.fadeIn(.12).play();
- activeCharacterClip=clipName;
- proneTransition=clipName;
+ activeCharacterClip=reverse?'IdleToLay':clipName;
+ proneTransition=reverse?'IdleToLay':clipName;
  proneTransitionUntil=now+Math.max(.15,next.getClip().duration)*1000;
  return true;
 }
