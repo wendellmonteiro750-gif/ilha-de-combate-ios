@@ -2,7 +2,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
 import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
 const $=id=>document.getElementById(id);
 const root=$('game');
-let scene,camera,renderer,clock,hero,rig={},weapon,muzzleFlash,muzzleLight,weaponKick=0,reloadBlend=0,muzzleTime=0,targets=[],realHero=null,realMixer=null,realActions={},activeRealAction='',realBones={},realPoseOffsets=[],realCrouchBlend=0,realProneBlend=0,realAimBlend=0,yaw=0,pitch=-.12,moveX=0,moveY=0,velocityX=0,velocityZ=0,locomotionSpeed=0,run=false,aim=false,shoot=false,pose='stand',proneBlend=0,velocityY=0,grounded=true,walkT=0,ammo=30,reloading=false,lastShot=0,started=false,cameraRecoil=0,cameraShake=0,stamina=100,worldBlockers=[],cameraRay=new THREE.Raycaster(),cameraDesired=new THREE.Vector3(),cameraCurrentDistance=5.6;
+let scene,camera,renderer,clock,hero,rig={},weapon,muzzleFlash,muzzleLight,weaponKick=0,reloadBlend=0,muzzleTime=0,targets=[],realHero=null,realMixer=null,realActions={},activeRealAction='',realBones={},realPoseOffsets=[],realCrouchBlend=0,realProneBlend=0,realAimBlend=0,yaw=0,pitch=-.12,moveX=0,moveY=0,velocityX=0,velocityZ=0,locomotionSpeed=0,run=false,aim=false,shoot=false,pose='stand',proneBlend=0,velocityY=0,grounded=true,walkT=0,runBlend=0,landingBlend=0,breathPhase=0,ammo=30,reloading=false,lastShot=0,started=false,cameraRecoil=0,cameraShake=0,stamina=100,worldBlockers=[],cameraRay=new THREE.Raycaster(),cameraDesired=new THREE.Vector3(),cameraCurrentDistance=5.6;
 const mat=(color,roughness=.9)=>new THREE.MeshStandardMaterial({color,roughness});
 function mesh(parent,geo,material,pos){const o=new THREE.Mesh(geo,material);o.position.set(...pos);parent.add(o);o.castShadow=true;o.receiveShadow=true;return o}
 function cube(parent,w,h,d,m,x,y,z){return mesh(parent,new THREE.BoxGeometry(w,h,d),m,[x,y,z])}
@@ -157,9 +157,11 @@ function buildHero(){
   mesh(upper,new THREE.SphereGeometry(.125,10,8),mat(0x394b5a),[0,-.49,-.005]);
   const knee=new THREE.Group();knee.position.set(0,-.52,0);upper.add(knee);capsule(knee,.115,.39,pants,0,-.23,.015);
   mesh(knee,new THREE.SphereGeometry(.125,10,8),mat(0x59634e),[0,-.34,-.105]);
-  cube(knee,.27,.16,.39,boots,0,-.48,-.08);
-  cube(knee,.25,.10,.18,mat(0x343a38),0,-.49,-.245);
-  rig.legs.push({upper,knee,side});
+  const ankle=new THREE.Group();ankle.position.set(0,-.45,-.055);knee.add(ankle);
+  cube(ankle,.27,.16,.39,boots,0,-.015,-.08);
+  cube(ankle,.25,.10,.18,mat(0x343a38),0,-.025,-.245);
+  cube(ankle,.285,.035,.24,mat(0x111817),0,-.09,-.17);
+  rig.legs.push({upper,knee,ankle,side});
  }
  // Articulated upper arms and forearms are separate joints; hands are posed onto the rifle grips.
  rig.arms=[];
@@ -252,19 +254,27 @@ function loadRealHero(){
   }
   const clipNames=Object.keys(realActions);
   const hasWalk=clipNames.some(k=>/walk|walking|locomotion|run|running|sprint/.test(k));
-  if(hasWalk){
+  const hasIdle=clipNames.some(k=>/idle|stand|breath/.test(k));
+  if(hasWalk&&hasIdle){
    rig.body.visible=false;
    playRealAnimation('idle');
    $('message').textContent='PERSONAGEM 3D COM ANIMAÇÕES CARREGADO';
   }else{
-   // Fallback garantido: exibe o humanoide articulado interno, que já possui
-   // ciclos próprios de caminhada, corrida, salto, agachamento e postura deitada.
+   // O GLB só é usado se trouxer ao menos repouso e locomoção. Caso contrário,
+   // o rig procedural assume para que o personagem nunca fique congelado.
    model.visible=false;
+   if(weapon.parent!==rig.body){
+    weapon.parent?.remove(weapon);
+    rig.body.add(weapon);
+   }
+   weapon.position.set(.28,.50,-.28);
+   weapon.rotation.set(0,0,0);
    rig.body.visible=true;
+   realHero=null;
    realMixer=null;
    realActions={};
    activeRealAction='';
-   $('message').textContent='PERSONAGEM ANIMADO — MODO DE SEGURANÇA';
+   $('message').textContent='PERSONAGEM ANIMADO — RIG PROCEDURAL';
   }
  },undefined,error=>{
   console.error('Falha ao carregar personagem GLB:',error);
@@ -397,11 +407,23 @@ function update(dt){
  const yawDelta=Math.atan2(Math.sin(facingYaw-hero.rotation.y),Math.cos(facingYaw-hero.rotation.y));
  hero.rotation.y+=yawDelta*Math.min(1,dt*(aim?12:7.5));
  // Jump arc and grounded recovery.
- if(!grounded){velocityY-=17*dt;hero.position.y+=velocityY*dt;if(hero.position.y<=0){hero.position.y=0;velocityY=0;grounded=true}}
- walkT+=dt*(horizontalSpeed>.12?(sprinting?10.5:5.8):1.6);
+ if(!grounded){
+  velocityY-=17*dt;
+  hero.position.y+=velocityY*dt;
+  if(hero.position.y<=0){
+   hero.position.y=0;velocityY=0;grounded=true;landingBlend=1;
+  }
+ }
+ // A cadência acompanha a velocidade real: menos passos ao andar devagar,
+ // mais rápidos na corrida, com ciclo contínuo sem saltos de fase.
+ walkT+=dt*(horizontalSpeed>.12?(sprinting?10.5:5.8):1.05);
  const gait=Math.sin(walkT),opposite=Math.sin(walkT+Math.PI);
  const strafe=THREE.MathUtils.clamp(moveX,-1,1);
- const movingBlend=horizontalSpeed>.12?1:0,runBlend=sprinting&&horizontalSpeed>.12?1:0;
+ const movingBlend=THREE.MathUtils.smoothstep(horizontalSpeed,.04,.8);
+ runBlend=THREE.MathUtils.damp(runBlend,sprinting&&horizontalSpeed>.12?1:0,7,dt);
+ const jumpBlend=grounded?0:THREE.MathUtils.clamp(Math.abs(velocityY)/6.2,0,1);
+ landingBlend=THREE.MathUtils.damp(landingBlend,0,5.5,dt);
+ breathPhase+=dt*(moving?1.2:1.0);
  // Smooth transitions between standing, crouched and prone silhouettes.
  // Deitar em sequência: abaixa o centro de gravidade, leva o peito ao chão
  // e estende o corpo gradualmente, em vez de apenas girar a câmera.
@@ -409,19 +431,35 @@ function update(dt){
  const lowHeight=THREE.MathUtils.lerp(crouch?.72:1.03,proneHeight,proneBlend);
  rig.body.position.y=THREE.MathUtils.lerp(rig.body.position.y,lowHeight,1-Math.exp(-dt*11));
  const pronePitch=-1.12*proneBlend;
- rig.body.rotation.x=THREE.MathUtils.lerp(rig.body.rotation.x,pronePitch+(1-proneBlend)*(aim?-.09:0),1-Math.exp(-dt*9));
- rig.body.rotation.z=THREE.MathUtils.lerp(rig.body.rotation.z,aim?-.035*strafe:-.10*strafe,1-Math.exp(-dt*8));
+ const forwardLean=THREE.MathUtils.clamp(horizontalSpeed*.018,0,.105);
+ const landingCushion=landingBlend*.10;
+ rig.body.rotation.x=THREE.MathUtils.lerp(rig.body.rotation.x,pronePitch+(1-proneBlend)*(aim?-.09:0)-forwardLean+landingCushion,1-Math.exp(-dt*9));
+ const turnLean=THREE.MathUtils.clamp(-velocityX*.025,-.12,.12);
+ rig.body.rotation.z=THREE.MathUtils.lerp(rig.body.rotation.z,aim?-.035*strafe:turnLean-.10*strafe,1-Math.exp(-dt*8));
  rig.head.rotation.x=THREE.MathUtils.lerp(rig.head.rotation.x,prone?.08:aim?-.10: moving?-.025:Math.sin(walkT*1.7)*.012,1-Math.exp(-dt*8));
  rig.head.rotation.y=THREE.MathUtils.lerp(rig.head.rotation.y,aim?0:strafe*.035,1-Math.exp(-dt*7));
  // Alternating stride, knee bend and planted-foot motion.
- rig.legs.forEach(({upper,knee,side})=>{
+ rig.legs.forEach(({upper,knee,ankle,side})=>{
   const phase=side===1?gait:opposite;
-  const crawl= moving ? Math.sin(walkT*1.35+(side===1?0:Math.PI)) : Math.sin(walkT*.65+(side===1?0:Math.PI))*.08;
+  const cycle=((walkT/(Math.PI*2)+(side===1?0:.5))%1+1)%1;
+  const stance=cycle<.62;
+  const stepT=stance?cycle/.62:(cycle-.62)/.38;
+  const stride=(sprinting?.48:.34)*inputMagnitude;
+  const footTravel=stance?THREE.MathUtils.lerp(-stride*.52,stride*.52,stepT):THREE.MathUtils.lerp(stride*.52,-stride*.52,stepT);
+  const footLift=stance?0:Math.sin(stepT*Math.PI)*(sprinting?.17:.115);
+  const crawl=moving?Math.sin(walkT*1.35+(side===1?0:Math.PI)):Math.sin(walkT*.65+(side===1?0:Math.PI))*.08;
   const swing=moving?phase*(.48+runBlend*.32):Math.sin(walkT*.5)*.018;
   const proneLeg=side===1?-.12+crawl*.30:-.12-crawl*.30;
   const proneKnee=.42+Math.max(0,crawl)*.22;
-  upper.rotation.x=THREE.MathUtils.lerp(upper.rotation.x,THREE.MathUtils.lerp(crouch?swing*.28:swing,proneLeg,proneBlend),1-Math.exp(-dt*12));
-  knee.rotation.x=THREE.MathUtils.lerp(knee.rotation.x,THREE.MathUtils.lerp(crouch?.45+Math.max(0,-phase)*.18:moving?Math.max(0,-phase)*(.55+runBlend*.55):.025,proneKnee,proneBlend),1-Math.exp(-dt*12));
+  const baseKnee=crouch?.45+Math.max(0,-phase)*.18:moving?Math.max(0,-phase)*(.55+runBlend*.55):.025;
+  upper.rotation.x=THREE.MathUtils.lerp(upper.rotation.x,THREE.MathUtils.lerp(THREE.MathUtils.lerp(crouch?swing*.28:swing,-.10-jumpBlend*.42,jumpBlend),proneLeg,proneBlend),1-Math.exp(-dt*12));
+  knee.rotation.x=THREE.MathUtils.lerp(knee.rotation.x,THREE.MathUtils.lerp(THREE.MathUtils.lerp(baseKnee, .82*jumpBlend, jumpBlend),proneKnee,proneBlend),1-Math.exp(-dt*12));
+  if(ankle){
+   ankle.position.z=THREE.MathUtils.damp(ankle.position.z,-.055+footTravel,18,dt);
+   ankle.position.y=THREE.MathUtils.damp(ankle.position.y,-.45+footLift*(1-proneBlend),18,dt);
+   const toeRoll=stance?(cycle>.48?-.18*((cycle-.48)/.14):0):-.10;
+   ankle.rotation.x=THREE.MathUtils.damp(ankle.rotation.x,toeRoll+footLift*-.35,14,dt);
+  }
  });
  // Two-bone procedural IK: each palm is placed at a real grip point on the rifle.
  const downAxis=new THREE.Vector3(0,-1,0);
@@ -452,10 +490,15 @@ function update(dt){
   fore.position.copy(elbow);
   fore.quaternion.setFromUnitVectors(downAxis,foreDir);
   hand.position.set(0,-foreLength,0);
-  hand.rotation.set(aim?-.13:moving?Math.sin(walkT+(side===1?0:Math.PI))*.025:0,side===1?-.025:.10,side===1?-.10:.06);
+  const counterSwing=aim?0:Math.sin(walkT+(side===1?Math.PI:0))*(.045+runBlend*.035);
+  hand.rotation.set((aim?-.13:counterSwing)-jumpBlend*.08,side===1?-.025:.10,side===1?-.10:.06);
  });
  // Respiração, sway de mira, recuo e manipulação durante a recarga.
- rig.body.position.y+=horizontalSpeed>.12?Math.abs(gait)*.018:Math.sin(walkT*1.7)*.012;
+ const gaitBounce=horizontalSpeed>.12?Math.abs(gait)*(.012+runBlend*.026):0;
+ const breathing=Math.sin(breathPhase*1.8)*.009;
+ rig.body.position.y+=gaitBounce+breathing-landingBlend*.075;
+ rig.head.rotation.z=THREE.MathUtils.damp(rig.head.rotation.z,turnLean*.22,7,dt);
+ rig.head.rotation.x=THREE.MathUtils.damp(rig.head.rotation.x,(aim?-.10:0)+breathing*.55,7,dt);
  const idleSway=Math.sin(walkT*.72)*.012;
  const aimSway=aim?Math.sin(walkT*1.15)*.008:0;
  weaponKick=THREE.MathUtils.damp(weaponKick,0,aim?13:8,dt);
