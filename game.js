@@ -545,7 +545,9 @@ async function createFighter(isEnemy=false,index=0){
    const stepLift=Math.max(0,Math.cos(this.gaitPhase)),oppositeLift=Math.max(0,Math.cos(this.gaitPhase+Math.PI));
    this.root.position.y=this.baseRootY+Math.abs(Math.sin(this.gaitPhase*2))*locomotion*(this.sprintBlend?.035:.018);
    const proneTarget=this.stanceMode==='prone'?1:0,crouchTarget=this.stanceMode==='crouch'?1:0;
-    this.proneBlend=THREE.MathUtils.damp(this.proneBlend||0,proneTarget,4.2,dt);this.crouchBlend=THREE.MathUtils.damp(this.crouchBlend||0,crouchTarget,9,dt);\n    model.rotation.x=this.baseModelRotationX-1.28*this.proneBlend;model.position.y=this.baseModelY+.38*this.proneBlend;\n    const prone=this.proneBlend,crouch=this.crouchBlend,crouchFactor=1-prone*.92-crouch*.58;
+    this.proneBlend=THREE.MathUtils.damp(this.proneBlend||0,proneTarget,4.2,dt);this.crouchBlend=THREE.MathUtils.damp(this.crouchBlend||0,crouchTarget,9,dt);
+    model.rotation.x=this.baseModelRotationX-1.28*this.proneBlend;model.position.y=this.baseModelY+.38*this.proneBlend;
+    const prone=this.proneBlend,crouch=this.crouchBlend,crouchFactor=1-prone*.92-crouch*.58;
    // A animação do GLB já movimenta as pernas; a camada procedural só corrige a passada para evitar duplicação exagerada.
    const gaitAmount=locomotion*crouchFactor*(this.sprintBlend?.42:.30);
    for(const [name,angle] of [['mixamorigLeftUpLeg',gait*(this.sprintBlend?.78:.62)],['mixamorigRightUpLeg',opposite*(this.sprintBlend?.78:.62)],['mixamorigLeftLeg',Math.max(0,-gait)*(this.sprintBlend?1.05:.82)+stepLift*.10],['mixamorigRightLeg',Math.max(0,-opposite)*(this.sprintBlend?1.05:.82)+oppositeLift*.10]]){
