@@ -278,11 +278,11 @@ async function init(){
  renderer.outputColorSpace=THREE.SRGBColorSpace;
  renderer.setClearColor(0x9bcbe4,1);
  root.appendChild(renderer.domElement);
- scene=new THREE.Scene();clock=new THREE.Clock();buildWorld();camera=new THREE.PerspectiveCamera(68,innerWidth/innerHeight,.1,900);
+ scene=new THREE.Scene();clock=new THREE.Clock();buildWorld();camera=new THREE.PerspectiveCamera(68,innerWidth/innerHeight,.1,900);camera.position.set(.7,2.35,4.8);cameraLook.set(0,1.45,-1.2);camera.lookAt(cameraLook);
  loading.textContent='CARREGANDO PERSONAGEM 3D…';
  const catalog=await catalogFromFiles(BASE);catalog.animations=catalog.animations.filter(a=>['General','Movement Basic','Movement Advanced','Combat Ranged'].includes(a.group));library=new Library(catalog);
  playerRig=await createFighter(false,0);playerRig.holder.position.set(0,0,0);playerRig.holder.rotation.y=Math.PI;
- const localHead=playerRig.bones.get('head')||playerRig.bones.get('Head');if(localHead)localHead.visible=false;
+ // Mantém a cabeça visível: a câmera agora acompanha o personagem em terceira pessoa.
  const spots=[[62,18],[-70,36],[18,78],[-42,-88],[98,-52]];
  await Promise.all(spots.map((p,i)=>spawnEnemy(p[0],p[1],i)));
  setupControls();addEventListener('resize',resize);
@@ -316,7 +316,7 @@ function setupControls(){
   e.preventDefault();
   const dx=e.clientX-lastPointerX,dy=e.clientY-lastPointerY;
   // A sensibilidade acompanha a densidade da tela para manter o mesmo giro no celular.
-  lookDeltaX+=THREE.MathUtils.clamp(dx,-110,110);lookDeltaY+=THREE.MathUtils.clamp(dy,-90,90);lastPointerX=e.clientX;lastPointerY=e.clientY;
+  lookDeltaX+=THREE.MathUtils.clamp(dx,-140,140);lookDeltaY+=THREE.MathUtils.clamp(dy,-110,110);lastPointerX=e.clientX;lastPointerY=e.clientY;
  });
  const endCameraDrag=e=>{if(e.pointerId===cameraPointerId)cameraPointerId=null};
  surface.addEventListener('pointerup',endCameraDrag);surface.addEventListener('pointercancel',endCameraDrag);
@@ -368,11 +368,11 @@ function updateRadar(){
 }
 function animate(){
  const dt=Math.min(clock.getDelta(),.04),p=playerRig.holder;
- worldYaw-=lookDeltaX*.0082;pitch=THREE.MathUtils.clamp(pitch+lookDeltaY*.0078,-1.02,1.02);lookDeltaX=lookDeltaY=0;
+ worldYaw-=lookDeltaX*.0052;pitch=THREE.MathUtils.clamp(pitch+lookDeltaY*.0046,-.58,.72);lookDeltaX=lookDeltaY=0;
  const forward=new THREE.Vector3(Math.sin(worldYaw),0,-Math.cos(worldYaw)),right=new THREE.Vector3(Math.cos(worldYaw),0,Math.sin(worldYaw));
  const move=forward.multiplyScalar(keys.forward).add(right.multiplyScalar(keys.side));if(move.lengthSq()>1)move.normalize();
  const targetVelocity=move.clone().multiplyScalar(aiming?2.85:5.4);playerVelocity.lerp(targetVelocity,1-Math.exp(-9*dt));p.position.addScaledVector(playerVelocity,dt);p.position.x=THREE.MathUtils.clamp(p.position.x,-124,124);p.position.z=THREE.MathUtils.clamp(p.position.z,-124,124);
- if(playerVelocity.length()>.22){dustClock-=dt;if(dustClock<=0){dustClock=playerVelocity.length()>4.2?.12:.24;const foot=p.position.clone().add(new THREE.Vector3((Math.random()-.5)*.55,.12,(Math.random()-.5)*.55));for(let n=0;n<3;n++)addParticle(foot,0xc6b58a,1.1,.055,.3)}const desiredYaw=Math.atan2(playerVelocity.x,playerVelocity.z);const turn=THREE.MathUtils.euclideanModulo(desiredYaw-p.rotation.y+Math.PI,Math.PI*2)-Math.PI;p.rotation.y+=turn*Math.min(1,10*dt);play(playerRig,playerVelocity.length()>4.2?'run':'walk',playerVelocity.length()>4.2?1.08:1.02)}else{if(aiming||fireHeld){const faceYaw=worldYaw+Math.PI;const turn=THREE.MathUtils.euclideanModulo(faceYaw-p.rotation.y+Math.PI,Math.PI*2)-Math.PI;p.rotation.y+=turn*Math.min(1,12*dt)}play(playerRig,fireHeld?'cast':'idle');}
+ if(playerVelocity.length()>.22){dustClock-=dt;if(dustClock<=0){dustClock=playerVelocity.length()>4.2?.12:.24;const foot=p.position.clone().add(new THREE.Vector3((Math.random()-.5)*.55,.12,(Math.random()-.5)*.55));for(let n=0;n<3;n++)addParticle(foot,0xc6b58a,1.1,.055,.3)}const desiredYaw=Math.atan2(playerVelocity.x,playerVelocity.z);const turn=THREE.MathUtils.euclideanModulo(desiredYaw-p.rotation.y+Math.PI,Math.PI*2)-Math.PI;p.rotation.y+=turn*Math.min(1,10*dt);play(playerRig,playerVelocity.length()>4.2?'run':'walk',playerVelocity.length()>4.2?1.08:1.02)}else{const faceYaw=worldYaw+Math.PI;const turn=THREE.MathUtils.euclideanModulo(faceYaw-p.rotation.y+Math.PI,Math.PI*2)-Math.PI;p.rotation.y+=turn*Math.min(1,(aiming||fireHeld?12:5)*dt);play(playerRig,fireHeld?'cast':'idle');}
  playerRig.jumpV=(playerRig.jumpV||0)-15*dt;p.position.y=Math.max(0,p.position.y+(playerRig.jumpV||0)*dt);if(p.position.y===0&&playerRig.jumpV<0)playerRig.jumpV=0;
  applyBodyMotion(playerRig,playerVelocity.dot(forward),playerVelocity.dot(right),dt);playerRig.update(dt);
  for(const e of enemies){if(!e.alive)continue;const ep=e.rig.holder,delta=p.position.clone().sub(ep.position);const dist=delta.length();if(dist>2.3){delta.normalize();ep.position.addScaledVector(delta,1.35*dt);ep.rotation.y=Math.atan2(delta.x,delta.z);if(e.anim!=='run'){e.anim='run';play(e.rig,'run')}}else{if(e.anim!=='idle'){e.anim='idle';play(e.rig,'idle')}e.attack+=dt;if(e.attack>1.5){e.attack=0;const raw=4,blocked=Math.min(armor,raw*.5);armor-=blocked;health=Math.max(0,health-(raw-blocked));refreshVitals();statusEl.textContent='SOB ATAQUE';setTimeout(()=>{if(health>0)statusEl.textContent='PRONTO'},450)}}applyBodyMotion(e.rig,dist>2.3?1.35:0,0,dt);e.rig.update(dt)}
@@ -380,7 +380,7 @@ function animate(){
  fireCooldown=Math.max(0,fireCooldown-dt);
  if(fireHeld&&fireCooldown<=0&&reloadTimer<=0)shoot();
  if(reloadTimer>0){reloadTimer-=dt;if(reloadTimer<=0){reloadTimer=0;weaponAmmo[weaponIndex]=currentWeapon().mag;refreshAmmo();document.querySelector('#reload').classList.remove('active');statusEl.textContent='PRONTO'}}
- recoil=Math.max(0,recoil-dt*.55);const forwardView=new THREE.Vector3(Math.sin(worldYaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(worldYaw)*Math.cos(pitch));const movingBob=playerVelocity.length()>.25?Math.sin(clock.elapsedTime*(aiming?7.5:10.5))*.018*(aiming?.4:1):0;const eye=p.position.clone().add(new THREE.Vector3(0,1.58+movingBob,0)).add(new THREE.Vector3(Math.sin(worldYaw),0,-Math.cos(worldYaw)).multiplyScalar(.12));const desired=eye.clone().add(new THREE.Vector3(0,recoil*.025,0));const smooth=1-Math.exp(-20*dt);camera.position.lerp(desired,smooth);const lookTarget=eye.clone().add(forwardView.multiplyScalar(12)).add(new THREE.Vector3(0,recoil*.16,0));cameraLook.lerp(lookTarget,smooth);camera.lookAt(cameraLook);const wantedFov=aiming?54:78;if(Math.abs(camera.fov-wantedFov)>.1){camera.fov=THREE.MathUtils.lerp(camera.fov,wantedFov,smooth);camera.updateProjectionMatrix();}
+ recoil=Math.max(0,recoil-dt*.55);const forwardView=new THREE.Vector3(Math.sin(worldYaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(worldYaw)*Math.cos(pitch));const rightView=new THREE.Vector3(Math.cos(worldYaw),0,Math.sin(worldYaw));const movingBob=playerVelocity.length()>.25?Math.sin(clock.elapsedTime*(aiming?7.5:10.5))*.025*(aiming?.35:1):0;const lookTarget=p.position.clone().add(new THREE.Vector3(0,1.42+movingBob,0)).add(forwardView.clone().multiplyScalar(aiming?2.05:1.25)).add(new THREE.Vector3(0,recoil*.13,0));const cameraDistance=aiming?3.65:4.85;const shoulder=aiming?.48:.72;const desiredCamera=lookTarget.clone().add(forwardView.clone().multiplyScalar(-cameraDistance)).add(rightView.multiplyScalar(shoulder));const smooth=1-Math.exp(-(aiming?16:12)*dt);camera.position.lerp(desiredCamera,smooth);cameraLook.lerp(lookTarget,smooth);camera.lookAt(cameraLook);const wantedFov=aiming?52:68;if(Math.abs(camera.fov-wantedFov)>.1){camera.fov=THREE.MathUtils.lerp(camera.fov,wantedFov,smooth);camera.updateProjectionMatrix();}
  updateSafeZone(dt);
  if(hitMarkerTimer>0){hitMarkerTimer-=dt;if(hitMarkerTimer<=0)document.querySelector('#crosshair')?.classList.remove('hit')}updateEffects(dt);radarClock-=dt;if(radarClock<=0){radarClock=.18;updateRadar()}renderer.render(scene,camera);
 }
