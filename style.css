@@ -41,3 +41,71 @@ h1{font:900 clamp(48px,13vw,62px)/.82 'Barlow Condensed',Impact,sans-serif;lette
 .weapon{right:110px;bottom:max(35px,calc(env(safe-area-inset-bottom) + 35px));width:58px;height:58px;background:linear-gradient(145deg,#657b65,#293b32)}
 .weapon:after{content:"ARMA"}
 @media(max-width:390px){.weapon{right:96px;width:53px;height:53px}}
+
+
+/* Combat HUD — layout inspirado na referência enviada, mantendo os controles funcionais. */
+.ff-hud{pointer-events:none;color:#fff;text-shadow:0 1px 3px #000c;font-family:Inter,system-ui,sans-serif}
+.ff-map{position:absolute;left:3.8%;top:0;width:clamp(130px,13.2vw,205px);height:clamp(88px,14vw,145px);overflow:hidden;border:2px solid #aebfc4;border-radius:2px;background:linear-gradient(135deg,#7fae9a 0 22%,#b5c7a0 22% 48%,#8eaf9d 48% 70%,#b9c9a6 70%);box-shadow:0 2px 7px #0008}
+.map-grid{position:absolute;inset:0;background:repeating-linear-gradient(28deg,transparent 0 22px,#e5e0c1 23px 25px,transparent 26px 46px),repeating-linear-gradient(112deg,transparent 0 32px,#e4dfc1 33px 35px,transparent 36px 65px);opacity:.75}
+.map-road{position:absolute;height:4px;background:#d9d4bd;border:1px solid #777f72;transform-origin:left center}
+.road-a{width:130%;left:-8%;top:65%;transform:rotate(-28deg)}
+.road-b{width:100%;left:32%;top:0;transform:rotate(68deg)}
+.map-pin{position:absolute;left:51%;top:43%;color:#e5f5ff;font-size:17px;text-shadow:0 1px 4px #000}
+.ff-map small{position:absolute;bottom:3px;left:5px;font-size:7px;letter-spacing:1px;font-weight:900}
+.ff-team{position:absolute;left:3.8%;top:clamp(94px,14.5vw,151px);width:clamp(130px,13.5vw,210px);display:grid;gap:2px}
+.ff-team div{height:20px;background:linear-gradient(90deg,#263b43dd,#263b4388);font-size:10px;font-weight:800;display:flex;align-items:center;gap:5px;padding-right:5px}
+.ff-team b{height:20px;width:20px;display:grid;place-items:center;background:#59c6d6;color:white}.ff-team div:nth-child(2) b{background:#e8bb45}.ff-team div:nth-child(3) b{background:#c77bdf}.ff-team div:nth-child(4) b{background:#9b80e4}.ff-team i{margin-left:auto;color:#7ee4ed;font-style:normal}
+.ff-utility{position:absolute;left:18.5%;top:5px;display:flex;gap:8px}
+.ff-utility span,.ff-extra span{width:31px;height:31px;border-radius:50%;display:grid;place-items:center;background:#273c4dcc;border:1px solid #aabac577;font-size:16px;box-shadow:0 2px 5px #0007}
+.ff-top-center{position:absolute;top:0;left:36%;display:flex;gap:4px}
+.ff-top-center span{width:clamp(65px,9vw,138px);height:34px;background:#e6e7e7;color:#1e292d;display:grid;place-items:center;font-size:20px;border:1px solid #6b7275}
+.ff-top-center .save{background:#f2b900;color:#202020}
+.ff-top-right{position:absolute;right:3.8%;top:0;display:flex;gap:4px;align-items:center}
+.ff-counter{height:29px;min-width:35px;padding:0 7px;display:flex;align-items:center;justify-content:center;gap:5px;background:#283a4cdd;border:1px solid #9aaab4;border-radius:0 0 5px 5px;font-size:12px;color:#f4c54c}
+.ff-counter b{color:#fff;font-size:11px}
+.ff-weapon-panel{position:absolute;right:3.8%;top:39px;width:clamp(145px,16vw,245px);background:#152332d9;border:1px solid #7f919b;border-radius:2px;padding:5px 8px}
+.ff-current{height:40px;display:flex;align-items:center;justify-content:space-between;gap:8px}.ff-current strong{font-size:20px}.ff-current span{color:#d7e2e4;letter-spacing:2px}.ff-current b{font-size:11px;color:#e9c15c}
+.ff-slots{display:flex;gap:3px;margin-top:4px}.ff-slots span{height:38px;flex:1;border:1px solid #91a0a9;background:#1d2b39;display:grid;place-items:center;font-size:22px}.ff-slots small{font-size:8px}
+.ff-items{position:absolute;right:3.8%;top:clamp(125px,16vw,190px);display:flex;gap:3px;width:clamp(145px,16vw,245px)}
+.ff-items span{height:66px;flex:1;background:#172735a8;border:1px solid #7c8b95;display:flex;align-items:end;justify-content:center;padding-bottom:4px;font-size:9px}
+.ff-tip{position:absolute;left:50%;top:20px;transform:translateX(-50%);padding:7px 12px;border-radius:4px;background:#172a3bd9;border:1px solid #91a1a8;font-size:9px;font-weight:800;white-space:nowrap;letter-spacing:.5px}
+.ff-status{position:absolute;left:3.8%;bottom:8px;display:flex;gap:4px;max-width:70%;opacity:.9}
+.ff-status span{padding:5px 8px;background:#182b39bd;border:1px solid #81919a;border-radius:3px;font-size:8px;font-weight:800}
+#health{color:#9ce3a1}#stamina{color:#f1cf75}
+.ff-controls{pointer-events:none}
+#stick{left:4.5%;bottom:7%;width:clamp(105px,12vw,174px);height:clamp(105px,12vw,174px)}
+#knob{left:33%;top:33%;width:36%;height:36%}
+.control{width:clamp(47px,5vw,70px);height:clamp(47px,5vw,70px);font-size:clamp(20px,2.2vw,29px);background:linear-gradient(145deg,#354b5bdc,#172a39e8);border:1px solid #aabac2;box-shadow:0 3px 9px #0008,inset 0 1px #fff5}
+.control:after{font-size:7px;bottom:5px}
+.run{right:7.2%;bottom:26%}
+.run:after{content:"CORRER"}
+.jump{right:7.2%;bottom:7%}
+.jump:after{content:"PULAR"}
+.crouch{right:2.8%;bottom:26%}
+.crouch:after{content:"AGACHAR"}
+.prone{right:20.5%;bottom:6%;width:clamp(56px,5.8vw,82px);height:clamp(56px,5.8vw,82px)}
+.prone:after{content:"DEITAR"}
+.aim{right:2.8%;bottom:7%}
+.aim:after{content:"MIRAR"}
+.reload{right:20.5%;bottom:26%}
+.reload:after{content:"RECARGA"}
+.weapon{right:13.8%;bottom:6%;width:clamp(48px,5vw,68px);height:clamp(48px,5vw,68px)}
+.weapon:after{content:"ARMA"}
+.fire{right:13.5%;bottom:25%;width:clamp(66px,7vw,96px);height:clamp(66px,7vw,96px);border:2px solid #f2d080;background:linear-gradient(145deg,#e1b22c,#9a6814)}
+.fire:after{content:"ATIRAR";bottom:9px}
+.ff-action{right:25%;bottom:7%;width:48px;height:48px}
+.ff-action small{position:absolute;bottom:-12px;font-size:6px}
+.ff-extra{position:absolute;right:27%;bottom:23%;display:flex;gap:6px;pointer-events:none}
+.ff-extra span{width:37px;height:37px;font-size:15px}
+.crosshair{z-index:3}
+@media(orientation:portrait){
+ .ff-map{left:10px;top:8px;width:112px;height:78px}.ff-team{left:10px;top:91px;width:112px}.ff-team div{height:16px;font-size:8px}.ff-team b{height:16px;width:16px}
+ .ff-utility{left:135px;top:8px;gap:4px}.ff-utility span{width:26px;height:26px}
+ .ff-top-center{display:none}.ff-top-right{right:8px;top:8px;gap:2px}.ff-counter{height:24px;min-width:25px;padding:0 4px;font-size:9px}
+ .ff-weapon-panel{right:8px;top:38px;width:130px;padding:3px 5px}.ff-current{height:30px}.ff-current strong{font-size:15px}.ff-items{display:none}
+ .ff-tip{top:112px;font-size:7px}.ff-status{left:8px;bottom:5px;max-width:65%;flex-wrap:wrap}.ff-status span{font-size:7px;padding:4px}
+ #stick{left:12px;bottom:48px;width:112px;height:112px}
+ .run{right:74px;bottom:190px}.crouch{right:10px;bottom:190px}.jump{right:74px;bottom:120px}.aim{right:10px;bottom:120px}
+ .reload{right:145px;bottom:190px}.fire{right:78px;bottom:35px;width:68px;height:68px}.prone{right:10px;bottom:35px;width:56px;height:56px}.weapon{right:150px;bottom:45px;width:48px;height:48px}
+ .ff-action,.ff-extra{display:none}
+}
