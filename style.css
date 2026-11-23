@@ -240,3 +240,55 @@
 
 /* Ajuste final: mira um pouco mais alta, no estilo battle royale mobile. */
 #crosshair{top:44%!important;}
+
+
+/* Layout de HUD inspirado em battle royale mobile: mapa, status e combate em zonas claras. */
+#hud{font-family:Arial,system-ui,sans-serif}
+.hud-top{top:8px;left:9px;right:9px;display:grid;grid-template-columns:minmax(0,1fr) auto 82px;align-items:start;gap:7px}
+.player-card{min-height:43px;padding:5px 7px;border-radius:5px;background:linear-gradient(100deg,#101820ed,#172833b8);border:1px solid #d8e5e766;clip-path:polygon(0 0,94% 0,100% 22%,100% 100%,0 100%)}
+.avatar{width:29px;height:29px;border-radius:4px}
+.player-info b{font-size:8px;letter-spacing:.45px}
+.player-info small{font-size:8px}
+.match-info{gap:4px;justify-self:center}
+.match-info span{min-width:42px;padding:4px 6px;border-radius:4px;background:#101820e8}
+.match-info b{font-size:15px;line-height:17px}
+.match-info small{font-size:7px}
+.minimap{width:82px;height:82px;flex-basis:82px;border-radius:5px;border:2px solid #e9d9a4;background:radial-gradient(circle,#66845c 0 30%,#405d47 31% 65%,#263d36 66% 100%)}
+.minimap>small{bottom:2px;font-size:7px;background:#101820aa}
+.stats{top:99px;left:9px;right:9px;display:flex;flex-wrap:wrap;gap:4px;max-width:calc(100% - 18px)}
+.stats span,.stats button{padding:5px 6px;border-radius:4px;background:#101820dc;border:1px solid #ffffff44;font-size:8px;letter-spacing:.15px}
+.health-panel{top:139px;left:9px;width:112px;padding:5px 7px;border-radius:4px;background:#101820d9}
+#joystick{left:17px;bottom:23px;width:108px;height:108px;border:2px solid #ffffff9c;background:radial-gradient(circle,#536e7780,#0c1925bd)}
+#stick{left:30px;top:30px;width:44px;height:44px}
+.actions{right:10px;bottom:18px;grid-template-columns:54px 74px!important;grid-template-rows:54px 54px 54px!important;gap:7px!important}
+.actions button{border-radius:50%!important}
+.aim-btn,.jump-btn,.reload-btn{width:51px;height:51px}
+.fire-btn{width:74px;height:74px;align-self:center}
+.ammo-panel{right:13px;bottom:151px;min-width:78px;justify-content:center;padding:5px 8px;border-radius:5px;background:#101820e8;border:1px solid #e6d08c88}
+.ammo-panel b{font-size:21px}
+#hint{bottom:5px;max-width:43%;font-size:7px;background:#101820d9;border-radius:4px}
+@media (orientation:portrait) and (max-width:699px){
+ .hud-top{grid-template-columns:minmax(0,1fr) auto 76px;gap:5px}
+ .minimap{width:76px;height:76px;flex-basis:76px}
+ .match-info span{min-width:38px;padding:4px 5px}
+ .stats{top:91px}
+ .health-panel{top:131px}
+ #joystick{left:13px;bottom:22px;width:104px;height:104px}
+ #stick{left:29px;top:29px}
+ .actions{right:9px;bottom:17px;grid-template-columns:51px 70px!important;grid-template-rows:51px 51px 51px!important;gap:6px!important}
+ .aim-btn,.jump-btn,.reload-btn{width:49px;height:49px}
+ .fire-btn{width:70px;height:70px}
+ .ammo-panel{right:10px;bottom:145px}
+}
+@media(max-height:500px){
+ .hud-top{top:4px}
+ .minimap{width:64px;height:64px;flex-basis:64px}
+ .stats{top:74px}
+ .health-panel{top:111px}
+ #joystick{width:82px;height:82px;bottom:8px}
+ #stick{left:22px;top:22px;width:36px;height:36px}
+ .actions{bottom:8px;grid-template-columns:44px 58px!important;grid-template-rows:44px 44px 44px!important}
+ .aim-btn,.jump-btn,.reload-btn{width:42px;height:42px}
+ .fire-btn{width:58px;height:58px}
+ .ammo-panel{bottom:122px}
+}
