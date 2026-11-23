@@ -220,17 +220,17 @@ function addRoadNetwork(){
   [[-105,4],[-68,0],[-32,-4],[8,-3],[48,5],[88,18]]
  ];
  for(const pts of paths){
-  const curve=new THREE.CatmullRomCurve3(pts.map(([x,z])=>new THREE.Vector3(x,.045,z)));
+  const curve=new THREE.CatmullRomCurve3(pts.map(([x,z])=>new THREE.Vector3(x,.012,z)));
   const road=new THREE.Mesh(new THREE.TubeGeometry(curve,100,3.15,8,false),roadMat);
-  road.scale.y=.08;road.receiveShadow=true;scene.add(road);
+  road.scale.y=.003;road.receiveShadow=true;scene.add(road);
   const left=new THREE.Mesh(new THREE.TubeGeometry(curve,100,3.55,8,false),edgeMat);
-  left.scale.y=.025;left.position.y=-.025;left.receiveShadow=true;scene.add(left);
+  left.scale.y=.003;left.position.y=-.01;left.receiveShadow=true;scene.add(left);
   // Marcas de rodas sutis ao longo do caminho.
   for(let t=.08;t<.96;t+=.075){
    const pt=curve.getPoint(t),tan=curve.getTangent(t),angle=Math.atan2(tan.x,tan.z);
    for(const side of [-1,1]){
     const rut=new THREE.Mesh(new THREE.BoxGeometry(.16,.018,2.2),trackMat);
-    rut.position.set(pt.x+Math.cos(angle)*side*1.25,.075,pt.z-Math.sin(angle)*side*1.25);
+    rut.position.set(pt.x+Math.cos(angle)*side*1.25,.028,pt.z-Math.sin(angle)*side*1.25);
     rut.rotation.y=angle;scene.add(rut);
    }
   }
