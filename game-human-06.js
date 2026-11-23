@@ -483,7 +483,7 @@ function addRifle(rig,index=0){
 function makeHumanoidModel(){
  const root=new THREE.Group();root.name='IlhaHumanoid_OwnModel';
  const bones=new Map();
- const skin=new THREE.MeshStandardMaterial({color:0xb98265,roughness:.82}),skinLight=new THREE.MeshStandardMaterial({color:0xc99173,roughness:.84});
+ const skin=new THREE.MeshStandardMaterial({color:0x98664f,roughness:.9}),skinLight=new THREE.MeshStandardMaterial({color:0xb77d61,roughness:.88}),skinShadow=new THREE.MeshStandardMaterial({color:0x80523f,roughness:.94}),skinHighlight=new THREE.MeshStandardMaterial({color:0xc48b6e,roughness:.82});
  const shirt=new THREE.MeshStandardMaterial({color:0x526b58,roughness:.94}),shirtDark=new THREE.MeshStandardMaterial({color:0x35483d,roughness:.92});
  const pants=new THREE.MeshStandardMaterial({color:0x303b3d,roughness:.96}),pantsLight=new THREE.MeshStandardMaterial({color:0x46504b,roughness:.95});
  const boots=new THREE.MeshStandardMaterial({color:0x292b2a,roughness:.88}),sole=new THREE.MeshStandardMaterial({color:0x171a1a,roughness:.95});
@@ -514,7 +514,13 @@ function makeHumanoidModel(){
  const spine2=bone('mixamorigSpine2',spine1,0,.16,0);
  ellipsoid(spine2,'deltoid_left',-.205,.025,0,.092,.095,.092,shirt);
  ellipsoid(spine2,'deltoid_right',.205,.025,0,.092,.095,.092,shirt);
- ellipsoid(spine2,'trapezius',0,.105,-.035,.145,.075,.085,shirt);
+ ellipsoid(spine2,'trapezius',0,.105,-.035,.155,.075,.09,shirt);
+ // Volume anatômico do tórax e abdômen sob a camisa.
+ ellipsoid(spine2,'left_pectoral',-.092,.055,.073,.105,.105,.055,shirt);
+ ellipsoid(spine2,'right_pectoral',.092,.055,.073,.105,.105,.055,shirt);
+ ellipsoid(spine2,'upper_abdomen',0,-.075,.075,.125,.105,.052,shirt);
+ ellipsoid(spine2,'lower_abdomen',0,-.155,.06,.115,.07,.045,shirtDark);
+ for(const side of [-1,1])ellipsoid(spine2,'clavicle',side*.105,.145,.055,.13,.025,.035,shirt);
  // Gola, costuras e bolsos discretos.
  ellipsoid(spine2,'shirt_collar',0,.12,.005,.105,.055,.105,shirtDark);
  box(spine2,.018,.24,.012,shirtDark,0,-.005,.151);
@@ -526,10 +532,19 @@ function makeHumanoidModel(){
  capsule(neck,'neck_mesh',.13,.052,skin,0,.025,0);
  const head=bone('mixamorigHead',neck,0,.115,0);
  ellipsoid(head,'head_mesh',0,.055,0,.112,.145,.105,skinLight);
- ellipsoid(head,'nose',0,.035,.099,.025,.035,.028,skin);
+ ellipsoid(head,'cheek_left',-.067,.005,.048,.047,.052,.052,skinHighlight);
+ ellipsoid(head,'cheek_right',.067,.005,.048,.047,.052,.052,skinHighlight);
+ ellipsoid(head,'forehead',0,.112,.055,.083,.052,.048,skinLight);
+ ellipsoid(head,'nose_bridge',0,.045,.094,.018,.045,.025,skinHighlight);
+ ellipsoid(head,'nose',0,.018,.105,.027,.027,.03,skin);
+ ellipsoid(head,'nostril_left',-.014,.004,.128,.007,.005,.004,skinShadow);
+ ellipsoid(head,'nostril_right',.014,.004,.128,.007,.005,.004,skinShadow);
  ellipsoid(head,'jaw',0,-.025,.018,.082,.062,.078,skinLight);
- ellipsoid(head,'mouth',0,-.012,.099,.025,.006,.006,hair);
+ ellipsoid(head,'upper_lip',0,-.025,.105,.029,.008,.009,skinShadow);
+ ellipsoid(head,'lower_lip',0,-.038,.104,.026,.007,.008,skinHighlight);
  ellipsoid(head,'chin',0,-.055,.071,.038,.022,.022,skin);
+ ellipsoid(head,'jawline_left',-.065,-.035,.035,.026,.045,.035,skin);
+ ellipsoid(head,'jawline_right',.065,-.035,.035,.026,.045,.035,skin);
  ellipsoid(head,'hair_cap',0,.145,-.012,.116,.067,.108,hair);
  ellipsoid(head,'hair_back',0,.065,-.075,.105,.105,.06,hair);
  // Boné tático de tecido: copa, aba frontal e costura central.
@@ -543,23 +558,30 @@ function makeHumanoidModel(){
  for(const side of [-1,1]){box(spine2,.045,.31,.035,packMat,side*.145,-.015,-.09);box(spine1,.09,.09,.035,pantsLight,side*.18,-.12,-.16)}
  for(const side of [-1,1]){
   ellipsoid(head,'ear',side*.112,.055,0,.022,.042,.025,skin);
-  ellipsoid(head,'eye',side*.043,.083,.091,.012,.012,.008,eyes);
+  ellipsoid(head,'eye_socket',side*.043,.083,.087,.022,.018,.012,skinShadow);
+  ellipsoid(head,'eye_white',side*.043,.083,.098,.014,.009,.006,skinHighlight);
+  ellipsoid(head,'eye',side*.043,.083,.104,.008,.009,.005,eyes);
   ellipsoid(head,'brow',side*.043,.105,.091,.022,.008,.009,hair);
   const upper=bone(side<0?'mixamorigLeftArm':'mixamorigRightArm',spine2,side*.205,.075,0);
   ellipsoid(spine2,'shoulder',side*.205,.045,0,.09,.095,.09,shirt);
   capsule(upper,'upper_arm',.31,.064,skin,0,-.015,0);
+  ellipsoid(upper,'biceps_skin',0,-.12,.025,.061,.105,.061,skinHighlight);
+  ellipsoid(upper,'elbow',0,-.275,.005,.056,.055,.055,skin);
   capsule(upper,'shirt_sleeve',.205,.078,shirt,0,-.015,0);
   ellipsoid(upper,'bicep_volume',0,-.115,.008,.067,.135,.067,shirt);
   ellipsoid(upper,'tricep_volume',0,-.13,-.035,.061,.125,.055,shirtDark);
   const fore=bone(side<0?'mixamorigLeftForeArm':'mixamorigRightForeArm',upper,0,-.30,0);
   capsule(fore,'forearm',.285,.052,skin,0,-.005,0);
   capsule(fore,'forearm_sleeve',.20,.066,shirt,0,-.005,0);
-  ellipsoid(fore,'forearm_shape',0,-.105,.006,.052,.125,.052,skinLight);
+  ellipsoid(fore,'forearm_shape',0,-.105,.006,.052,.125,.052,skinHighlight);
+  ellipsoid(fore,'forearm_muscle',0,-.12,.028,.045,.105,.035,skin);
+  ellipsoid(fore,'elbow_guard',0,-.015,.045,.058,.045,.025,shirtDark);
   ellipsoid(fore,'wrist',0,-.235,.004,.042,.055,.042,skin);
   ellipsoid(fore,'sleeve_cuff',0,-.19,0,.067,.045,.067,shirtDark);
   const hand=bone(side<0?'mixamorigLeftHand':'mixamorigRightHand',fore,0,-.275,0);
   ellipsoid(hand,'palm',0,-.035,.005,.052,.07,.035,skin);
-  ellipsoid(hand,'knuckles',0,-.075,.018,.052,.035,.026,skinLight);
+  ellipsoid(hand,'knuckles',0,-.075,.018,.052,.035,.026,skinHighlight);
+  for(let f=0;f<4;f++)ellipsoid(hand,'finger_knuckle',(f-1.5)*.021,-.087,.027,.011,.012,.009,skin);
   ellipsoid(hand,'glove_cuff',0,-.018,0,.06,.035,.042,belt);
   for(let f=0;f<4;f++)capsule(hand,'finger',.065,.009,skin,(f-1.5)*.021,-.095,.008);
   capsule(hand,'thumb',.06,.012,skin,side*.052,-.045,.012);
@@ -567,17 +589,23 @@ function makeHumanoidModel(){
   capsule(upLeg,'thigh',.445,.095,skin,0,-.015,0);
   capsule(upLeg,'cargo_trouser',.455,.108,pants,0,-.015,-.003);
   ellipsoid(upLeg,'thigh_contour',0,-.19,.012,.105,.19,.105,pantsLight);
+  ellipsoid(upLeg,'front_quadriceps',0,-.17,.073,.078,.17,.043,pants);
+  ellipsoid(upLeg,'outer_hip',side*.055,-.035,-.005,.075,.105,.09,pants);
   ellipsoid(upLeg,'outer_thigh',side*.045,-.20,-.015,.07,.16,.085,pants);
   ellipsoid(upLeg,'cargo_pocket',side*.075,-.23,.085,.075,.11,.025,pantsLight);
   const leg=bone(side<0?'mixamorigLeftLeg':'mixamorigRightLeg',upLeg,0,-.43,0);
   capsule(leg,'calf',.415,.064,skin,0,-.005,0);
   capsule(leg,'lower_trouser',.415,.078,pants,0,-.005,-.002);
   ellipsoid(leg,'calf_contour',0,-.19,-.018,.078,.15,.085,pantsLight);
+  ellipsoid(leg,'calf_muscle',0,-.19,.045,.061,.125,.045,pants);
+  ellipsoid(leg,'ankle_cuff',0,-.365,.005,.081,.045,.082,shirtDark);
   ellipsoid(leg,'shin_panel',0,-.20,.055,.058,.14,.025,pants);
   ellipsoid(leg,'knee_pad',0,-.045,.066,.078,.085,.025,pantsLight);
   const foot=bone(side<0?'mixamorigLeftFoot':'mixamorigRightFoot',leg,0,-.395,.015);
   ellipsoid(foot,'ankle_boot',0,-.012,.025,.075,.07,.09,boots);
   ellipsoid(foot,'boot_toe',0,-.035,.095,.082,.052,.13,boots);
+  ellipsoid(foot,'boot_tongue',0,.012,.065,.043,.045,.075,pantsLight);
+  for(let lace=0;lace<4;lace++)box(foot,.065,.008,.012,sole,0,.025-lace*.014,.12-lace*.018);
   ellipsoid(foot,'boot_sole',0,-.078,.075,.084,.018,.14,sole);
   const toe=bone(side<0?'mixamorigLeftToeBase':'mixamorigRightToeBase',foot,0,-.01,.12);
   ellipsoid(toe,'toe_mesh',0,0,.025,.07,.035,.055,boots);
