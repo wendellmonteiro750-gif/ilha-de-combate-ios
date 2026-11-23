@@ -586,7 +586,7 @@ function makeHumanoidModel(){
  return {root,bones};
 }
 // Modelo masculino humano completo, externo, com malha skinned, texturas PBR e esqueleto Biped.
-const HUMAN_MODEL_URL='https://models.codelove.in/models/military-male-01.glb';
+const HUMAN_MODEL_URL='https://models.vinish.dev/people/soldier.glb';
 let humanModelPromise=null,humanSkeletonUtils=null;
 async function loadHumanModel(){
  if(!humanModelPromise)humanModelPromise=(async()=>{
@@ -605,7 +605,7 @@ async function createFighter(isEnemy=false,index=0){
  try{
   const gltf=await loadHumanModel();
   model=humanSkeletonUtils.clone(gltf.scene);
-  model.name='MaleSoldier01_SkinnedHuman';
+  model.name='VinishSoldier_SkinnedHuman';
  }catch(loadError){
   humanModelPromise=null;
   console.error('Não foi possível carregar o novo operador 3D.',loadError);
