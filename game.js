@@ -515,7 +515,7 @@ async function createFighter(isEnemy=false,index=0){
  for(const sourceClip of source.animations){const clip=sourceClip.clone();for(const track of clip.tracks){if(/Hips.*position/i.test(track.name)){for(let k=0;k<track.values.length;k+=3){track.values[k]=0;track.values[k+2]=0;}}}actions.set(clip.name,mixer.clipAction(clip));}
  let current=null,playing='';
  const rig={
-  holder,root:model,bones,isPlayer:!isEnemy,baseRootY:model.position.y,
+  holder,root:model,bones,isPlayer:!isEnemy,baseRootY:model.position.y,baseModelY:model.position.y,baseModelRotationX:model.rotation.x,proneBlend:0,crouchBlend:0,
   lib:{role(role){return {clip:HUMAN_ROLE_CLIPS[role]||'Idle',loop:true}}},
   get playing(){return playing},
   playRole(role,opts={}){
@@ -544,7 +544,7 @@ async function createFighter(isEnemy=false,index=0){
    const gait=Math.sin(this.gaitPhase),opposite=Math.sin(this.gaitPhase+Math.PI);
    const stepLift=Math.max(0,Math.cos(this.gaitPhase)),oppositeLift=Math.max(0,Math.cos(this.gaitPhase+Math.PI));
    this.root.position.y=this.baseRootY+Math.abs(Math.sin(this.gaitPhase*2))*locomotion*(this.sprintBlend?.035:.018);
-   const crouchFactor=this.stanceMode==='crouch'?.42:this.stanceMode==='prone'?.08:1;
+   const proneTarget=this.stanceMode==='prone'?1:0,crouchTarget=this.stanceMode==='crouch'?1:0;\n    this.proneBlend=THREE.MathUtils.damp(this.proneBlend||0,proneTarget,4.2,dt);this.crouchBlend=THREE.MathUtils.damp(this.crouchBlend||0,crouchTarget,9,dt);\n    model.rotation.x=this.baseModelRotationX-1.28*this.proneBlend;model.position.y=this.baseModelY+.38*this.proneBlend;\n    const prone=this.proneBlend,crouch=this.crouchBlend,crouchFactor=1-prone*.92-crouch*.58;
    // A animação do GLB já movimenta as pernas; a camada procedural só corrige a passada para evitar duplicação exagerada.
    const gaitAmount=locomotion*crouchFactor*(this.sprintBlend?.42:.30);
    for(const [name,angle] of [['mixamorigLeftUpLeg',gait*(this.sprintBlend?.78:.62)],['mixamorigRightUpLeg',opposite*(this.sprintBlend?.78:.62)],['mixamorigLeftLeg',Math.max(0,-gait)*(this.sprintBlend?1.05:.82)+stepLift*.10],['mixamorigRightLeg',Math.max(0,-opposite)*(this.sprintBlend?1.05:.82)+oppositeLift*.10]]){
@@ -554,7 +554,7 @@ async function createFighter(isEnemy=false,index=0){
    }
    const target=this.stanceMode==='crouch'||this.stanceMode==='prone'?1:0;
    this._stanceBlend=THREE.MathUtils.damp(this._stanceBlend,target,10,dt);
-   const prone=this.stanceMode==='prone',crouch=this.stanceMode==='crouch';
+   const prone=this.proneBlend||0,crouch=this.crouchBlend||0;
    const ready=this.isPlayer?1:.72,aim=THREE.MathUtils.clamp(this.weaponAimBlend||0,0,1),combatPose=Math.max(aim,THREE.MathUtils.clamp(this.weaponFireBlend||0,0,1));
    const fire=THREE.MathUtils.clamp(this.weaponFireBlend||0,0,1),run=THREE.MathUtils.clamp(this.weaponRunBlend||0,0,1),reload=THREE.MathUtils.clamp(this.reloadBlend||0,0,1);
    const firePhase=this.firePosePhase||0;
@@ -566,10 +566,10 @@ async function createFighter(isEnemy=false,index=0){
    const moveBob=Math.sin(this.gaitPhase*2)*(locomotion*(.018+.018*run));
    const reloadReach=Math.sin((1-reload)*Math.PI)*reload;
    const pose=[
-    ['mixamorigHips',prone ? .82 : crouch ? .42 : -(this.jumpBlend||0)*.16,0,0],
-    ['mixamorigSpine',prone ? .48 : crouch ? -.10 : -.30*combatPose-.12*aim+ .10*run-(this.jumpBlend||0)*.08+moveBob*.35,0,-(this.lateralMotion||0)*(.10-.045*aim)],
-    ['mixamorigSpine1',prone ? .22 : crouch ? -.08 : -.22*combatPose-.07*aim+.06*run-(this.jumpBlend||0)*.04+moveBob*.25,0,(this.lateralMotion||0)*(.055-.025*aim)],
-    ['mixamorigSpine2',prone ? .10 : crouch ? -.04 : -.12*combatPose-.035*aim,0,0],
+    ['mixamorigHips',THREE.MathUtils.lerp(THREE.MathUtils.lerp(-(this.jumpBlend||0)*.16,.42,crouch),.82,prone),0,0],
+    ['mixamorigSpine',THREE.MathUtils.lerp(THREE.MathUtils.lerp(-.30*combatPose-.12*aim+.10*run-(this.jumpBlend||0)*.08+moveBob*.35,-.10,crouch),.48,prone),0,-(this.lateralMotion||0)*(.10-.045*aim)],
+    ['mixamorigSpine1',THREE.MathUtils.lerp(THREE.MathUtils.lerp(-.22*combatPose-.07*aim+.06*run-(this.jumpBlend||0)*.04+moveBob*.25,-.08,crouch),.22,prone),0,(this.lateralMotion||0)*(.055-.025*aim)],
+    ['mixamorigSpine2',THREE.MathUtils.lerp(THREE.MathUtils.lerp(-.12*combatPose-.035*aim,-.04,crouch),.10,prone),0,0],
     ['mixamorigNeck',0,0,0],
     ['mixamorigHead',-(this.aimPitch||0)*.32,0,0],
     ['mixamorigLeftUpLeg',prone ? -.62 : crouch ? -.58 : -(this.jumpBlend||0)*.34,0,0],
