@@ -15,6 +15,10 @@ const weapons=[
  {name:'METRALHADORA',category:'LEVE',lengthCm:98,mag:60,damage:22,rate:.095,spread:.025,reload:2.25,modes:['AUTO'],range:92}
 ];
 let weaponIndex=0,weaponAmmo=[30,40,8,6,15,60],reserveAmmo=[120,160,32,36,75,180],scopeLevel=0,sprintHeld=false,fireMode='AUTO',burstRemaining=0,attachmentLevel=0;
+let weaponAudioContext=null,weaponNoiseBuffer=null;
+function initWeaponAudio(){try{const AudioCtx=window.AudioContext||window.webkitAudioContext;if(!AudioCtx)return;if(!weaponAudioContext){weaponAudioContext=new AudioCtx();const length=Math.floor(weaponAudioContext.sampleRate*.13);weaponNoiseBuffer=weaponAudioContext.createBuffer(1,length,weaponAudioContext.sampleRate);const data=weaponNoiseBuffer.getChannelData(0);for(let i=0;i<length;i++)data[i]=(Math.random()*2-1)*Math.pow(1-i/length,2.4);}if(weaponAudioContext.state==='suspended')weaponAudioContext.resume();}catch(err){console.warn('Áudio indisponível neste navegador',err)}}
+function playWeaponSound(){if(!weaponAudioContext||weaponAudioContext.state!=='running')return;try{const now=weaponAudioContext.currentTime,source=weaponAudioContext.createBufferSource(),filter=weaponAudioContext.createBiquadFilter(),gain=weaponAudioContext.createGain();source.buffer=weaponNoiseBuffer;filter.type='lowpass';filter.frequency.value=[1450,1900,850,1050,2400,1250][weaponIndex]||1400;gain.gain.setValueAtTime(.22,now);gain.gain.exponentialRampToValueAtTime(.001,now+.12);source.connect(filter);filter.connect(gain);gain.connect(weaponAudioContext.destination);source.start(now);source.stop(now+.13);const osc=weaponAudioContext.createOscillator(),thump=weaponAudioContext.createGain();osc.type='sine';osc.frequency.setValueAtTime([92,110,58,72,145,80][weaponIndex]||90,now);osc.frequency.exponentialRampToValueAtTime(35,now+.085);thump.gain.setValueAtTime(.12,now);thump.gain.exponentialRampToValueAtTime(.001,now+.09);osc.connect(thump);thump.connect(weaponAudioContext.destination);osc.start(now);osc.stop(now+.1);}catch(err){}}
+
 function currentWeapon(){return weapons[weaponIndex]}
 function setFireMode(next){const modes=currentWeapon().modes;fireMode=modes.includes(next)?next:modes[modes.length-1];const el=document.querySelector('#fireMode');if(el)el.textContent='MODO: '+fireMode;}
 function cycleFireMode(){const modes=currentWeapon().modes;const i=modes.indexOf(fireMode);setFireMode(modes[(i+1)%modes.length]);statusEl.textContent='DISPARO '+fireMode;}
@@ -43,8 +47,8 @@ function saveGameSettings(){try{localStorage.setItem('ic-game-settings',JSON.str
 // Ativa o perfil Ultra como padrão visual, mantendo a opção de reduzir qualidade no menu.
 if(gameSettings.quality==='medium'||gameSettings.quality==='high')gameSettings.quality='ultra';if(gameSettings.shadows===false)gameSettings.shadows=true;saveGameSettings();
 let adaptiveFrameTime=0,adaptiveFrameCount=0,adaptiveCheckTime=0,adaptivePixelRatio=0;
-function applyGraphicsSettings(){if(!renderer)return;const mobile=innerWidth<700;const q={low:{ratio:mobile?.72:1,shadows:false},medium:{ratio:mobile?.90:1.2,shadows:false},high:{ratio:mobile?1.05:1.55,shadows:true},ultra:{ratio:mobile?1.2:1.85,shadows:true}}[gameSettings.quality]||{ratio:mobile?.72:.9,shadows:false};const cap=Math.min(devicePixelRatio||1,q.ratio);adaptivePixelRatio=mobile?Math.min(cap,adaptivePixelRatio||cap):cap;renderer.setPixelRatio(adaptivePixelRatio);renderer.shadowMap.enabled=!!gameSettings.shadows&&!!q.shadows;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.shadowMap.needsUpdate=true;if(scene)scene.traverse(o=>{if(o.isDirectionalLight){o.castShadow=renderer.shadowMap.enabled;if(o.shadow){const size=mobile?1024:2048;o.shadow.mapSize.set(size,size);o.shadow.needsUpdate=true;}}});renderer.setSize(innerWidth,innerHeight);}
-function adaptMobileFrameRate(frameDt){if(innerWidth>=700||!renderer)return;adaptiveFrameTime+=frameDt;adaptiveFrameCount++;adaptiveCheckTime+=frameDt;if(adaptiveCheckTime<2)return;const fps=adaptiveFrameCount/Math.max(.001,adaptiveFrameTime);const q={low:.72,medium:.90,high:1.05,ultra:1.2}[gameSettings.quality]||.72;const cap=Math.min(devicePixelRatio||1,q);let next=adaptivePixelRatio;if(fps<46)next=Math.max(.72,adaptivePixelRatio-.07);else if(fps>57)next=Math.min(cap,adaptivePixelRatio+.025);if(Math.abs(next-adaptivePixelRatio)>.015){adaptivePixelRatio=next;renderer.setPixelRatio(next);renderer.setSize(innerWidth,innerHeight);}adaptiveFrameTime=0;adaptiveFrameCount=0;adaptiveCheckTime=0;}
+function applyGraphicsSettings(){if(!renderer)return;const mobile=innerWidth<700;const q={low:{ratio:mobile?.68:1,shadows:false},medium:{ratio:mobile?.80:1.2,shadows:false},high:{ratio:mobile?.90:1.55,shadows:true},ultra:{ratio:mobile?.98:1.85,shadows:true}}[gameSettings.quality]||{ratio:mobile?.68:.9,shadows:false};const cap=Math.min(devicePixelRatio||1,q.ratio);adaptivePixelRatio=mobile?Math.min(cap,adaptivePixelRatio||cap):cap;renderer.setPixelRatio(adaptivePixelRatio);renderer.shadowMap.enabled=!!gameSettings.shadows&&!!q.shadows;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.shadowMap.needsUpdate=true;if(scene)scene.traverse(o=>{if(o.isDirectionalLight){o.castShadow=renderer.shadowMap.enabled;if(o.shadow){const size=mobile?768:2048;o.shadow.mapSize.set(size,size);o.shadow.needsUpdate=true;}}});renderer.setSize(innerWidth,innerHeight);}
+function adaptMobileFrameRate(frameDt){if(innerWidth>=700||!renderer)return;adaptiveFrameTime+=frameDt;adaptiveFrameCount++;adaptiveCheckTime+=frameDt;if(adaptiveCheckTime<2)return;const fps=adaptiveFrameCount/Math.max(.001,adaptiveFrameTime);const q={low:.68,medium:.80,high:.90,ultra:.98}[gameSettings.quality]||.68;const cap=Math.min(devicePixelRatio||1,q);let next=adaptivePixelRatio;if(fps<46)next=Math.max(.64,adaptivePixelRatio-.06);else if(fps>57)next=Math.min(cap,adaptivePixelRatio+.02);if(Math.abs(next-adaptivePixelRatio)>.015){adaptivePixelRatio=next;renderer.setPixelRatio(next);renderer.setSize(innerWidth,innerHeight);}adaptiveFrameTime=0;adaptiveFrameCount=0;adaptiveCheckTime=0;}
 function applyHudSettings(){const hud=document.querySelector('#hud');if(!hud)return;hud.style.setProperty('--hud-scale',gameSettings.hudScale/100);hud.style.setProperty('--hud-opacity',gameSettings.hudOpacity/100);const map=document.querySelector('.minimap');if(map)map.style.display=gameSettings.minimap?'':'none';}
 function initSettings(){
  const panel=document.querySelector('#settingsPanel'),open=()=>{panel.classList.add('open');panel.setAttribute('aria-hidden','false')},close=()=>{panel.classList.remove('open');panel.setAttribute('aria-hidden','true');if(hudEditing)toggleHudEditor(false)};
@@ -219,7 +223,9 @@ function addRoadNetwork(){
  const paths=[
   [[-112,58],[-78,38],[-42,18],[-8,2],[28,-10],[65,-28],[108,-58]],
   [[-82,-88],[-55,-54],[-25,-25],[5,4],[35,42],[62,76],[94,102]],
-  [[-105,4],[-68,0],[-32,-4],[8,-3],[48,5],[88,18]]
+  [[-105,4],[-68,0],[-32,-4],[8,-3],[48,5],[88,18]],
+  [[-8,0],[-48,-8],[-86,-7],[-126,-4]],
+  [[0,0],[18,38],[26,82],[24,120]]
  ];
  for(const pts of paths){
   const curve=new THREE.CatmullRomCurve3(pts.map(([x,z])=>new THREE.Vector3(x,0,z)));
@@ -382,7 +388,7 @@ function addLootDrops(){
   [12,5,'medkit'],[-32,42,'armor'],[55,-34,'ammo'],[-70,-12,'medkit'],[78,66,'armor'],
   [-10,-8,'weapon',0],[17,-15,'scope'],[25,12,'medkit'],[-28,18,'weapon',1],
   [65,38,'ammo'],[-73,-45,'scope'],[41,-85,'weapon',2],[-89,70,'medkit'],
-  [99,8,'armor'],[44,57,'weapon',1],[-46,71,'ammo'],[82,-61,'scope'],
+  [99,8,'armor'],[44,57,'weapon',1],[-46,71,'ammo'],[82,-61,'scope'],[-128,-5,'ammo'],[112,96,'scope'],[24,132,'weapon',3],[-128,-28,'medkit'],
   [-56,-79,'weapon',0],[8,85,'medkit'],[-101,21,'ammo'],[106,80,'weapon',2],[-6,-99,'scope'],[31,-48,'weapon',3],[-92,-55,'weapon',4],[88,42,'weapon',5],[5,48,'attachment'],[-48,-18,'attachment'],[102,-24,'attachment'],
   // Suprimentos dentro das casas: recompensam a exploração dos interiores.
   [-12,-12,'ammo'],[14,-18,'medkit'],[22,9,'armor'],[-25,15,'weapon',1],[68,35,'scope'],[-76,-42,'ammo'],[38,-88,'attachment'],[42,54,'medkit']
@@ -843,6 +849,7 @@ async function init(){
  await Promise.all(spots.map((p,i)=>spawnEnemy(p[0],p[1],i)));
  setupControls();initSettings();addEventListener('resize',resize);
  document.querySelector('#playGame').addEventListener('click',()=>{
+  initWeaponAudio();
   const lobby=document.querySelector('#lobby');lobby.classList.add('leaving');
   document.querySelector('#hud').style.display='block';
   setTimeout(()=>lobby.remove(),550);
@@ -903,7 +910,7 @@ function reloadWeapon(){
 function shoot(){
  if(reloadTimer>0||fireCooldown>0)return;
  if(ammo<=0){statusEl.textContent=reserveAmmo[weaponIndex]>0?'RECARREGUE':'SEM MUNIÇÃO';fireHeld=false;burstRemaining=0;return}
- ammo--;weaponAmmo[weaponIndex]=ammo;ammoEl.textContent='MUNIÇÃO '+ammo;document.querySelector('#ammoLarge').textContent=ammo;
+ ammo--;weaponAmmo[weaponIndex]=ammo;ammoEl.textContent='MUNIÇÃO '+ammo;document.querySelector('#ammoLarge').textContent=ammo;playWeaponSound();
  fireCooldown=currentWeapon().rate*(aiming?.86:1);
  const cameraRight=new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion);const horizontalOffset=.06*Math.tan(THREE.MathUtils.degToRad(camera.fov*.5))*(window.innerWidth/window.innerHeight);const dir=new THREE.Vector3();camera.getWorldDirection(dir);dir.addScaledVector(cameraRight,horizontalOffset).normalize();
  const movement=THREE.MathUtils.clamp(playerVelocity.length()/7.1,0,1);
