@@ -1,7 +1,7 @@
 // Battle royale systems for Battle Island (offline prototype).
 export class BattleSystems {
   constructor(THREE, scene, hero, onStatus=()=>{}, blockers=[]) {
-    this.T=THREE; this.scene=scene; this.hero=hero; this.onStatus=onStatus; this.blockers=blockers; this.blockers=blockers;
+    this.T=THREE; this.scene=scene; this.hero=hero; this.onStatus=onStatus; this.blockers=blockers;
     this.phase='lobby'; this.items=[]; this.inventory={medkit:1, ammo:90, vest:0, helmet:0, backpack:0};
     this.weapons=[
       {name:'RIFLE AR',damage:34,rate:155,mag:30,reserve:90},
@@ -129,7 +129,7 @@ export class BattleSystems {
   }
   start(){
     if(this.phase!=='lobby')return;this.phase='plane';this.elapsed=0;
-    this.hero.position.set(-88,31,-8);
+    this.hero.position.copy(this.planeStart);
     this.plane=this.createPlane();this.scene.add(this.plane);
     this.plane.position.copy(this.hero.position);this.plane.rotation.y=Math.atan2(this.planeEnd.z-this.planeStart.z,this.planeEnd.x-this.planeStart.x);
     document.getElementById('br-panel').style.display='block';document.getElementById('br-hint').style.display='block';
@@ -174,10 +174,12 @@ export class BattleSystems {
     if(this.phase==='lobby'||this.phase==='ended')return;
     this.elapsed+=dt;
     if(this.phase==='plane'){
-      this.hero.position.x=Math.min(88,this.hero.position.x+dt*8);this.hero.position.y=31;this.plane.position.copy(this.hero.position);
+      const travel=Math.min(1,this.elapsed/18);
+      this.hero.position.lerpVectors(this.planeStart,this.planeEnd,travel);
+      this.plane.position.copy(this.hero.position);
       this.plane.rotation.z=Math.sin(this.elapsed*1.1)*.018;
       for(const prop of this.propellers||[])prop.rotation.x+=dt*34;
-      if(this.hero.position.x>=88)this.jump();
+      if(travel>=1)this.jump();
     }else if(this.phase==='freefall'){
       this.freefallTime+=dt;this.hero.position.y=Math.max(0,this.hero.position.y-dt*9.2);
       this.hero.position.x+=moveX*dt*5.5;this.hero.position.z+=(-moveY)*dt*5.5;
