@@ -399,20 +399,16 @@ function fireShot(){
  const aimPoint=aimHits.length
   ?aimHits[0].point.clone()
   :aimRay.ray.origin.clone().addScaledVector(aimRay.ray.direction,85);
- // O projétil agora percorre a trajetória desde a boca do cano até esse ponto.
- // Assim o rastro e a colisão seguem a mira, em vez de simular um tiro saindo da câmera.
+ // O rastro termina exatamente no ponto escolhido pelo raio central da câmera.
+ // A colisão também usa esse mesmo raio para não desviar do centro da mira.
  let muzzlePoint=camera.position.clone();
  if(weaponModel&&weaponModel.visible){
   weaponModel.updateMatrixWorld(true);
   muzzlePoint=weaponModel.localToWorld(new THREE.Vector3(0,.012,-1.14));
  }
- const shotDirection=aimPoint.clone().sub(muzzlePoint).normalize();
- const shotRay=new THREE.Raycaster(muzzlePoint,shotDirection,.02,85);
- const shotHits=shotRay.intersectObjects(targets,true);
- const endPoint=shotHits.length?shotHits[0].point.clone():aimPoint;
- showBulletTrail(muzzlePoint,endPoint);
- if(shotHits.length){
-  const target=shotHits[0].object;
+ showBulletTrail(muzzlePoint,aimPoint);
+ if(aimHits.length){
+  const target=aimHits[0].object;
   target.material=mat(0xe5a43a);
   $('message').textContent='ALVO ATINGIDO!';
   $('message').classList.add('hit');
