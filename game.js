@@ -211,8 +211,8 @@ function move(dt){
  if(hero.position.y>0||jumpVelocity>0){jumpVelocity-=19*dt;hero.position.y=Math.max(0,hero.position.y+jumpVelocity*dt);if(hero.position.y===0)jumpVelocity=0}
 }
 const cameraRay=new THREE.Raycaster();
-const cameraLookTarget=new THREE.Vector3(),cameraDesired=new THREE.Vector3(),cameraForward=new THREE.Vector3(),cameraSide=new THREE.Vector3();
-let activeIndoorBuilding=null;
+const cameraLookTarget=new THREE.Vector3(),cameraDesired=new THREE.Vector3(),cameraForward=new THREE.Vector3(),cameraSide=new THREE.Vector3(),cameraOffset=new THREE.Vector3();
+let activeIndoorBuilding=null,cameraInitialized=false;
 function cameraUpdate(dt){
  cameraForward.set(-Math.sin(yaw),0,-Math.cos(yaw));
  cameraSide.set(Math.cos(yaw),0,-Math.sin(yaw));
@@ -223,29 +223,32 @@ function cameraUpdate(dt){
   activeIndoorBuilding=indoor;
  }
  const inside=!!indoor;
- const distance=inside?(aim?0.285:0.435):(aim?3.8:7.0);
- const shoulder=inside?(aim?.12:.22):(aim?.82:1.18);
- const targetHeight=inside?THREE.MathUtils.lerp(1.48,.86,poseBlend):THREE.MathUtils.lerp(2.05,.88,poseBlend);
- cameraLookTarget.copy(hero.position).add(new THREE.Vector3(0,targetHeight,0));
- const height=inside?(aim?1.52:1.72):(aim?2.35:THREE.MathUtils.lerp(4.0,2.25,poseBlend));
+ // Câmera de perseguição em terceira pessoa, inspirada no padrão de battle royale mobile:
+ // distância constante, ombro direito, foco no tronco e rotação controlada pelo arrasto.
+ const distance=aim?3.25:5.35;
+ const shoulder=aim?.58:.78;
+ const targetHeight=pose==='prone'?.62:pose==='crouch'?1.02:1.48;
+ cameraLookTarget.set(hero.position.x,hero.position.y+targetHeight,hero.position.z);
  cameraDesired.copy(hero.position).addScaledVector(cameraForward,-distance).addScaledVector(cameraSide,shoulder);
- cameraDesired.y=hero.position.y+height+Math.sin(-pitch)*distance*(inside?.30:.52);
- // Em áreas abertas, manter o afastamento exato: sem suavização ou zoom por colisões falsas.
- if(inside){
-  const offset=cameraDesired.clone().sub(cameraLookTarget),length=offset.length(),direction=offset.normalize();
-  cameraRay.set(cameraLookTarget,direction);cameraRay.near=.08;cameraRay.far=length;
-  const obstacle=cameraRay.intersectObjects(cameraOccluders,true).find(hit=>hit.distance>.12);
-  if(obstacle){
-   const safeDistance=Math.max(.30,obstacle.distance-.30);
-   cameraDesired.copy(cameraLookTarget).addScaledVector(direction,Math.min(length,safeDistance));
-  }
+ cameraDesired.y=hero.position.y+(aim?2.02:2.28)+Math.sin(-pitch)*distance*.30;
+ // Colisão apenas com paredes/edificações; nunca com vegetação ou objetos pequenos.
+ const offset=cameraDesired.clone().sub(cameraLookTarget),length=offset.length(),direction=offset.normalize();
+ cameraRay.set(cameraLookTarget,direction);cameraRay.near=.10;cameraRay.far=length;
+ const obstacle=cameraRay.intersectObjects(cameraOccluders,true).find(hit=>hit.distance>.18);
+ if(obstacle){
+  const safeDistance=Math.max(2.15,obstacle.distance-.32);
+  cameraDesired.copy(cameraLookTarget).addScaledVector(direction,Math.min(length,safeDistance));
  }
- camera.position.copy(cameraDesired);
- const lookAhead=inside?(aim?.85:.48):(aim?3.0:1.0);
- const lookAt=cameraLookTarget.clone().addScaledVector(cameraForward,lookAhead);
+ if(!cameraInitialized){camera.position.copy(cameraDesired);cameraInitialized=true}
+ else camera.position.lerp(cameraDesired,1-Math.exp(-12*Math.min(dt,.05)));
+ // Impede que o amortecimento deixe a câmera ultrapassar o limite de distância desejado.
+ cameraOffset.copy(camera.position).sub(cameraLookTarget);
+ const maxDistance=cameraDesired.distanceTo(cameraLookTarget);
+ if(cameraOffset.length()>maxDistance)camera.position.copy(cameraLookTarget).addScaledVector(cameraOffset.normalize(),maxDistance);
+ const lookAt=cameraLookTarget.clone().addScaledVector(cameraForward,aim?1.25:.45);
  camera.lookAt(lookAt);
- const targetFov=inside?(aim?49:66):(aim?39:65);
- camera.fov=targetFov;camera.updateProjectionMatrix();
+ camera.fov=THREE.MathUtils.damp(camera.fov,aim?48:62,10,dt);
+ camera.updateProjectionMatrix();
 }
 let audioCtx=null;
 function sound(freq=140,duration=.07,kind='sawtooth',volume=.035){try{audioCtx ||= new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();osc.type=kind;osc.frequency.setValueAtTime(freq,audioCtx.currentTime);osc.frequency.exponentialRampToValueAtTime(Math.max(35,freq*.38),audioCtx.currentTime+duration);gain.gain.setValueAtTime(volume,audioCtx.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+duration);osc.connect(gain);gain.connect(audioCtx.destination);osc.start();osc.stop(audioCtx.currentTime+duration)}catch(e){}}
