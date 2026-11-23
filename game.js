@@ -223,33 +223,29 @@ function cameraUpdate(dt){
   activeIndoorBuilding=indoor;
  }
  const inside=!!indoor;
- // Interior close-follow framing: roughly 70% tighter than the previous indoor view.
- const distance=inside?(aim?0.285:0.435):(aim?3.8:7.0); // 30% da distância interna anterior
+ const distance=inside?(aim?0.285:0.435):(aim?3.8:7.0);
  const shoulder=inside?(aim?.12:.22):(aim?.82:1.18);
  const targetHeight=inside?THREE.MathUtils.lerp(1.48,.86,poseBlend):THREE.MathUtils.lerp(2.05,.88,poseBlend);
  cameraLookTarget.copy(hero.position).add(new THREE.Vector3(0,targetHeight,0));
  const height=inside?(aim?1.52:1.72):(aim?2.35:THREE.MathUtils.lerp(4.0,2.25,poseBlend));
  cameraDesired.copy(hero.position).addScaledVector(cameraForward,-distance).addScaledVector(cameraSide,shoulder);
  cameraDesired.y=hero.position.y+height+Math.sin(-pitch)*distance*(inside?.30:.52);
- const offset=cameraDesired.clone().sub(cameraLookTarget),length=offset.length(),direction=offset.normalize();
- cameraRay.set(cameraLookTarget,direction);cameraRay.near=.08;cameraRay.far=length;
- // Clamp the camera before the first wall/obstacle hit, leaving a small safety gap.
- const obstacle=cameraRay.intersectObjects(cameraOccluders,true).find(hit=>hit.distance>.12);
- if(obstacle){
-  const safeDistance=Math.max(.18,obstacle.distance-.42);
-  cameraDesired.copy(cameraLookTarget).addScaledVector(direction,Math.min(length,safeDistance));
+ // Em áreas abertas, manter o afastamento exato: sem suavização ou zoom por colisões falsas.
+ if(inside){
+  const offset=cameraDesired.clone().sub(cameraLookTarget),length=offset.length(),direction=offset.normalize();
+  cameraRay.set(cameraLookTarget,direction);cameraRay.near=.08;cameraRay.far=length;
+  const obstacle=cameraRay.intersectObjects(cameraOccluders,true).find(hit=>hit.distance>.12);
+  if(obstacle){
+   const safeDistance=Math.max(.30,obstacle.distance-.30);
+   cameraDesired.copy(cameraLookTarget).addScaledVector(direction,Math.min(length,safeDistance));
+  }
  }
- const smoothing=1-Math.exp(-(inside?20:14)*dt);
- camera.position.lerp(cameraDesired,smoothing);
- // Never allow smoothing to leave the camera beyond the collision-safe point.
- const safeOffset=cameraDesired.clone().sub(cameraLookTarget);
- const currentOffset=camera.position.clone().sub(cameraLookTarget);
- if(currentOffset.length()>safeOffset.length())camera.position.copy(cameraLookTarget).addScaledVector(safeOffset.normalize(),safeOffset.length());
- const lookAhead=inside?(aim?.85:.48):(aim?8:3);
+ camera.position.copy(cameraDesired);
+ const lookAhead=inside?(aim?.85:.48):(aim?3.0:1.0);
  const lookAt=cameraLookTarget.clone().addScaledVector(cameraForward,lookAhead);
  camera.lookAt(lookAt);
  const targetFov=inside?(aim?49:66):(aim?39:65);
- camera.fov=THREE.MathUtils.damp(camera.fov,targetFov,inside?13:9,dt);camera.updateProjectionMatrix();
+ camera.fov=targetFov;camera.updateProjectionMatrix();
 }
 let audioCtx=null;
 function sound(freq=140,duration=.07,kind='sawtooth',volume=.035){try{audioCtx ||= new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();osc.type=kind;osc.frequency.setValueAtTime(freq,audioCtx.currentTime);osc.frequency.exponentialRampToValueAtTime(Math.max(35,freq*.38),audioCtx.currentTime+duration);gain.gain.setValueAtTime(volume,audioCtx.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+duration);osc.connect(gain);gain.connect(audioCtx.destination);osc.start();osc.stop(audioCtx.currentTime+duration)}catch(e){}}
