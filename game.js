@@ -220,7 +220,7 @@ function loadRealHero(){
     // Normalize Mixamo, Blender and common humanoid naming conventions.
     // The previous character class accidentally removed the letter "s"
     // instead of whitespace, preventing several real bones from matching.
-    const n=o.name.toLowerCase().replace(/[\\s_.-]/g,'');
+    const n=o.name.toLowerCase().replace(/[\s_.-]/g,'');
     if(/(?:hips|pelvis)$/.test(n))realBones.hips=o;
     if(/spine(?:1|2)?$/.test(n)&&(!realBones.spine||/spine2$/.test(n)))realBones.spine=o;
     if(/(?:neck|head)$/.test(n))realBones.head=o;
