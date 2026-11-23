@@ -19,9 +19,9 @@ const weapons=[
 ];
 let weaponIndex=0,weaponAmmo=[30,40,8,6,15,60],reserveAmmo=[120,160,32,36,75,180],scopeLevel=0,sprintHeld=false,fireMode='AUTO',burstRemaining=0,attachmentLevel=0;
 function currentWeapon(){return weapons[weaponIndex]}
-function setFireMode(next){const modes=currentWeapon().modes;fireMode=modes.includes(next)?next:modes[modes.length-1];const el=document.querySelector('#fireMode');if(el)el.textContent='MODO: '+fireMode;}
+function setFireMode(next){const modes=currentWeapon().modes;fireMode=modes.includes(next)?next:modes[modes.length-1];const el=document.querySelector('#fireMode');if(el){el.textContent='☷';el.title='Modo de disparo: '+fireMode;el.setAttribute('aria-label','Modo de disparo: '+fireMode)}}
 function cycleFireMode(){const modes=currentWeapon().modes;const i=modes.indexOf(fireMode);setFireMode(modes[(i+1)%modes.length]);statusEl.textContent='DISPARO '+fireMode;}
-function refreshAmmo(){ammo=weaponAmmo[weaponIndex];ammoEl.textContent='MUNIÇÃO '+ammo;document.querySelector('#ammoLarge').textContent=ammo;document.querySelector('#ammoMag').textContent=currentWeapon().mag;document.querySelector('#ammoReserve').textContent=reserveAmmo[weaponIndex];document.querySelector('#weaponSwitch').textContent='ARMA: '+currentWeapon().name;setFireMode(fireMode);refreshInventory()}
+function refreshAmmo(){ammo=weaponAmmo[weaponIndex];ammoEl.textContent='MUNIÇÃO '+ammo;document.querySelector('#ammoLarge').textContent=ammo;document.querySelector('#ammoMag').textContent=currentWeapon().mag;document.querySelector('#ammoReserve').textContent=reserveAmmo[weaponIndex];document.querySelector('#weaponSwitch').textContent='▣';document.querySelector('#weaponSwitch').title='Trocar arma: '+currentWeapon().name;document.querySelector('#weaponSwitch').setAttribute('aria-label','Trocar arma: '+currentWeapon().name);setFireMode(fireMode);refreshInventory()}
 function refreshInventory(){
  const panel=document.querySelector('#inventoryPanel');if(!panel)return;
  document.querySelector('#inventoryWeapons').innerHTML=weapons.map((w,i)=>'<div class="inventory-slot '+(i===weaponIndex?'equipped':'')+'"><b>'+(i+1)+'. '+w.name+'</b><span>'+weaponAmmo[i]+'/'+w.mag+' • reserva '+reserveAmmo[i]+'</span><small>'+w.category+' • DANO '+w.damage+' • '+w.rate.toFixed(2)+'s/tiro • '+w.lengthCm+' cm</small></div>').join('');
@@ -29,7 +29,7 @@ function refreshInventory(){
 }
 function toggleInventory(){
  const panel=document.querySelector('#inventoryPanel');const open=panel.classList.toggle('visible');
- document.querySelector('#inventoryToggle').textContent=open?'FECHAR MOCHILA':'MOCHILA';
+ document.querySelector('#inventoryToggle').textContent='▤';document.querySelector('#inventoryToggle').title=open?'Fechar mochila':'Abrir mochila';document.querySelector('#inventoryToggle').setAttribute('aria-label',open?'Fechar mochila':'Abrir mochila');
  refreshInventory();
 }
 function switchWeapon(){if(reloadTimer>0)return;weaponIndex=(weaponIndex+1)%weapons.length;burstRemaining=0;setFireMode(fireMode);if(playerRig)addRifle(playerRig,weaponIndex);refreshAmmo();statusEl.textContent='EQUIPADO: '+currentWeapon().name}
@@ -38,12 +38,12 @@ const playerVelocity=new THREE.Vector3(),cameraLook=new THREE.Vector3(),_shotOri
 let safeRing=null,zoneElapsed=0,zoneDamageClock=0,lootItems=[];const worldObstacles=[];
 const keys={forward:0,side:0},bullets=[],enemies=[],effects=[];const bulletGeometry=new THREE.CylinderGeometry(.012,.012,.72,5),bulletMaterial=new THREE.MeshBasicMaterial({color:0xffdf91,transparent:true,opacity:.92});let dustClock=0,recoil=0,aiming=false,aimBlend=0,hitMarkerTimer=0,fireHeld=false,fireCooldown=0,reloadTimer=0,firePoseTimer=0,movementMode='stand';
 const BASE='https://raw.githubusercontent.com/NoLimitNexus/game-models/main/';
-const defaultSettings={general:100,red:100,two:100,four:100,awm:100,look:100,autoFire:true,invertY:false,minimap:true,hudScale:100,hudOpacity:100,quality:'low',shadows:false,vibration:false};
+const defaultSettings={general:100,red:100,two:100,four:100,awm:100,look:100,autoFire:true,invertY:false,minimap:true,hudScale:100,hudOpacity:100,quality:'medium',shadows:false,vibration:false};
 let gameSettings={...defaultSettings};
 try{gameSettings={...defaultSettings,...JSON.parse(localStorage.getItem('ic-game-settings')||'{}')}}catch{}
 let hudEditing=false,hudDrag=null;
 function saveGameSettings(){try{localStorage.setItem('ic-game-settings',JSON.stringify(gameSettings));}catch{}}
-function applyGraphicsSettings(){if(!renderer)return;const mobile=innerWidth<700;const q={low:{ratio:mobile ? .68 : .9,shadows:false},medium:{ratio:mobile ? .82 : 1,shadows:true},high:{ratio:mobile ? .95 : 1.2},ultra:{ratio:mobile ? 1 : 1.4}}[gameSettings.quality]||{ratio:mobile ? .68 : .9,shadows:false};renderer.setPixelRatio(Math.min(devicePixelRatio||1,q.ratio));renderer.shadowMap.enabled=!mobile&&!!gameSettings.shadows&&!!q.shadows;renderer.shadowMap.needsUpdate=true;renderer.setSize(innerWidth,innerHeight);}
+function applyGraphicsSettings(){if(!renderer)return;const mobile=innerWidth<700;const q={low:{ratio:mobile?.78:1,shadows:false},medium:{ratio:mobile?.92:1.15,shadows:true},high:{ratio:mobile?1.05:1.35,shadows:true},ultra:{ratio:mobile?1.15:1.6,shadows:true}}[gameSettings.quality]||{ratio:mobile?.92:1.15,shadows:true};renderer.setPixelRatio(Math.min(devicePixelRatio||1,q.ratio));renderer.shadowMap.enabled=!mobile&&!!gameSettings.shadows&&!!q.shadows;renderer.shadowMap.needsUpdate=true;renderer.setSize(innerWidth,innerHeight);}
 function applyHudSettings(){const hud=document.querySelector('#hud');if(!hud)return;hud.style.setProperty('--hud-scale',gameSettings.hudScale/100);hud.style.setProperty('--hud-opacity',gameSettings.hudOpacity/100);const map=document.querySelector('.minimap');if(map)map.style.display=gameSettings.minimap?'':'none';}
 function initSettings(){
  const panel=document.querySelector('#settingsPanel'),open=()=>{panel.classList.add('open');panel.setAttribute('aria-hidden','false')},close=()=>{panel.classList.remove('open');panel.setAttribute('aria-hidden','true');if(hudEditing)toggleHudEditor(false)};
@@ -773,7 +773,7 @@ async function init(){
  }catch(err){throw new Error('Não foi possível ativar os gráficos WebGL 2. Feche outras abas, atualize o iOS e tente novamente. '+(err?.message||''))}
  // Perfil gráfico equilibrado: imagem mais nítida sem sobrecarregar o Safari no iPhone.
  const mobileQuality=innerWidth<700;
- renderer.setPixelRatio(Math.min(devicePixelRatio||1,mobileQuality?.68:1.25));
+ renderer.setPixelRatio(Math.min(devicePixelRatio||1,mobileQuality?.92:1.25));
  renderer.setSize(innerWidth,innerHeight);
  renderer.shadowMap.enabled=!mobileQuality&&!!gameSettings.shadows&&gameSettings.quality!=='low';
  renderer.shadowMap.type=THREE.PCFShadowMap;
