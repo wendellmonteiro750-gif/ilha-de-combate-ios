@@ -648,7 +648,7 @@ function shoot(){
   bullets.push({mesh,dir:shotDir,life:currentWeapon().range/72,damage:currentWeapon().damage,travelled:0,range:currentWeapon().range});
  }
  muzzleFlash(origin,dir);document.querySelector('#crosshair')?.classList.add('firing');setTimeout(()=>document.querySelector('#crosshair')?.classList.remove('firing'),85);
- recoil=Math.min(.55,recoil+(aiming?.055:.085)*(currentWeapon().pellets?1.4:1));
+ const recoilByWeapon=[.085,.065,.19,.17,.048,.125];recoil=Math.min(.55,recoil+(aiming?.055:.085)*(recoilByWeapon[weaponIndex]||.085)/.085*(currentWeapon().pellets?1.35:1));
  statusEl.textContent=ammo===0?(reserveAmmo[weaponIndex]>0?'RECARREGUE':'SEM MUNIÇÃO'):(aiming?'MIRA PRECISA':'DISPARANDO');
 }
 let radarClock=0;
