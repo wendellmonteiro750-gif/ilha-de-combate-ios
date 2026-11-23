@@ -484,11 +484,13 @@ function makeHumanoidModel(){
  const root=new THREE.Group();root.name='IlhaHumanoid_OwnModel';
  const bones=new Map();
  const skin=new THREE.MeshStandardMaterial({color:0x98664f,roughness:.9}),skinLight=new THREE.MeshStandardMaterial({color:0xb77d61,roughness:.88}),skinShadow=new THREE.MeshStandardMaterial({color:0x80523f,roughness:.94}),skinHighlight=new THREE.MeshStandardMaterial({color:0xc48b6e,roughness:.82});
- const shirt=new THREE.MeshStandardMaterial({color:0x526b58,roughness:.94}),shirtDark=new THREE.MeshStandardMaterial({color:0x35483d,roughness:.92});
- const pants=new THREE.MeshStandardMaterial({color:0x303b3d,roughness:.96}),pantsLight=new THREE.MeshStandardMaterial({color:0x46504b,roughness:.95});
- const boots=new THREE.MeshStandardMaterial({color:0x292b2a,roughness:.88}),sole=new THREE.MeshStandardMaterial({color:0x171a1a,roughness:.95});
+ const shirt=new THREE.MeshStandardMaterial({color:0x111214,roughness:.96}),shirtDark=new THREE.MeshStandardMaterial({color:0x08090b,roughness:.98});
+ const pants=new THREE.MeshStandardMaterial({color:0x17191d,roughness:.97}),pantsLight=new THREE.MeshStandardMaterial({color:0x252a30,roughness:.95});
+ const boots=new THREE.MeshStandardMaterial({color:0xf0f1f3,roughness:.78}),sole=new THREE.MeshStandardMaterial({color:0x25282d,roughness:.9});
  const belt=new THREE.MeshStandardMaterial({color:0x292b27,roughness:.78}),metal=new THREE.MeshStandardMaterial({color:0x9c895d,metalness:.55,roughness:.42});
- const hair=new THREE.MeshStandardMaterial({color:0x30251f,roughness:.95}),eyes=new THREE.MeshStandardMaterial({color:0x211b18,roughness:.45});
+ const hair=new THREE.MeshStandardMaterial({color:0x171719,roughness:.95}),eyes=new THREE.MeshStandardMaterial({color:0x211b18,roughness:.45});
+ const graphicWhite=new THREE.MeshStandardMaterial({color:0xf0f1f4,roughness:.85});
+ const graphicBlue=new THREE.MeshStandardMaterial({color:0x00aeea,roughness:.78});
  const bone=(name,parent,x,y,z)=>{const b=new THREE.Bone();b.name=name;b.position.set(x,y,z);parent.add(b);bones.set(name,b);return b};
  const ellipsoid=(parent,name,x,y,z,sx,sy,sz,material)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(1,48,32),material);m.name=name;m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m};
  const capsule=(parent,name,length,radius,material,x=0,y=0,z=0)=>{const h=Math.max(.02,length),r=Math.min(radius,h*.46),profile=[new THREE.Vector2(0,-h/2),new THREE.Vector2(r*.62,-h/2),new THREE.Vector2(r*.9,-h/2+r*.35),new THREE.Vector2(r,-h/2+r),new THREE.Vector2(r*.99,h/2-r),new THREE.Vector2(r*.88,h/2-r*.3),new THREE.Vector2(r*.58,h/2),new THREE.Vector2(0,h/2)];const geo=new THREE.LatheGeometry(profile,40);geo.computeVertexNormals();const m=new THREE.Mesh(geo,material);m.name=name;m.position.set(x,y-length*.5,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m};
@@ -520,32 +522,12 @@ function makeHumanoidModel(){
  ellipsoid(spine2,'right_pectoral',.092,.055,.073,.105,.105,.055,shirt);
  ellipsoid(spine2,'upper_abdomen',0,-.075,.075,.125,.105,.052,shirt);
  ellipsoid(spine2,'lower_abdomen',0,-.155,.06,.115,.07,.045,shirtDark);
- // Colete balístico de tecido acolchoado, com placas curvas e bolsos individuais.
- const vestMat=new THREE.MeshStandardMaterial({color:0x3d5142,roughness:.97});
- const vestEdge=new THREE.MeshStandardMaterial({color:0x26372e,roughness:.94});
- const vestPlate=new THREE.MeshStandardMaterial({color:0x53634e,roughness:.95});
- const vestProfile=[new THREE.Vector2(.17,-.17),new THREE.Vector2(.18,-.11),new THREE.Vector2(.19,.015),new THREE.Vector2(.205,.13),new THREE.Vector2(.19,.22),new THREE.Vector2(.145,.25)];
- const vestGeo=new THREE.LatheGeometry(vestProfile,32);vestGeo.scale(1,1,.76);
- const vest=new THREE.Mesh(vestGeo,vestMat);vest.name='tactical_vest_shell';vest.position.set(0,.045,.035);vest.castShadow=true;vest.receiveShadow=true;spine2.add(vest);
- // Painel frontal anatômico, costuras e fitas do colete.
- const plate=new THREE.Mesh(new THREE.SphereGeometry(1,28,20),vestPlate);plate.name='front_ballistic_plate';plate.position.set(0,.045,.139);plate.scale.set(.145,.16,.035);plate.castShadow=true;spine2.add(plate);
- for(const side of [-1,1]){
-  const strap=box(spine2,.052,.29,.045,vestEdge,side*.125,.13,.105);strap.rotation.z=side*.13;
-  box(spine2,.112,.105,.045,vestMat,side*.105,-.025,.17);
-  box(spine2,.105,.018,.05,vestEdge,side*.105,-.083,.17);
-  box(spine2,.085,.085,.045,vestPlate,side*.105,.105,.174);
-  box(spine2,.025,.12,.035,vestEdge,side*.178,.005,.04);
- }
- box(spine2,.095,.065,.055,vestEdge,0,-.145,.12);
- // Rádio preso à alça do ombro e pequenas presilhas utilitárias.
- box(spine2,.065,.12,.045,vestEdge,-.17,.105,.045);
- box(spine2,.035,.07,.018,metal,-.17,.115,.075);
- for(let k=0;k<3;k++)box(spine2,.018,.045,.018,vestPlate,.18,.04-k*.055,.045);
-
+ // Camiseta preta lisa, sem colete.
  for(const side of [-1,1])ellipsoid(spine2,'clavicle',side*.105,.145,.055,.13,.025,.035,shirt);
  // Gola, costuras e bolsos discretos.
  ellipsoid(spine2,'shirt_collar',0,.12,.005,.105,.055,.105,shirtDark);
  box(spine2,.018,.24,.012,shirtDark,0,-.005,.151);
+ const chestMark=box(spine2,.055,.055,.012,graphicWhite,.075,.075,.157);chestMark.rotation.z=-.25;
  for(const sx of [-1,1]){
   box(spine2,.13,.11,.025,shirtDark,sx*.145,.025,.145);
   box(spine2,.13,.018,.03,shirt,sx*.145,-.035,.16);
@@ -570,13 +552,10 @@ function makeHumanoidModel(){
  ellipsoid(head,'hair_cap',0,.145,-.012,.116,.067,.108,hair);
  ellipsoid(head,'hair_back',0,.065,-.075,.105,.105,.06,hair);
  // Boné tático de tecido: copa, aba frontal e costura central.
- const capMat=new THREE.MeshStandardMaterial({color:0x354a3b,roughness:.96});
+ const capMat=new THREE.MeshStandardMaterial({color:0x090a0c,roughness:.96});
  ellipsoid(head,'cap_crown',0,.19,-.012,.12,.075,.112,capMat);
- const capBrim=new THREE.Mesh(new THREE.BoxGeometry(.19,.025,.15),capMat);capBrim.position.set(0,.155,.105);capBrim.rotation.x=-.08;capBrim.castShadow=true;head.add(capBrim);
- // Mochila compacta presa às costas, com alças visíveis sobre os ombros.
- const packMat=new THREE.MeshStandardMaterial({color:0x343f37,roughness:.98});
- ellipsoid(spine1,'combat_backpack',0,.025,-.185,.175,.235,.095,packMat);
- box(spine1,.19,.07,.035,shirtDark,0,-.16,-.205);
+ const capBrim=new THREE.Mesh(new THREE.BoxGeometry(.19,.025,.15),capMat);capBrim.position.set(0,.155,-.105);capBrim.rotation.x=.08;capBrim.castShadow=true;head.add(capBrim);
+ // Costas livres, sem mochila.
  for(const side of [-1,1]){box(spine2,.045,.31,.035,packMat,side*.145,-.015,-.09);box(spine1,.09,.09,.035,pantsLight,side*.18,-.12,-.16)}
  for(const side of [-1,1]){
   ellipsoid(head,'ear',side*.112,.055,0,.022,.042,.025,skin);
@@ -613,6 +592,8 @@ function makeHumanoidModel(){
   ellipsoid(upLeg,'outer_hip',side*.055,-.035,-.005,.075,.105,.09,pants);
   ellipsoid(upLeg,'outer_thigh',side*.045,-.20,-.015,.07,.16,.085,pants);
   ellipsoid(upLeg,'cargo_pocket',side*.075,-.23,.085,.075,.11,.025,pantsLight);
+ box(upLeg,.105,.018,.012,graphicWhite,side*.075,-.205,.111);
+ if(side>0){const stripe=box(upLeg,.022,.34,.012,graphicBlue,.095,-.20,.09);stripe.rotation.z=-.035;}else{const slash=box(upLeg,.105,.035,.012,graphicWhite,-.035,-.31,.092);slash.rotation.z=-.48;}
   const leg=bone(side<0?'mixamorigLeftLeg':'mixamorigRightLeg',upLeg,0,-.43,0);
   capsule(leg,'calf',.415,.064,skin,0,-.005,0);
   capsule(leg,'lower_trouser',.415,.078,pants,0,-.005,-.002);
@@ -624,6 +605,8 @@ function makeHumanoidModel(){
   const foot=bone(side<0?'mixamorigLeftFoot':'mixamorigRightFoot',leg,0,-.395,.015);
   ellipsoid(foot,'ankle_boot',0,-.012,.025,.075,.07,.09,boots);
   ellipsoid(foot,'boot_toe',0,-.035,.095,.082,.052,.13,boots);
+ ellipsoid(foot,'white_sneaker_midsole',0,-.071,.075,.086,.018,.142,graphicWhite);
+ ellipsoid(foot,'sneaker_side_mark',.078,-.025,.075,.009,.018,.065,graphicBlue);
   ellipsoid(foot,'boot_tongue',0,.012,.065,.043,.045,.075,pantsLight);
   for(let lace=0;lace<4;lace++)box(foot,.065,.008,.012,sole,0,.025-lace*.014,.12-lace*.018);
   ellipsoid(foot,'boot_sole',0,-.078,.075,.084,.018,.14,sole);
