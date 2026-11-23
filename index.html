@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#101b20">
 <title>Ilha de Combate — Ilha Tropical</title>
-<link rel="stylesheet" href="./style.css?v=3">
+<link rel="stylesheet" href="./style.css?v=4">
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
 </head>
 <body>
@@ -16,10 +16,10 @@
  <section class="hud"><div class="stat"><small>VIDA</small><b id="health">100</b><div class="bar"><i id="healthbar"></i></div></div><div class="stat ammo"><small>MUNIÇÃO</small><b id="ammo">30 <small>/ 120</small></b></div><div class="aim" id="aim">+</div></section>
  <div class="hint" id="hint">ARRASTE O LADO DIREITO PARA OLHAR · JOYSTICK PARA MOVER</div>
  <div id="joystick" aria-label="Joystick"><div id="stick"></div></div>
- <div class="actions"><button id="jump" aria-label="Pular">↑</button><button id="fire" aria-label="Atirar">●</button></div>
+ <div class="actions"><button id="sprint" aria-label="Alternar corrida">»</button><button id="crouch" aria-label="Agachar">↓</button><button id="jump" aria-label="Pular">↑</button><button id="aimBtn" aria-label="Mirar">⌖</button><button id="reload" aria-label="Recarregar">↻</button><button id="fire" aria-label="Atirar">●</button></div>
  <div id="toast">NOVO PROJETO 3D CARREGADO</div>
  <div id="error" hidden></div>
 </main>
-<script type="module" src="./game.js?v=5"></script>
+<script type="module" src="./game.js?v=6"></script>
 </body>
 </html>
