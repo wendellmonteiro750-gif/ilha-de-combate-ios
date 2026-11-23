@@ -2,7 +2,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
 import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
 const $=id=>document.getElementById(id);
 const root=$('game');
-let scene,camera,renderer,clock,hero,rig={},weapon,targets=[],realHero=null,realMixer=null,realActions={},activeRealAction='',yaw=0,pitch=-.12,moveX=0,moveY=0,run=false,aim=false,shoot=false,pose='stand',proneBlend=0,velocityY=0,grounded=true,walkT=0,ammo=30,reloading=false,lastShot=0,started=false;
+let scene,camera,renderer,clock,hero,rig={},weapon,targets=[],realHero=null,realMixer=null,realActions={},activeRealAction='',realBones={},yaw=0,pitch=-.12,moveX=0,moveY=0,velocityX=0,velocityZ=0,locomotionSpeed=0,run=false,aim=false,shoot=false,pose='stand',proneBlend=0,velocityY=0,grounded=true,walkT=0,ammo=30,reloading=false,lastShot=0,started=false;
 const mat=(color,roughness=.9)=>new THREE.MeshStandardMaterial({color,roughness});
 function mesh(parent,geo,material,pos){const o=new THREE.Mesh(geo,material);o.position.set(...pos);parent.add(o);o.castShadow=true;o.receiveShadow=true;return o}
 function cube(parent,w,h,d,m,x,y,z){return mesh(parent,new THREE.BoxGeometry(w,h,d),m,[x,y,z])}
@@ -139,7 +139,17 @@ function loadRealHero(){
   model.position.set(0,-bounds.min.y*model.scale.y,0);
   model.rotation.y=Math.PI;
   model.traverse(o=>{if(o.isMesh&&o.material){o.material.roughness=Math.min(o.material.roughness??.8,.92);o.material.metalness=Math.min(o.material.metalness??0,.15)}});
-  model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.side=THREE.FrontSide}}});
+  model.traverse(o=>{
+   if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material)o.material.side=THREE.FrontSide}
+   if(o.isBone){
+    const n=o.name.toLowerCase().replace(/[\\s_.-]/g,'');
+    if(/hips|pelvis/.test(n))realBones.hips=o;
+    else if(/spine2|spine1|spine$/.test(n)&&!realBones.spine)realBones.spine=o;
+    if(/neck|head/.test(n)&&!realBones.head)realBones.head=o;
+    if(/leftarm|upperarml/.test(n))realBones.leftArm=o;
+    if(/rightarm|upperarmr/.test(n))realBones.rightArm=o;
+   }
+  });
   hero.add(model);
   realHero=model;
   // Transfere o rifle para o personagem real antes de esconder o rig procedural.
@@ -150,9 +160,11 @@ function loadRealHero(){
   rig.body.visible=false;
   if(gltf.animations&&gltf.animations.length){
    realMixer=new THREE.AnimationMixer(model);
-   for(const clip of gltf.animations){realActions[clip.name.toLowerCase()]=realMixer.clipAction(clip)}
-   const first=Object.keys(realActions)[0];
-   if(first){realActions[first].play();activeRealAction=first}
+   for(const clip of gltf.animations){
+    const key=clip.name.toLowerCase().replace(/[^a-z0-9]/g,'');
+    realActions[key]=realMixer.clipAction(clip);
+   }
+   playRealAnimation('idle');
   }
   $('message').textContent='MODELO HUMANO 3D DETALHADO CARREGADO';
  },undefined,error=>{
@@ -162,11 +174,21 @@ function loadRealHero(){
 }
 function playRealAnimation(name){
  if(!realMixer)return;
- const key=Object.keys(realActions).find(k=>k.includes(name));
- if(!key||key===activeRealAction)return;
+ const keys=Object.keys(realActions);
+ const patterns=name==='run'?['run','running','sprint']:name==='walk'?['walk','walking','locomotion']:name==='idle'?['idle','stand','breath','mixamo.com']:['idle'];
+ let key=keys.find(k=>patterns.some(p=>k.includes(p)));
+ if(!key&&name==='walk')key=keys.find(k=>k.includes('run')||k.includes('running'));
+ if(!key&&name==='run')key=keys.find(k=>k.includes('walk')||k.includes('walking'));
+ if(key===activeRealAction)return;
+ if(!key){
+  if(realActions[activeRealAction])realActions[activeRealAction].fadeOut(.18);
+  activeRealAction='';
+  return;
+ }
  const next=realActions[key];if(!next)return;
- next.reset().fadeIn(.2).play();
- if(realActions[activeRealAction])realActions[activeRealAction].fadeOut(.2);
+ next.enabled=true;next.setEffectiveTimeScale(name==='run'?1.12:1);
+ next.reset().fadeIn(.22).play();
+ if(realActions[activeRealAction])realActions[activeRealAction].fadeOut(.22);
  activeRealAction=key;
 }
 function bind(){
@@ -190,28 +212,46 @@ function setPose(p){pose=p;$('poseLabel').textContent='POSTURA: '+(p==='stand'?'
 function stats(){$('ammo').textContent=ammo+' / 90'}
 function fireShot(){if(reloading||ammo<=0||performance.now()-lastShot<160)return;lastShot=performance.now();ammo--;stats();weapon.rotation.x=.16;setTimeout(()=>{if(weapon)weapon.rotation.x=aim?-.04:0},65);const origin=camera.position.clone(),direction=new THREE.Vector3();camera.getWorldDirection(direction);const ray=new THREE.Raycaster(origin,direction,0,85);const hits=ray.intersectObjects(targets,true);if(hits.length){const target=hits[0].object;target.material=mat(0xe5a43a);$('message').textContent='ALVO ATINGIDO!';setTimeout(()=>{$('message').textContent='ÁREA DE TREINO';target.material=mat(0xd6d1bd)},500)}}
 function update(dt){
- const moving=Math.abs(moveX)+Math.abs(moveY)>.08;
- if(realMixer){realMixer.update(dt);playRealAnimation(moving?(run?'run':'walk'):'idle')}
+ const inputMagnitude=Math.min(1,Math.hypot(moveX,moveY));
+ const moving=inputMagnitude>.08;
  const crouch=pose==='crouch',prone=pose==='prone';
  proneBlend=THREE.MathUtils.damp(proneBlend,prone?1:0,7.5,dt);
- const speed=prone?.52:crouch?1.55:run?6.8:3.35;
- // Movement is camera-relative, while the upper body can remain oriented toward aim.
+ const speed=prone?.62:crouch?1.75:run?6.1:3.15;
+ // Aceleração e desaceleração progressivas: evita arrancadas e paradas instantâneas.
  const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
  const right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
- const dir=forward.clone().multiplyScalar(-moveY).add(right.multiplyScalar(moveX));
- if(dir.length()>1)dir.normalize();
- hero.position.addScaledVector(dir,speed*dt);
+ const inputDir=forward.clone().multiplyScalar(-moveY).add(right.multiplyScalar(moveX));
+ if(inputDir.length()>1)inputDir.normalize();
+ const targetVX=inputDir.x*speed*inputMagnitude;
+ const targetVZ=inputDir.z*speed*inputMagnitude;
+ const accel=moving?12:17;
+ velocityX=THREE.MathUtils.damp(velocityX,targetVX,accel,dt);
+ velocityZ=THREE.MathUtils.damp(velocityZ,targetVZ,accel,dt);
+ const horizontalSpeed=Math.hypot(velocityX,velocityZ);
+ locomotionSpeed=THREE.MathUtils.damp(locomotionSpeed,horizontalSpeed,10,dt);
+ hero.position.x+=velocityX*dt;
+ hero.position.z+=velocityZ*dt;
+ if(realMixer){
+  realMixer.update(dt);
+  playRealAnimation(prone?'prone':crouch?'crouch':horizontalSpeed>.12?(run?'run':'walk'):'idle');
+ }
+ if(realHero){
+  const bob=horizontalSpeed>.12?Math.abs(Math.sin(walkT*1.7))*.018:Math.sin(walkT*1.2)*.006;
+  realHero.position.y=bob;
+  realHero.rotation.z=THREE.MathUtils.damp(realHero.rotation.z,THREE.MathUtils.clamp(-velocityX*.018,-.09,.09),8,dt);
+ }
  hero.position.x=THREE.MathUtils.clamp(hero.position.x,-34,34);
  hero.position.z=THREE.MathUtils.clamp(hero.position.z,-34,34);
- const facingYaw=(aim||!moving)?yaw:Math.atan2(-dir.x,-dir.z);
+ const actualDir=new THREE.Vector3(velocityX,0,velocityZ);
+ const facingYaw=(aim||horizontalSpeed<.12)?yaw:Math.atan2(-actualDir.x,-actualDir.z);
  const yawDelta=Math.atan2(Math.sin(facingYaw-hero.rotation.y),Math.cos(facingYaw-hero.rotation.y));
- hero.rotation.y+=yawDelta*Math.min(1,dt*(aim?14:9));
+ hero.rotation.y+=yawDelta*Math.min(1,dt*(aim?12:7.5));
  // Jump arc and grounded recovery.
  if(!grounded){velocityY-=17*dt;hero.position.y+=velocityY*dt;if(hero.position.y<=0){hero.position.y=0;velocityY=0;grounded=true}}
- walkT+=dt*(moving?(run&&!crouch&&!prone?11:6):2);
+ walkT+=dt*(horizontalSpeed>.12?(run&&!crouch&&!prone?10.5:5.8):1.6);
  const gait=Math.sin(walkT),opposite=Math.sin(walkT+Math.PI);
  const strafe=THREE.MathUtils.clamp(moveX,-1,1);
- const movingBlend=moving?1:0,runBlend=run&&!crouch&&!prone&&moving?1:0;
+ const movingBlend=horizontalSpeed>.12?1:0,runBlend=run&&!crouch&&!prone&&horizontalSpeed>.12?1:0;
  // Smooth transitions between standing, crouched and prone silhouettes.
  // Deitar em sequência: abaixa o centro de gravidade, leva o peito ao chão
  // e estende o corpo gradualmente, em vez de apenas girar a câmera.
@@ -243,7 +283,7 @@ function update(dt){
   grip.y+=crouch?-.035:0;
   // Cotovelos mais baixos e abertos no apoio deitado, mantendo as mãos nos punhos.
   grip.y+=proneBlend*.035;
-  if(moving){grip.y+=Math.sin(walkT+(side===1?0:Math.PI))*.018}
+  if(horizontalSpeed>.12){grip.y+=Math.sin(walkT+(side===1?0:Math.PI))*.018}
   const reach=grip.clone().sub(shoulder);
   const distance=THREE.MathUtils.clamp(reach.length(),.08,.995);
   const direction=reach.normalize();
@@ -265,7 +305,7 @@ function update(dt){
   hand.rotation.set(aim?-.13:moving?Math.sin(walkT+(side===1?0:Math.PI))*.025:0,side===1?-.025:.10,side===1?-.10:.06);
  });
  // Small breathing/idle motion and recoil.
- rig.body.position.y+=moving?Math.abs(gait)*.018:Math.sin(walkT*1.7)*.012;
+ rig.body.position.y+=horizontalSpeed>.12?Math.abs(gait)*.018:Math.sin(walkT*1.7)*.012;
  weapon.position.y=aim?1.58:moving?1.54:1.53;
  // Compensa a inclinação do tronco para o cano continuar apontado à frente,
  // paralelo ao chão durante a posição deitada.
