@@ -1,4 +1,5 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
 
 const $=id=>document.getElementById(id);
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x9bb9c3);scene.fog=new THREE.Fog(0x9bb9c3,100,310);
@@ -83,6 +84,46 @@ makeWorld();
 // Player rig with articulated limbs and detailed rifle
 const hero=new THREE.Group();scene.add(hero);hero.position.set(0,0,10);
 const torso=new THREE.Group();torso.position.y=1.05;hero.add(torso);
+// Importação do personagem GLB original. O rig procedural permanece como fallback até o GLB carregar.
+let soldierModel=null,soldierMixer=null,soldierBones={},soldierRest={},soldierLoadState='loading';
+const gltfLoader=new GLTFLoader();
+function findBone(root,part){let found=null;root.traverse(o=>{if(!found&&o.isBone&&o.name.toLowerCase().includes(part.toLowerCase()))found=o});return found}
+function loadSoldierModel(){
+ gltfLoader.load('./assets/military-male-03.glb',gltf=>{
+  soldierModel=gltf.scene;
+  soldierModel.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.side=THREE.FrontSide}}});
+  const bounds=new THREE.Box3().setFromObject(soldierModel),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());
+  const scale=1.82/Math.max(size.y,.001);soldierModel.scale.setScalar(scale);
+  soldierModel.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
+  hero.add(soldierModel);soldierModel.updateMatrixWorld(true);
+  ['Bip01 Pelvis','Bip01 Spine','Bip01 Spine1','Bip01 Spine2','Bip01 L UpperArm','Bip01 R UpperArm','Bip01 L Forearm','Bip01 R Forearm','Bip01 L Thigh','Bip01 R Thigh','Bip01 L Calf','Bip01 R Calf','Bip01 Head'].forEach(n=>{
+   const b=findBone(soldierModel,n.replace('Bip01 ',''));
+   if(b){soldierBones[n]=b;soldierRest[n]=b.rotation.clone()}
+  });
+  if(gltf.animations&&gltf.animations.length){soldierMixer=new THREE.AnimationMixer(soldierModel);gltf.animations.forEach(clip=>soldierMixer.clipAction(clip).play())}
+  torso.visible=false;soldierLoadState='loaded';setMsg('PERSONAGEM 3D ORIGINAL CARREGADO');
+ },undefined,error=>{soldierLoadState='fallback';console.warn('GLB não encontrado; mantendo personagem provisório.',error)});
+}
+function animateSoldierRig(dt){
+ if(!soldierModel)return;
+ if(soldierMixer){soldierMixer.update(dt);return}
+ const moving=Math.abs(mx)+Math.abs(my)>.08,phase=performance.now()*.008*(run?1.5:1),stride=moving?Math.sin(phase)*(run?.48:.27):0;
+ const blend=poseBlend||0;
+ const apply=(name,x=0,y=0,z=0)=>{const b=soldierBones[name],r=soldierRest[name];if(b&&r){b.rotation.set(r.x+x,r.y+y,r.z+z)}};
+ apply('Bip01 Pelvis',pose==='prone'?-1.25*blend:0);
+ apply('Bip01 Spine',-.12*blend);
+ apply('Bip01 Spine1',-.08*blend);
+ apply('Bip01 Spine2',-.06*blend);
+ apply('Bip01 L UpperArm',pose==='prone'?1.05*blend:stride*.35);
+ apply('Bip01 R UpperArm',pose==='prone'?1.05*blend:-stride*.35);
+ apply('Bip01 L Forearm',pose==='prone'?-.65*blend:0);
+ apply('Bip01 R Forearm',pose==='prone'?-.65*blend:0);
+ apply('Bip01 L Thigh',stride*(1-blend));
+ apply('Bip01 R Thigh',-stride*(1-blend));
+ apply('Bip01 L Calf',Math.max(0,-stride)*.6);
+ apply('Bip01 R Calf',Math.max(0,stride)*.6);
+}
+loadSoldierModel();
 const skin=mat(0x9a6c50),uniform=mat(0x34483c),pants=mat(0x303b36),armor=mat(0x4b5a4c),black=mat(0x1c2524,.42,.25);
 function ell(p,x,y,z,sx,sy,sz,m){const o=new THREE.Mesh(new THREE.SphereGeometry(1,16,12),m);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.castShadow=true;p.add(o);return o}
 // Corpo articulado procedural, com peças separadas para transições de animação.
@@ -157,7 +198,7 @@ function shoot(){
 function reload(){if(reloading||ammo===30||reserve<=0)return;reloading=true;setMsg('RECARREGANDO');sound(260,.16,'triangle',.025);setTimeout(()=>sound(190,.13,'triangle',.025),520);setTimeout(()=>{const n=Math.min(30-ammo,reserve);ammo+=n;reserve-=n;reloading=false;updateHud();setMsg('PRONTO PARA COMBATE')},1450)}
 function updateLoot(){for(const l of loot){if(!l.active)continue;l.g.rotation.y+=.012;if(l.g.position.distanceTo(hero.position)<2.4){l.active=false;l.g.visible=false;sound(620,.07,'sine',.025);if(l.kind==='MUNIÇÃO')reserve+=45;else if(l.kind==='KIT MÉDICO')health=Math.min(100,health+35);else if(l.kind==='COLETE')health=Math.min(150,health+15);else{ammo=Math.min(30,ammo+10);reserve+=20}setMsg('COLETADO: '+l.kind);updateHud()}}}
 function updateBots(dt){for(const b of bots){if(!b.alive)continue;const d=b.g.position.distanceTo(hero.position);if(d<46){const dir=hero.position.clone().sub(b.g.position).setY(0).normalize();b.g.position.addScaledVector(dir,dt*(d>12?2.1:.4));b.g.lookAt(hero.position.x,0,hero.position.z);if(d<32&&performance.now()-b.shot>1500){b.shot=performance.now();health=Math.max(0,health-(2+Math.random()*4));updateHud();if(health<=0){setMsg('VOCÊ FOI ELIMINADO');$('lobby').classList.remove('hidden');$('play').textContent='TENTAR NOVAMENTE';gameStarted=false}}}}}
-function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);if(gameStarted){move(dt);updateLoot();updateBots(dt)}cameraUpdate(dt);for(let i=effects.length-1;i>=0;i--){effects[i].t-=dt;if(effects[i].t<=0){scene.remove(effects[i].o);effects[i].o.geometry.dispose();effects[i].o.material.dispose();effects.splice(i,1)}}renderer.render(scene,camera)}
+function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);if(gameStarted){move(dt);updateLoot();updateBots(dt)}animateSoldierRig(dt);cameraUpdate(dt);for(let i=effects.length-1;i>=0;i--){effects[i].t-=dt;if(effects[i].t<=0){scene.remove(effects[i].o);effects[i].o.geometry.dispose();effects[i].o.material.dispose();effects.splice(i,1)}}renderer.render(scene,camera)}
 function start(){gameStarted=true;health=100;ammo=30;reserve=120;score=0;hero.position.set(0,0,10);$('lobby').classList.add('hidden');setMsg('POUSO CONCLUÍDO · EXPLORE AS NOVE CIDADES');updateHud()}
 $('play').addEventListener('click',start);
 $('fire').addEventListener('pointerdown',e=>{e.preventDefault();shooting=true;shoot()});['pointerup','pointercancel','pointerleave'].forEach(t=>$('fire').addEventListener(t,()=>shooting=false));
