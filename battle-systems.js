@@ -1,7 +1,7 @@
 // Battle royale systems for Battle Island (offline prototype).
 export class BattleSystems {
   constructor(THREE, scene, hero, onStatus=()=>{}, blockers=[]) {
-    this.T=THREE; this.scene=scene; this.hero=hero; this.onStatus=onStatus; this.blockers=blockers;
+    this.T=THREE; this.scene=scene; this.hero=hero; this.onStatus=onStatus; this.blockers=blockers; this.blockers=blockers;
     this.phase='lobby'; this.items=[]; this.inventory={medkit:1, ammo:90, vest:0, helmet:0, backpack:0};
     this.weapons=[
       {name:'RIFLE AR',damage:34,rate:155,mag:30,reserve:90},
@@ -9,7 +9,7 @@ export class BattleSystems {
       {name:'SNIPER',damage:85,rate:950,mag:5,reserve:20},
       {name:'PISTOLA',damage:24,rate:280,mag:15,reserve:60}
     ]; this.weaponIndex=0; this.zoneRadius=108; this.zoneCenter=new THREE.Vector3(0,0,0);
-    this.elapsed=0; this.dropTarget=new THREE.Vector3(0,0,0); this.parachute=null; this.plane=null;
+    this.elapsed=0; this.dropTarget=new THREE.Vector3(0,0,0); this.planeStart=new THREE.Vector3(-125,42,-42); this.planeEnd=new THREE.Vector3(125,42,42); this.parachute=null; this.plane=null;
     this.makeUI(); this.makeZone(); this.spawnLoot(); this.makeMap();
   }
   makeUI(){
@@ -131,7 +131,7 @@ export class BattleSystems {
     if(this.phase!=='lobby')return;this.phase='plane';this.elapsed=0;
     this.hero.position.set(-88,31,-8);
     this.plane=this.createPlane();this.scene.add(this.plane);
-    this.plane.position.copy(this.hero.position);this.plane.rotation.y=Math.PI/2;
+    this.plane.position.copy(this.hero.position);this.plane.rotation.y=Math.atan2(this.planeEnd.z-this.planeStart.z,this.planeEnd.x-this.planeStart.x);
     document.getElementById('br-panel').style.display='block';document.getElementById('br-hint').style.display='block';
     document.getElementById('br-hint').textContent='AVIÃO EM ROTA — ESCOLHA O MOMENTO DO SALTO';
     this.onStatus('AVIÃO DE TRANSPORTE EM ROTA — PREPARE-SE PARA SALTAR');
