@@ -151,13 +151,29 @@ function setBoneWorldRotation(bone,worldRotation){
  bone.quaternion.copy(parentRotation.multiply(worldRotation));
 }
 function applyCombatWeaponPose(crouch=false,prone=false,dt=0){
- // Deitado, o rifle acompanha a malha inclinada como um conjunto; não aplicar
- // IK de ombro em pé, que puxaria os braços de volta para a postura agachada.
- if(prone||!weaponEquipped||!weaponModel||!characterVisual)return;
+ if(!weaponEquipped||!weaponModel||!characterVisual)return;
  const rightUpper=combatBones.upperarm_r,rightLower=combatBones.lowerarm_r,rightHand=combatBones.hand_r;
  const leftUpper=combatBones.upperarm_l,leftLower=combatBones.lowerarm_l,leftHand=combatBones.hand_l;
  if(!rightUpper||!rightLower||!rightHand||!leftUpper||!leftLower||!leftHand)return;
  const now=performance.now();
+ if(prone){
+  // Na postura de peito no chão, a coronha acompanha a mão direita e a
+  // mão esquerda apoia o guarda-mão. O cano continua seguindo a mira.
+  characterVisual.updateMatrixWorld(true);
+  const aimWorldDirection=camera.getWorldDirection(new THREE.Vector3()).normalize();
+  const characterWorldRotation=characterVisual.getWorldQuaternion(new THREE.Quaternion());
+  const aimLocalDirection=aimWorldDirection.applyQuaternion(characterWorldRotation.invert()).normalize();
+  const desiredWeaponRotation=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,-1),aimLocalDirection);
+  weaponModel.quaternion.slerp(desiredWeaponRotation,1-Math.exp(-dt*20));
+  const gripPoint=new THREE.Vector3(0,-.105,.075);
+  const supportPoint=new THREE.Vector3(0,.005,-.53);
+  const rightHandLocal=characterVisual.worldToLocal(rightHand.getWorldPosition(new THREE.Vector3()));
+  weaponModel.position.copy(rightHandLocal).sub(gripPoint.clone().applyQuaternion(weaponModel.quaternion));
+  weaponModel.updateMatrixWorld(true);
+  solveArmIK(rightUpper,rightLower,rightHand,weaponModel.localToWorld(gripPoint));
+  solveArmIK(leftUpper,leftLower,leftHand,weaponModel.localToWorld(supportPoint));
+  return;
+ }
  // A arma fica referenciada ao ombro, não pendurada na mão. A coronha
  // encosta no pivô do ombro direito; as duas mãos são então resolvidas por IK.
  characterVisual.updateMatrixWorld(true);
