@@ -4,7 +4,7 @@ import { BattleSystems } from './battle-systems.js';
 const $=id=>document.getElementById(id);
 const root=$('game');
 let battleSystems=null;
-let scene,camera,renderer,clock,hero,targets=[],yaw=0,pitch=-.12,moveYaw=0,stickActive=false,moveX=0,moveY=0,velocityX=0,velocityZ=0,run=false,aim=false,shoot=false,pose='stand',velocityY=0,grounded=true,ammo=30,ammoReserve=90,eliminations=0,playerHealth=100,bots=[],playerDownUntil=0,reloading=false,lastShot=0,started=false,cameraRecoil=0,cameraShake=0,stamina=100,worldBlockers=[],cameraRay=new THREE.Raycaster(),cameraDesired=new THREE.Vector3(),cameraCurrentDistance=5.6;
+let scene,camera,renderer,clock,hero,targets=[],yaw=0,pitch=-.12,moveYaw=0,stickActive=false,moveX=0,moveY=0,velocityX=0,velocityZ=0,run=false,aim=false,shoot=false,pose='stand',velocityY=0,grounded=true,ammo=30,ammoReserve=90,eliminations=0,playerHealth=100,bots=[],playerDownUntil=0,reloading=false,lastShot=0,started=false,cameraRecoil=0,cameraShake=0,stamina=100,worldBlockers=[],cameraBlockerMeshes=[],cameraRay=new THREE.Raycaster(),cameraDesired=new THREE.Vector3(),cameraCurrentDistance=5.6;
 const mat=(color,roughness=.9)=>new THREE.MeshStandardMaterial({color,roughness});
 function mesh(parent,geo,material,pos){const o=new THREE.Mesh(geo,material);o.position.set(...pos);parent.add(o);o.castShadow=true;o.receiveShadow=true;return o}
 function cube(parent,w,h,d,m,x,y,z){return mesh(parent,new THREE.BoxGeometry(w,h,d),m,[x,y,z])}
@@ -113,7 +113,7 @@ function buildExpandedDistricts(){
   [-47,-52,16,13,0xb58c68,'house'],[-24,-55,17,14,0x9da99a,'house'],[45,-48,18,14,0xb18a65,'house'],
   [-52,47,18,15,0x9eaa9e,'house'],[-25,62,16,13,0xb98b6c,'house'],[48,48,18,15,0x9c9b7d,'house'],
   [-78,-5,22,17,0x68767a,'warehouse'],[77,8,23,18,0x727d76,'warehouse'],[0,83,24,18,0x727c78,'warehouse'],
-  [0,-88,18,15,0xb1a17a,'house'],[86,-70,18,15,0x9eaa9a,'house'],[-88,76,18,15,0x9d876d,'house']
+  [0,-88,18,15,0xb1a17a,'house'],[-88,76,18,15,0x9d876d,'house']
  ];
  for(const lot of lots)addExpandedBuilding(...lot);
  // Fuel station canopy and pump islands as a landmark and hard cover.
@@ -160,7 +160,7 @@ function house(x,z,color){
  // A real open-front interior replaces the old solid box house.
  const w=9,d=8,h=3.6,t=.25;
  cube(g,w,.16,d,mat(0x756b57,1),0,.08,0);
- const wallPart=(len,px,pz,axis)=>{const part=axis==='x'?cube(g,len,h,t,wall,px,h/2,pz):cube(g,t,h,len,wall,px,h/2,pz);part.castShadow=true;const n=Math.ceil(len/.8);for(let i=0;i<=n;i++){const p=-len/2+len*i/n;worldBlockers.push(axis==='x'?{x:x+px+p,z:z+pz,r:.36}:{x:x+px,z:z+pz+p,r:.36})}};
+ const wallPart=(len,px,pz,axis)=>{const part=axis==='x'?cube(g,len,h,t,wall,px,h/2,pz):cube(g,t,h,len,wall,px,h/2,pz);part.castShadow=true;part.userData.cameraObstacle=true;cameraBlockerMeshes.push(part);const n=Math.ceil(len/.8);for(let i=0;i<=n;i++){const p=-len/2+len*i/n;worldBlockers.push(axis==='x'?{x:x+px+p,z:z+pz,r:.36}:{x:x+px,z:z+pz+p,r:.36})}};
  wallPart(w,0,-d/2,'x');wallPart(w,0,d/2,'x');wallPart(d,-w/2,0,'z');wallPart(d,w/2,0,'z');
  // Split front facade to leave a proper entrance.
  cube(g,2.2,2.2,.22,wall,-3.4,1.1,d/2);
