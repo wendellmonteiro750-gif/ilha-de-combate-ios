@@ -461,6 +461,12 @@ function update(dt){
    ankle.rotation.x=THREE.MathUtils.damp(ankle.rotation.x,toeRoll+footLift*-.35,14,dt);
   }
  });
+ // Atualiza a posição do rifle antes de resolver o IK, para que as mãos
+ // persigam o punho e o guarda-mão na mesma pose deste frame.
+ const idleSwayPre=Math.sin(walkT*.72)*.012;
+ const aimSwayPre=aim?Math.sin(walkT*1.15)*.008:0;
+ weapon.position.y=(aim?1.58:horizontalSpeed>.12?1.54:1.53)+idleSwayPre+aimSwayPre-reloadBlend*.12;
+ weapon.position.x=.28+(aim?-.035:0)+Math.sin(walkT*.9)*.006;
  // Two-bone procedural IK: each palm is placed at a real grip point on the rifle.
  const downAxis=new THREE.Vector3(0,-1,0);
  rig.arms.forEach(({upper,fore,hand,side})=>{
@@ -505,8 +511,6 @@ function update(dt){
  reloadBlend=THREE.MathUtils.damp(reloadBlend,reloading?1:0,7,dt);
  muzzleTime=Math.max(0,muzzleTime-dt);
  if(muzzleFlash&&muzzleTime===0){muzzleFlash.visible=false;muzzleLight.intensity=0}
- weapon.position.y=(aim?1.58:horizontalSpeed>.12?1.54:1.53)+idleSway+aimSway-reloadBlend*.12;
- weapon.position.x=.28+(aim?-.035:0)+Math.sin(walkT*.9)*.006;
  weapon.rotation.z=THREE.MathUtils.damp(weapon.rotation.z,aim?-.025*strafe:Math.sin(walkT*.8)*.008,9,dt);
  weapon.rotation.x=THREE.MathUtils.damp(weapon.rotation.x,aim?-.035:proneBlend*.08,10,dt)-weaponKick*.19+reloadBlend*.28;
  weapon.rotation.y=THREE.MathUtils.damp(weapon.rotation.y,Math.sin(walkT*.7)*.012+reloadBlend*.16,8,dt);
