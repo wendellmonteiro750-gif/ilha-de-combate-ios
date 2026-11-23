@@ -308,8 +308,14 @@ function animateRig(dt,speed,sprinting,crouch,prone){
  const sprint=exactClip('Sprint_Loop','Run_Fwd_Loop')||walk;
  const crouchIdle=exactClip('Crouch_Idle_Loop')||idle;
  const crouchMove=exactClip('Crouch_Fwd_Loop','Crouch_Fwd_L_Loop')||walk;
- const proneIdle=exactClip('Prone_Idle_Loop','Crawl_Idle_Loop')||crouchIdle;
- const proneMove=exactClip('Crawl_Fwd_Loop','Prone_Crawl_Loop')||crouchMove;
+ // Deitado precisa usar animação de chão/crawl de verdade. Nunca cair
+ // no Crouch_Idle: esse fallback era a causa do boneco parecer agachado.
+ const proneIdle=exactClip('Prone_Idle_Loop','Crawl_Idle_Loop','Crawl_Idle')
+  ||[...characterActions.keys()].find(n=>/(prone|crawl).*(idle)|(idle).*(prone|crawl)/i.test(n))
+  ||idle;
+ const proneMove=exactClip('Crawl_Fwd_Loop','Prone_Crawl_Loop','Crawl_Fwd','Crawl_Left_Loop')
+  ||[...characterActions.keys()].find(n=>/(crawl|prone).*(fwd|forward|move|walk)/i.test(n))
+  ||proneIdle;
  // Mirar, atirar e recarregar não mudam a postura das pernas ou do tronco.
  let clip=idle;
  if(prone)clip=moving?proneMove:proneIdle;
