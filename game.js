@@ -415,7 +415,7 @@ async function createFighter(isEnemy=false,index=0){
  model.updateMatrixWorld(true);
  const bounds=new THREE.Box3().setFromObject(model),height=Math.max(.1,bounds.max.y-bounds.min.y);
  holder.scale.setScalar(1.82/height);model.position.y=-bounds.min.y;
- const bones=new Map(),palette=['#35483d','#5a4938','#3c4b5d','#4c3d35','#4b5144','#51443b'],outfitColor=isEnemy?palette[index%palette.length]:'#35463f';
+ const bones=new Map(),palette=['#35483d','#5a4938','#3c4b5d','#4c3d35','#4b5144','#51443b'],outfitColor=isEnemy?palette[index%palette.length]:'#17191d';
  model.traverse(o=>{
   if(o.isBone)bones.set(o.name,o);
   if(o.isMesh){
@@ -459,53 +459,8 @@ async function createFighter(isEnemy=false,index=0){
    for(const x of [-.22,.22])make(outfit,.075,.39,.09,shirt,x,.02,.02);
    torso.add(outfit);
   }else{
-   // Camiseta preta com acabamento dourado, modelada sobre o torso animado.
-   const tee=new THREE.Mesh(new THREE.CapsuleGeometry(.205,.28,5,10),shirt);tee.scale.set(1.04,1.02,.62);tee.position.set(0,-.005,.025);tee.castShadow=true;outfit.add(tee);
-   for(const x of [-.235,.235]){
-    const sleeve=new THREE.Mesh(new THREE.CapsuleGeometry(.075,.17,4,8),shirt);sleeve.position.set(x,.105,.02);sleeve.rotation.z=x<0?-.28:.28;sleeve.castShadow=true;outfit.add(sleeve);
-    make(outfit,.145,.035,.105,gold,x,.105,.035);
-   }
-   make(outfit,.105,.12,.018,gold,.105,.035,.215);
-   const slash=make(outfit,.075,.39,.018,gold,.105,-.12,.205);slash.rotation.z=-.48;
-   torso.add(outfit);
-   const pelvis=bones.get('mixamorigHips')||bones.get('Hips');
-   if(pelvis){
-    const trousers=new THREE.Group();
-    make(trousers,.43,.19,.24,pants,0,-.035,.015);
-    make(trousers,.19,.36,.225,pants,-.115,-.29,.012);
-    make(trousers,.19,.36,.225,pants,.115,-.29,.012);
-    make(trousers,.44,.045,.255,gold,0,.075,.018);
-    make(trousers,.095,.09,.018,gold,.105,.075,.15);
-    make(trousers,.085,.18,.045,dark,-.215,-.29,.045);
-    make(trousers,.085,.18,.045,dark,.215,-.29,.045);
-    make(trousers,.09,.035,.052,gold,-.215,-.22,.075);
-    make(trousers,.09,.035,.052,gold,.215,-.22,.075);
-    pelvis.add(trousers);
-   }
-   for(const side of ['Left','Right']){
-    const upper=bones.get('mixamorig'+side+'UpLeg')||bones.get(side+'UpLeg');
-    const lower=bones.get('mixamorig'+side+'Leg')||bones.get(side+'Leg');
-    if(upper){const leg=new THREE.Group();make(leg,.19,.39,.22,pants,0,-.19,.012);make(leg,.205,.045,.235,gold,0,-.34,.012);upper.add(leg)}
-    if(lower){const shin=new THREE.Group();make(shin,.17,.34,.195,pants,0,-.17,.008);make(shin,.18,.035,.205,dark,0,-.31,.012);lower.add(shin)}
-    const foot=bones.get('mixamorig'+side+'Foot')||bones.get(side+'Foot');
-    if(foot){
-     const shoe=new THREE.Group();
-     make(shoe,.205,.085,.34,dark,0,-.025,.055);
-     make(shoe,.205,.035,.345,gold,0,-.068,.055);
-     make(shoe,.18,.105,.19,shirt,0,.025,-.015);
-     make(shoe,.07,.018,.16,gold,0,.083,.035);
-     foot.add(shoe);
-    }
-   }
-   const headBone=bones.get('mixamorigHead')||bones.get('Head');
-   if(headBone){
-    const hat=new THREE.Group();
-    const brim=new THREE.Mesh(new THREE.CylinderGeometry(.235,.235,.035,24),dark);brim.position.y=.105;brim.castShadow=true;hat.add(brim);
-    const crown=new THREE.Mesh(new THREE.CylinderGeometry(.125,.15,.19,20),dark);crown.position.y=.205;crown.castShadow=true;hat.add(crown);
-    const band=new THREE.Mesh(new THREE.CylinderGeometry(.153,.153,.035,20),gold);band.position.y=.145;hat.add(band);
-    make(hat,.045,.07,.012,gold,0,.22,.151);
-    hat.position.set(0,.11,0);headBone.add(hat);
-   }
+   // A roupa improvisada em caixas foi removida para não atravessar o corpo
+   // nem deformar durante corrida, salto e mira. O operador mantém o rig original.
   }
  }
  const head=bones.get('mixamorigHead')||bones.get('Head');
