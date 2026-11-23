@@ -262,7 +262,54 @@ function buildWorld(){
  addSettlementDetails();
  addWorldDetail();
  addCombatLandmarks();
+ addCoastalLandmarks();
  addSafeZone();addLootDrops();
+}
+function addCoastalLandmarks(){
+ // Novo cais de madeira na enseada norte, com píer, postes e barco encalhado.
+ const timber=mat(0x76563a,.92),darkTimber=mat(0x493b2e,.95),metal=mat(0x3d494d,.58,.42);
+ const dock=new THREE.Group();
+ box(dock,5.2,.32,28,timber,0,.05,0);
+ for(let z=-12;z<=12;z+=4){
+  for(const x of [-2.25,2.25])box(dock,.22,1.25,.22,darkTimber,x,-.48,z);
+  for(const x of [-2.45,2.45])box(dock,.12,.72,.12,timber,x,.48,z);
+  box(dock,.16,.14,.16,metal,0,.26,z);
+ }
+ for(const x of [-2.45,2.45])box(dock,.18,.16,28,timber,x,.62,0);
+ dock.position.set(-18,0,105);dock.rotation.y=-.12;scene.add(dock);
+ worldObstacles.push({x:-18,z:92,radius:3.8});
+ // Barco de pesca com casco, cabine, janelas e defensas.
+ const boat=new THREE.Group(),hull=mat(0x263e48,.5,.35),paint=mat(0xe0d8c3,.72),glass=new THREE.MeshStandardMaterial({color:0x5b9ba8,roughness:.22,metalness:.2});
+ const hullMesh=new THREE.Mesh(new THREE.CylinderGeometry(.15,1.35,8,8,1,false),hull);hullMesh.rotation.z=Math.PI/2;hullMesh.scale.set(1,.62,.72);hullMesh.position.y=.65;boat.add(hullMesh);
+ box(boat,3.6,.65,2.2,paint,0,1.15,0);box(boat,1.7,1.05,1.55,paint,-.35,1.9,-.05);
+ box(boat,.08,.72,1.15,glass,.55,1.95,.02);box(boat,.08,.72,1.15,glass,-1.15,1.95,.02);
+ const mast=new THREE.Mesh(new THREE.CylinderGeometry(.045,.06,2.1,8),metal);mast.position.set(-.25,3.45,-.1);boat.add(mast);
+ for(const z of [-1.1,1.1]){const f=new THREE.Mesh(new THREE.SphereGeometry(.22,8,6),mat(0x343a3c));f.position.set(1.45,.95,z);boat.add(f)}
+ boat.position.set(-24,-.18,121);boat.rotation.y=.3;scene.add(boat);
+ // Farol costeiro com base de pedra, faixas, janelas e cobertura.
+ const lighthouse=new THREE.Group(),stone=mat(0xb8b5a5,.92),white=mat(0xe2dfd1,.8),red=mat(0x9d493c,.82);
+ const base=new THREE.Mesh(new THREE.CylinderGeometry(3.5,4.1,1.1,12),stone);base.position.y=.55;lighthouse.add(base);
+ const shaft=new THREE.Mesh(new THREE.CylinderGeometry(1.8,2.45,13,16),white);shaft.position.y=7.4;shaft.castShadow=true;lighthouse.add(shaft);
+ for(const y of [3.2,8.2,12.7]){const stripe=new THREE.Mesh(new THREE.CylinderGeometry(2.05-(y-3)*.035,2.2-(y-3)*.035,.72,16),red);stripe.position.y=y;lighthouse.add(stripe)}
+ const gallery=new THREE.Mesh(new THREE.CylinderGeometry(2.45,2.1,.32,16),metal);gallery.position.y=14;lighthouse.add(gallery);
+ const lantern=new THREE.Mesh(new THREE.CylinderGeometry(1.55,1.55,2.2,12),new THREE.MeshStandardMaterial({color:0x8ab8bd,roughness:.2,metalness:.25,transparent:true,opacity:.72}));lantern.position.y=15.2;lighthouse.add(lantern);
+ const cap=new THREE.Mesh(new THREE.ConeGeometry(1.9,1.55,12),red);cap.position.y=17.05;lighthouse.add(cap);
+ const beacon=new THREE.Mesh(new THREE.SphereGeometry(.35,10,8),new THREE.MeshBasicMaterial({color:0xffe6a0}));beacon.position.y=15.25;lighthouse.add(beacon);
+ lighthouse.position.set(76,0,-82);scene.add(lighthouse);worldObstacles.push({x:76,z:-82,radius:4.5});
+ // Pátio de carga: contêineres coloridos, travas, faixas e pilhas de caixas.
+ const colors=[0x526c70,0x8a5142,0x6b7550],containerMats=colors.map(c=>mat(c,.82));
+ const yard=new THREE.Group();
+ for(let i=0;i<3;i++){
+  const x=(i-1)*7;
+  box(yard,6,2.7,2.7,containerMats[i],x,1.35,0);
+  for(let k=0;k<7;k++)box(yard,.045,2.45,.055,metal,x-2.7+k*.9,1.35,1.39);
+  for(const sx of [-1,1])box(yard,.13,2.75,.13,metal,x+sx*2.88,1.35,0);
+  box(yard,5.7,.08,.08,metal,x,2.74,0);
+ }
+ box(yard,24,.12,13,mat(0x686b61),0,.03,0);
+ yard.position.set(-4,0,-59);yard.rotation.y=.12;scene.add(yard);
+ worldObstacles.push({x:-4,z:-59,radius:12});
+ for(const [x,z] of [[-13,-52],[7,-52],[11,-66]]){box(scene,1.1,1.2,1.1,mat(0x785c3e),x,.6,z);box(scene,1.14,.08,1.14,metal,x,1.22,z)}
 }
 function addSafeZone(){
  const ring=new THREE.Mesh(new THREE.TorusGeometry(1,.012,8,256),new THREE.MeshBasicMaterial({color:0x54dfff,transparent:true,opacity:.82}));
