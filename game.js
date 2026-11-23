@@ -517,26 +517,31 @@ async function createFighter(isEnemy=false,index=0){
    this._stanceBlend=THREE.MathUtils.damp(this._stanceBlend,target,10,dt);
    const prone=this.stanceMode==='prone',crouch=this.stanceMode==='crouch';
    const ready=this.isPlayer?1:.72,aim=THREE.MathUtils.clamp(this.weaponAimBlend||0,0,1),combatPose=Math.max(aim,THREE.MathUtils.clamp(this.weaponFireBlend||0,0,1));
-   const readyTarget=this.isPlayer?(this.runBlend? .16 : Math.max(.58,aim,THREE.MathUtils.clamp(this.weaponFireBlend||0,0,1))):.62;
-   this.weaponReadyBlend=THREE.MathUtils.damp(this.weaponReadyBlend??.58,readyTarget,12,dt);
-   const armReady=1,elbowReady=1;
+   const fire=THREE.MathUtils.clamp(this.weaponFireBlend||0,0,1),run=THREE.MathUtils.clamp(this.weaponRunBlend||0,0,1),reload=THREE.MathUtils.clamp(this.reloadBlend||0,0,1);
+   const readyTarget=this.isPlayer?(run?.12:Math.max(.72,aim*.98,fire*.96,reload*.78)):.62;
+   this.weaponReadyBlend=THREE.MathUtils.damp(this.weaponReadyBlend??.72,readyTarget,12,dt);
+   const armReady=this.weaponReadyBlend,elbowReady=THREE.MathUtils.clamp(armReady+aim*.12,0,1);
+   const reloadPhase=Math.sin((1-reload)*Math.PI);
+   const firePulse=fire*(.12+.10*Math.sin((this.firePosePhase||0)*18));
    const pose=[
     ['mixamorigHips',prone ? .82 : crouch ? .42 : -(this.jumpBlend||0)*.16,0,0],
-    ['mixamorigSpine',prone ? .48 : crouch ? -.10 : -.28*combatPose-(this.jumpBlend||0)*.08,0,0],
-    ['mixamorigSpine1',prone ? .22 : crouch ? -.08 : -.20*combatPose-(this.jumpBlend||0)*.04,0,0],
-     ['mixamorigSpine2',prone ? .10 : crouch ? -.04 : -.12*combatPose,0,0],
-     ['mixamorigNeck',0,0,0],
-     ['mixamorigHead',-(this.aimPitch||0)*.32,0,0],
+    ['mixamorigSpine',prone ? .48 : crouch ? -.10 : -.30*combatPose-.12*aim+ .10*run-(this.jumpBlend||0)*.08,0,0],
+    ['mixamorigSpine1',prone ? .22 : crouch ? -.08 : -.22*combatPose-.07*aim+.06*run-(this.jumpBlend||0)*.04,0,0],
+    ['mixamorigSpine2',prone ? .10 : crouch ? -.04 : -.12*combatPose-.035*aim,0,0],
+    ['mixamorigNeck',0,0,0],
+    ['mixamorigHead',-(this.aimPitch||0)*.32,0,0],
     ['mixamorigLeftUpLeg',prone ? -.42 : crouch ? -.52 : -(this.jumpBlend||0)*.34,0,0],
     ['mixamorigRightUpLeg',prone ? -.42 : crouch ? -.52 : -(this.jumpBlend||0)*.28,0,0],
     ['mixamorigLeftLeg',prone ? .18 : crouch ? 1.02 : (this.jumpBlend||0)*.62,0,0],
     ['mixamorigRightLeg',prone ? .18 : crouch ? 1.02 : (this.jumpBlend||0)*.54,0,0],
-    ['mixamorigLeftArm',prone ? -.22 : crouch ? -.08 : -1.20*armReady-(this.jumpBlend||0)*.06,0,.18*armReady],
-    ['mixamorigLeftForeArm',0,0,-.08*elbowReady],
-    ['mixamorigLeftHand',.08*ready,0,0],
-    ['mixamorigRightArm',prone ? -.22 : crouch ? -.08 : -1.12*armReady-(this.jumpBlend||0)*.06,0,-.18*armReady],
-    ['mixamorigRightForeArm',-.12*elbowReady,0,.06*elbowReady],
-    ['mixamorigRightHand',-.04*ready,0,0]
+    // Ombro esquerdo sustenta o guarda-mão; o IK ajusta a mão à posição real da arma.
+    ['mixamorigLeftArm',prone ? -.22 : crouch ? -.08 : -1.18*armReady-(this.jumpBlend||0)*.06, .035*aim, .20*armReady+.10*run],
+    ['mixamorigLeftForeArm',-.10*elbowReady-.08*reloadPhase*reload,0,-.12*elbowReady],
+    ['mixamorigLeftHand',.08*armReady,0,.025*aim],
+    // Mão direita permanece na empunhadura/gatilho; a flexão do cotovelo acompanha mira e recarga.
+    ['mixamorigRightArm',prone ? -.22 : crouch ? -.08 : -1.10*armReady-(this.jumpBlend||0)*.06, -.025*aim, -.20*armReady-.08*run],
+    ['mixamorigRightForeArm',-.16*elbowReady-.10*reloadPhase*reload-firePulse,0,.08*elbowReady],
+    ['mixamorigRightHand',-.05*armReady,0,-.025*fire]
    ];
    for(const [name,x,y,z] of pose){
     const bone=this.bones.get(name);if(!bone)continue;
