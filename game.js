@@ -28,15 +28,40 @@ function tree(x,z,s){const g=new THREE.Group();g.position.set(x,0,z);scene.add(g
 function house(x,z,color){const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);cube(g,6,3.1,5,mat(color),0,1.55,0);const roof=mesh(g,new THREE.ConeGeometry(4.5,2,4),mat(0x984d37),[0,4,0]);roof.rotation.y=Math.PI/4;cube(g,1,2,.12,mat(0x59402e),0,1,2.56);for(const sx of [-1.7,1.7])cube(g,.9,.8,.1,mat(0x77b9c7),sx,1.9,2.57)}
 function buildHero(){
  hero=new THREE.Group();scene.add(hero);
- const skin=mat(0xd99b70),shirt=mat(0x27795e),pants=mat(0x263d55),boots=mat(0x242b2e),hair=mat(0x30251f),vest=mat(0x475247),gun=mat(0x252b2e);
+ const skin=mat(0xd99b70),shirt=mat(0x27795e),pants=mat(0x263d55),boots=mat(0x242b2e),hair=mat(0x30251f),vest=mat(0x475247),gun=mat(0x252b2e),glove=mat(0x343b38);
+ // Procedural articulated rig: pelvis, torso, head, upper/lower arms and legs.
  rig.body=new THREE.Group();rig.body.position.y=1.03;hero.add(rig.body);
- cube(rig.body,.75,.9,.42,shirt,0,.48,0);cube(rig.body,.78,.58,.45,vest,0,.49,-.01);
- rig.head=new THREE.Group();rig.head.position.set(0,1.13,0);rig.body.add(rig.head);
- capsule(rig.head,.13,.18,skin,0,-.04,0);const face=mesh(rig.head,new THREE.SphereGeometry(.27,12,10),skin,[0,.27,0]);face.scale.set(.85,1.15,.9);
- const cap=mesh(rig.head,new THREE.SphereGeometry(.276,12,8,0,Math.PI*2,0,Math.PI*.55),hair,[0,.34,0]);
- rig.legs=[];for(const side of [-1,1]){const leg=new THREE.Group();leg.position.set(side*.22,-.02,0);rig.body.add(leg);capsule(leg,.15,.48,pants,0,-.34,0);capsule(leg,.115,.43,pants,0,-.83,.02);cube(leg,.26,.16,.4,boots,0,-1.12,-.09);rig.legs.push(leg)}
- rig.arms=[];for(const side of [-1,1]){const arm=new THREE.Group();arm.position.set(side*.47,.82,0);rig.body.add(arm);capsule(arm,.12,.38,shirt,0,-.24,0);const fore=new THREE.Group();fore.position.set(0,-.47,-.02);arm.add(fore);capsule(fore,.105,.36,skin,0,-.22,-.02);rig.arms.push({arm,fore,side})}
- weapon=new THREE.Group();weapon.position.set(.23,.47,-.42);rig.body.add(weapon);cube(weapon,.16,.17,.85,gun,0,0,-.22);cube(weapon,.075,.075,.7,gun,0,.02,-.92);cube(weapon,.13,.13,.35,vest,0,0,.38);cube(weapon,.11,.3,.18,gun,0,-.2,-.24);cube(weapon,.08,.07,.16,gun,0,.12,-.25);
+ rig.pelvis=new THREE.Group();rig.pelvis.position.set(0,0,0);rig.body.add(rig.pelvis);
+ cube(rig.pelvis,.48,.3,.34,pants,0,-.08,0);
+ cube(rig.body,.76,.88,.42,shirt,0,.48,0);cube(rig.body,.79,.56,.45,vest,0,.5,-.015);
+ rig.head=new THREE.Group();rig.head.position.set(0,1.08,0);rig.body.add(rig.head);
+ capsule(rig.head,.13,.17,skin,0,-.02,0);
+ const face=mesh(rig.head,new THREE.SphereGeometry(.27,14,12),skin,[0,.28,0]);face.scale.set(.86,1.14,.92);
+ mesh(rig.head,new THREE.SphereGeometry(.278,14,9,0,Math.PI*2,0,Math.PI*.54),hair,[0,.35,0]);
+ // Two-segment legs with knee pivots and feet.
+ rig.legs=[];
+ for(const side of [-1,1]){
+  const upper=new THREE.Group();upper.position.set(side*.22,-.18,0);rig.body.add(upper);
+  capsule(upper,.15,.42,pants,0,-.27,0);
+  const knee=new THREE.Group();knee.position.set(0,-.52,0);upper.add(knee);capsule(knee,.115,.39,pants,0,-.23,.015);
+  cube(knee,.25,.15,.38,boots,0,-.48,-.08);
+  rig.legs.push({upper,knee,side});
+ }
+ // Arms have shoulder, elbow and wrist pivots so weapon stance can be posed.
+ rig.arms=[];
+ for(const side of [-1,1]){
+  const arm=new THREE.Group();arm.position.set(side*.46,.82,0);rig.body.add(arm);
+  capsule(arm,.12,.36,shirt,0,-.22,0);
+  const fore=new THREE.Group();fore.position.set(0,-.45,-.015);arm.add(fore);
+  capsule(fore,.105,.34,shirt,0,-.2,-.015);
+  const hand=new THREE.Group();hand.position.set(0,-.4,-.04);fore.add(hand);mesh(hand,new THREE.SphereGeometry(.105,9,8),glove,[0,-.04,-.035]);
+  rig.arms.push({arm,fore,hand,side});
+ }
+ // Rifle points along the character's forward axis (-Z).
+ weapon=new THREE.Group();weapon.position.set(.2,.48,-.42);rig.body.add(weapon);
+ cube(weapon,.16,.17,.85,gun,0,0,-.22);cube(weapon,.075,.075,.7,gun,0,.02,-.92);
+ cube(weapon,.13,.13,.35,vest,0,0,.38);cube(weapon,.11,.3,.18,gun,0,-.2,-.24);
+ cube(weapon,.08,.07,.16,gun,0,.12,-.25);
 }
 function bind(){
  const stick=$('stick'),knob=$('knob');let sid=null,rect=null;
@@ -59,16 +84,57 @@ function setPose(p){pose=p;$('poseLabel').textContent='POSTURA: '+(p==='stand'?'
 function stats(){$('ammo').textContent=ammo+' / 90'}
 function fireShot(){if(reloading||ammo<=0||performance.now()-lastShot<160)return;lastShot=performance.now();ammo--;stats();weapon.rotation.x=.16;setTimeout(()=>{if(weapon)weapon.rotation.x=aim?-.04:0},65);const origin=camera.position.clone(),direction=new THREE.Vector3();camera.getWorldDirection(direction);const ray=new THREE.Raycaster(origin,direction,0,85);const hits=ray.intersectObjects(targets,true);if(hits.length){const target=hits[0].object;target.material=mat(0xe5a43a);$('message').textContent='ALVO ATINGIDO!';setTimeout(()=>{$('message').textContent='ÁREA DE TREINO';target.material=mat(0xd6d1bd)},500)}}
 function update(dt){
- const moving=Math.abs(moveX)+Math.abs(moveY)>.08;let speed=run?7:3.4;if(pose==='crouch')speed=1.65;if(pose==='prone')speed=.55;
- const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));const dir=forward.clone().multiplyScalar(-moveY).add(right.multiplyScalar(moveX));if(dir.length()>1)dir.normalize();hero.position.addScaledVector(dir,speed*dt);hero.position.x=THREE.MathUtils.clamp(hero.position.x,-34,34);hero.position.z=THREE.MathUtils.clamp(hero.position.z,-34,34);
- if(moving&&pose!=='prone'){const targetYaw=Math.atan2(dir.x,dir.z),delta=Math.atan2(Math.sin(targetYaw-hero.rotation.y),Math.cos(targetYaw-hero.rotation.y));hero.rotation.y+=delta*Math.min(1,dt*11)}
+ const moving=Math.abs(moveX)+Math.abs(moveY)>.08;
+ const crouch=pose==='crouch',prone=pose==='prone';
+ const speed=prone?.52:crouch?1.55:run?6.8:3.35;
+ // Movement is camera-relative, while the upper body can remain oriented toward aim.
+ const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
+ const right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
+ const dir=forward.clone().multiplyScalar(-moveY).add(right.multiplyScalar(moveX));
+ if(dir.length()>1)dir.normalize();
+ hero.position.addScaledVector(dir,speed*dt);
+ hero.position.x=THREE.MathUtils.clamp(hero.position.x,-34,34);
+ hero.position.z=THREE.MathUtils.clamp(hero.position.z,-34,34);
+ const facingYaw=(aim||!moving)?yaw:Math.atan2(-dir.x,-dir.z);
+ const yawDelta=Math.atan2(Math.sin(facingYaw-hero.rotation.y),Math.cos(facingYaw-hero.rotation.y));
+ hero.rotation.y+=yawDelta*Math.min(1,dt*(aim?14:9));
+ // Jump arc and grounded recovery.
  if(!grounded){velocityY-=17*dt;hero.position.y+=velocityY*dt;if(hero.position.y<=0){hero.position.y=0;velocityY=0;grounded=true}}
- walkT+=dt*(moving?speed*1.7:1);
- const crouch=pose==='crouch',prone=pose==='prone';rig.body.position.y=THREE.MathUtils.lerp(rig.body.position.y,prone?.43:crouch?.73:1.03,dt*8);rig.body.rotation.x=THREE.MathUtils.lerp(rig.body.rotation.x,prone?-1.2:aim?-.1:0,dt*7);
- rig.legs.forEach((leg,i)=>{const phase=walkT+i*Math.PI;leg.rotation.x=prone?0:crouch?Math.sin(phase)*.12:moving?Math.sin(phase)*.62:Math.sin(walkT)*.02});
- rig.arms.forEach(({arm,fore,side})=>{arm.rotation.x=THREE.MathUtils.lerp(arm.rotation.x,aim?-.95:-.42,dt*8);arm.rotation.z=THREE.MathUtils.lerp(arm.rotation.z,side*.08,dt*8);fore.rotation.x=THREE.MathUtils.lerp(fore.rotation.x,-.85,dt*8)});
- weapon.position.y=aim?.51:.47;weapon.rotation.x=aim?-.04:0;if(shoot)fireShot();
- const target=hero.position.clone().add(new THREE.Vector3(0,prone?1.12:crouch?1.8:2.12,0));const dist=aim?3.55:5.8;const offset=new THREE.Vector3(Math.sin(yaw)*dist*Math.cos(pitch),dist*(.34+Math.sin(-pitch)),Math.cos(yaw)*dist*Math.cos(pitch));camera.position.lerp(target.clone().add(offset),1-Math.exp(-dt*8));camera.lookAt(target);
+ walkT+=dt*(moving?(run&&!crouch&&!prone?11:6):2);
+ const gait=Math.sin(walkT),opposite=Math.sin(walkT+Math.PI);
+ const strafe=THREE.MathUtils.clamp(moveX,-1,1);
+ const movingBlend=moving?1:0,runBlend=run&&!crouch&&!prone&&moving?1:0;
+ // Smooth transitions between standing, crouched and prone silhouettes.
+ rig.body.position.y=THREE.MathUtils.lerp(rig.body.position.y,prone?.28:crouch?.72:1.03,1-Math.exp(-dt*9));
+ rig.body.rotation.x=THREE.MathUtils.lerp(rig.body.rotation.x,prone?-Math.PI/2:aim?-.09:0,1-Math.exp(-dt*10));
+ rig.body.rotation.z=THREE.MathUtils.lerp(rig.body.rotation.z,aim?-.035*strafe:-.10*strafe,1-Math.exp(-dt*8));
+ rig.head.rotation.x=THREE.MathUtils.lerp(rig.head.rotation.x,prone?.08:aim?-.06:0,1-Math.exp(-dt*8));
+ // Alternating stride, knee bend and planted-foot motion.
+ rig.legs.forEach(({upper,knee,side})=>{
+  const phase=side===1?gait:opposite;
+  const swing=moving?phase*(.48+runBlend*.32):Math.sin(walkT*.5)*.018;
+  upper.rotation.x=THREE.MathUtils.lerp(upper.rotation.x,prone?0:crouch?swing*.28:swing,1-Math.exp(-dt*12));
+  knee.rotation.x=THREE.MathUtils.lerp(knee.rotation.x,prone?0:crouch?.45+Math.max(0,-phase)*.18:moving?Math.max(0,-phase)*(.55+runBlend*.55):.025,1-Math.exp(-dt*12));
+ });
+ // Weapon-ready arms: both hands stay close to the rifle; elbows react to aim and movement.
+ rig.arms.forEach(({arm,fore,side})=>{
+  const targetArmX=prone?-.18:aim?-.96:crouch?-.63:-.48;
+  const targetArmZ=side===1?-.08:.12;
+  arm.rotation.x=THREE.MathUtils.lerp(arm.rotation.x,targetArmX+(moving?Math.sin(walkT)*.035:0),1-Math.exp(-dt*11));
+  arm.rotation.z=THREE.MathUtils.lerp(arm.rotation.z,targetArmZ+(aim?strafe*.045:0),1-Math.exp(-dt*11));
+  fore.rotation.x=THREE.MathUtils.lerp(fore.rotation.x,prone?-.12:aim?-.58:-.78,1-Math.exp(-dt*11));
+ });
+ // Small breathing/idle motion and recoil.
+ rig.body.position.y+=moving?Math.abs(gait)*.018:Math.sin(walkT*1.7)*.012;
+ weapon.position.y=aim?.51:.48;
+ weapon.rotation.x=THREE.MathUtils.lerp(weapon.rotation.x,aim?-.035:0,1-Math.exp(-dt*12));
+ if(shoot)fireShot();
+ // Shoulder camera follows the player and tightens when aiming.
+ const target=hero.position.clone().add(new THREE.Vector3(0,prone?1.0:crouch?1.55:2.02,0));
+ const dist=aim?3.45:5.65;
+ const offset=new THREE.Vector3(Math.sin(yaw)*dist*Math.cos(pitch),dist*(.32+Math.sin(-pitch)),Math.cos(yaw)*dist*Math.cos(pitch));
+ camera.position.lerp(target.clone().add(offset),1-Math.exp(-dt*8));
+ camera.lookAt(target);
 }
 function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);if(started)update(dt);renderer.render(scene,camera)}
 function resize(){if(!camera||!renderer)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.5))}
