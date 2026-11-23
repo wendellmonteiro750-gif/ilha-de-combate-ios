@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap');
 :root{color-scheme:dark;--glass:rgba(9,20,23,.72);--line:rgba(255,255,255,.19);--gold:#e9b45a;--mint:#b9d9c3}
-*{box-sizing:border-box}html,body,#game{margin:0;width:100%;height:100%;overflow:hidden;background:#78b9c7;font-family:Inter,system-ui,sans-serif;touch-action:none;overscroll-behavior:none;-webkit-user-select:none;user-select:none}body{position:fixed;inset:0}canvas{display:block;width:100%;height:100%;touch-action:none}
+*{box-sizing:border-box}html,body,#game{margin:0;width:100%;height:100%;height:100dvh;overflow:hidden;background:#78b9c7;font-family:Inter,system-ui,sans-serif;touch-action:none;overscroll-behavior:none;-webkit-user-select:none;user-select:none}body{position:fixed;inset:0}canvas{display:block;width:100%;height:100%;touch-action:none}
 #hud{position:fixed;inset:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);z-index:2;color:#fff;text-shadow:0 2px 5px #000b;pointer-events:none}
 .topbar{position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
 .brand{display:flex;align-items:center;gap:9px;background:linear-gradient(135deg,rgba(8,24,25,.88),rgba(14,35,32,.66));border:1px solid var(--line);border-radius:12px;padding:8px 11px;font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:900;letter-spacing:1px;backdrop-filter:blur(12px);box-shadow:0 5px 18px #0004}
@@ -109,3 +109,8 @@ h1{font:900 clamp(48px,13vw,62px)/.82 'Barlow Condensed',Impact,sans-serif;lette
  .reload{right:145px;bottom:190px}.fire{right:78px;bottom:35px;width:68px;height:68px}.prone{right:10px;bottom:35px;width:56px;height:56px}.weapon{right:150px;bottom:45px;width:48px;height:48px}
  .ff-action,.ff-extra{display:none}
 }
+
+/* Ajustes de Safari iOS: área segura, viewport dinâmico e instrução de instalação. */
+.install-hint{margin:12px 0 0!important;padding:9px 10px;border:1px solid #ffffff35;border-radius:8px;background:#ffffff0c;color:#f3d59a!important;font-size:9px!important;font-weight:800;letter-spacing:.45px;line-height:1.45!important}
+@supports (-webkit-touch-callout:none){html,body,#game{height:-webkit-fill-available}#hud{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}button{ -webkit-appearance:none;appearance:none} .control{-webkit-tap-highlight-color:transparent}}
+@media(orientation:landscape) and (max-height:500px){.lobby-card{padding:18px 24px 15px;width:min(82vw,560px)}h1{font-size:42px;margin:12px 0}.lobby-card p{margin:10px 0 14px;font-size:11px}.lobby-card small{margin-top:10px}.install-hint{margin-top:8px!important}#stick{width:108px;height:108px;bottom:18px}.run,.crouch{bottom:116px}.jump,.aim{bottom:22px}.reload{bottom:116px}.prone,.weapon{bottom:18px}.fire{bottom:18px}}
