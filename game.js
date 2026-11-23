@@ -9,21 +9,30 @@ let renderer,scene,camera,clock,playerRig,worldYaw=0,pitch=-.12,ammo=30,kills=0,
 const HUMAN_MODEL_URL='https://raw.githubusercontent.com/memoriesrohit/avatar-studio/2fd9ec82fbe1613d40ae38aadcca3f410725f740/models/andre_casual.glb';
 let humanModelPromise=null;
 const HUMAN_ROLE_CLIPS={idle:'Idle',walk:'Walk',run:'Walk',cast:'Boxing',hit:'Argue'};
-const weapons=[{name:'FUZIL',mag:30,damage:35,rate:.13,spread:.014,reload:1.35},{name:'SMG',mag:40,damage:19,rate:.075,spread:.022,reload:1.5},{name:'PRECISÃO',mag:8,damage:90,rate:.72,spread:.002,reload:1.8}];
-let weaponIndex=0,weaponAmmo=[30,40,8],scopeLevel=0,sprintHeld=false;
+const weapons=[
+ {name:'FUZIL AR',category:'FUZIL',mag:30,damage:34,rate:.105,spread:.012,reload:1.45,modes:['SINGLE','BURST','AUTO'],range:105},
+ {name:'SMG',category:'SUBMETRALHADORA',mag:40,damage:19,rate:.075,spread:.021,reload:1.35,modes:['SINGLE','AUTO'],range:62},
+ {name:'SNIPER',category:'PRECISÃO',mag:8,damage:92,rate:.78,spread:.0015,reload:2.05,modes:['SINGLE'],range:180},
+ {name:'ESCOPETA',category:'ESCOPETA',mag:6,damage:12,rate:.72,spread:.055,reload:1.85,modes:['SINGLE'],pellets:8,range:28},
+ {name:'PISTOLA',category:'PISTOLA',mag:15,damage:25,rate:.22,spread:.018,reload:1.15,modes:['SINGLE'],range:48},
+ {name:'METRALHADORA',category:'LEVE',mag:60,damage:22,rate:.095,spread:.025,reload:2.25,modes:['AUTO'],range:92}
+];
+let weaponIndex=0,weaponAmmo=[30,40,8,6,15,60],reserveAmmo=[120,160,32,36,75,180],scopeLevel=0,sprintHeld=false,fireMode='AUTO',burstRemaining=0,attachmentLevel=0;
 function currentWeapon(){return weapons[weaponIndex]}
-function refreshAmmo(){ammo=weaponAmmo[weaponIndex];ammoEl.textContent='MUNIÇÃO '+ammo;document.querySelector('#ammoLarge').textContent=ammo;document.querySelector('#weaponSwitch').textContent='ARMA: '+currentWeapon().name;refreshInventory()}
+function setFireMode(next){const modes=currentWeapon().modes;fireMode=modes.includes(next)?next:modes[modes.length-1];const el=document.querySelector('#fireMode');if(el)el.textContent='MODO: '+fireMode;}
+function cycleFireMode(){const modes=currentWeapon().modes;const i=modes.indexOf(fireMode);setFireMode(modes[(i+1)%modes.length]);statusEl.textContent='DISPARO '+fireMode;}
+function refreshAmmo(){ammo=weaponAmmo[weaponIndex];ammoEl.textContent='MUNIÇÃO '+ammo;document.querySelector('#ammoLarge').textContent=ammo;document.querySelector('#ammoMag').textContent=currentWeapon().mag;document.querySelector('#ammoReserve').textContent=reserveAmmo[weaponIndex];document.querySelector('#weaponSwitch').textContent='ARMA: '+currentWeapon().name;setFireMode(fireMode);refreshInventory()}
 function refreshInventory(){
  const panel=document.querySelector('#inventoryPanel');if(!panel)return;
- document.querySelector('#inventoryWeapons').innerHTML=weapons.map((w,i)=>'<div class="inventory-slot '+(i===weaponIndex?'equipped':'')+'"><b>'+(i+1)+'. '+w.name+'</b><span>'+weaponAmmo[i]+' / '+w.mag+'</span><small>DANO '+w.damage+'</small></div>').join('');
- document.querySelector('#inventorySupplies').textContent='Kits: '+medkits+'  •  Colete: '+Math.round(armor)+'%  •  Miras: '+scopeLevel+'x  •  Munição atual: '+ammo;
+ document.querySelector('#inventoryWeapons').innerHTML=weapons.map((w,i)=>'<div class="inventory-slot '+(i===weaponIndex?'equipped':'')+'"><b>'+(i+1)+'. '+w.name+'</b><span>'+weaponAmmo[i]+'/'+w.mag+' • reserva '+reserveAmmo[i]+'</span><small>'+w.category+' • DANO '+w.damage+' • '+w.rate.toFixed(2)+'s/tiro</small></div>').join('');
+ document.querySelector('#inventorySupplies').textContent='Kits: '+medkits+' • Colete: '+Math.round(armor)+'% • Mira: '+scopeLevel+'x • Acessórios: '+attachmentLevel;
 }
 function toggleInventory(){
  const panel=document.querySelector('#inventoryPanel');const open=panel.classList.toggle('visible');
  document.querySelector('#inventoryToggle').textContent=open?'FECHAR MOCHILA':'MOCHILA';
  refreshInventory();
 }
-function switchWeapon(){if(reloadTimer>0)return;weaponIndex=(weaponIndex+1)%weapons.length;refreshAmmo();statusEl.textContent='EQUIPADO: '+currentWeapon().name}
+function switchWeapon(){if(reloadTimer>0)return;weaponIndex=(weaponIndex+1)%weapons.length;burstRemaining=0;setFireMode(fireMode);refreshAmmo();statusEl.textContent='EQUIPADO: '+currentWeapon().name}
 
 const playerVelocity=new THREE.Vector3(),cameraLook=new THREE.Vector3();
 let safeRing=null,zoneElapsed=0,zoneDamageClock=0,lootItems=[];const worldObstacles=[];
@@ -265,16 +274,18 @@ function addLootDrops(){
   [-10,-8,'weapon',0],[17,-15,'scope'],[25,12,'medkit'],[-28,18,'weapon',1],
   [65,38,'ammo'],[-73,-45,'scope'],[41,-85,'weapon',2],[-89,70,'medkit'],
   [99,8,'armor'],[44,57,'weapon',1],[-46,71,'ammo'],[82,-61,'scope'],
-  [-56,-79,'weapon',0],[8,85,'medkit'],[-101,21,'ammo'],[106,80,'weapon',2],[-6,-99,'scope']
+  [-56,-79,'weapon',0],[8,85,'medkit'],[-101,21,'ammo'],[106,80,'weapon',2],[-6,-99,'scope'],[31,-48,'weapon',3],[-92,-55,'weapon',4],[88,42,'weapon',5],[5,48,'attachment'],[-48,-18,'attachment'],[102,-24,'attachment']
  ];
  drops.forEach(([x,z,type,weaponSlot],i)=>{
   const group=new THREE.Group();
-  const colors={medkit:0x42d879,armor:0x4ca8ff,ammo:0xf3c64e,weapon:0xd9823b,scope:0xb78cff};
+  const colors={medkit:0x42d879,armor:0x4ca8ff,ammo:0xf3c64e,weapon:0xd9823b,scope:0xb78cff,attachment:0x5de0cf};
   const color=colors[type]||0xf3c64e,base=mat(type==='medkit'?0x315c42:0x514b3f,.72),trim=mat(color,.42,.22);
   box(group,.72,.48,.62,base,0,.26,0);
   box(group,.76,.09,.66,trim,0,.5,0);
   if(type==='weapon'){
    box(group,.82,.09,.12,trim,0,.68,0);box(group,.16,.25,.14,base,.23,.56,0);
+  }else if(type==='attachment'){
+   box(group,.48,.12,.16,trim,0,.68,0);box(group,.12,.25,.12,base,.18,.56,0);
   }else if(type==='scope'){
    const tube=new THREE.Mesh(new THREE.CylinderGeometry(.11,.11,.48,12),trim);tube.rotation.z=Math.PI/2; tube.position.y=.68;group.add(tube);
    const lens=new THREE.Mesh(new THREE.CircleGeometry(.105,16),new THREE.MeshBasicMaterial({color:0x8cecff}));lens.position.set(.245,.68,0);lens.rotation.y=Math.PI/2;group.add(lens);
@@ -307,13 +318,15 @@ function takeLoot(){
  nearest.taken=true;scene.remove(nearest.group);
  if(nearest.type==='medkit')medkits++;
  else if(nearest.type==='armor')armor=Math.min(100,armor+50);
- else if(nearest.type==='ammo')weaponAmmo[weaponIndex]=Math.min(currentWeapon().mag,weaponAmmo[weaponIndex]+20);
+ else if(nearest.type==='ammo')reserveAmmo[weaponIndex]+=30;
  else if(nearest.type==='scope'){scopeLevel=Math.min(3,scopeLevel+1);statusEl.textContent='MIRA '+scopeLevel+'X COLETADA';}
- else if(nearest.type==='weapon'){weaponIndex=nearest.weaponSlot??((weaponIndex+1)%weapons.length);weaponAmmo[weaponIndex]=Math.min(currentWeapon().mag,weaponAmmo[weaponIndex]+currentWeapon().mag);statusEl.textContent=currentWeapon().name+' ENCONTRADO';}
+ else if(nearest.type==='attachment'){attachmentLevel=Math.min(3,attachmentLevel+1);statusEl.textContent='ACESSÓRIO EQUIPADO';}
+ else if(nearest.type==='weapon'){weaponIndex=nearest.weaponSlot??((weaponIndex+1)%weapons.length);weaponAmmo[weaponIndex]=Math.min(currentWeapon().mag,weaponAmmo[weaponIndex]+currentWeapon().mag);reserveAmmo[weaponIndex]+=currentWeapon().mag*2;statusEl.textContent=currentWeapon().name+' ENCONTRADO';}
  refreshAmmo();refreshVitals();
  if(nearest.type==='medkit')statusEl.textContent='KIT ENCONTRADO';
  else if(nearest.type==='armor')statusEl.textContent='COLETE REFORÇADO';
- else if(nearest.type==='ammo')statusEl.textContent='MUNIÇÃO COLETADA';
+ else if(nearest.type==='ammo')statusEl.textContent='MUNIÇÃO DE RESERVA COLETADA';
+ else if(nearest.type==='attachment')statusEl.textContent='ACESSÓRIO: ESTABILIDADE +';
 }
 function updateSafeZone(dt){
  if(document.querySelector('#hud').style.display==='none')return;
@@ -555,38 +568,43 @@ function setupControls(){
  aimButton.setAttribute('aria-pressed','false');
  aimButton.onclick=()=>{aiming=!aiming;aimButton.classList.toggle('active',aiming);aimButton.setAttribute('aria-pressed',String(aiming));document.querySelector('#crosshair')?.classList.toggle('aiming',aiming);statusEl.textContent=aiming?'MIRA PRECISA':'EM COMBATE'};
  const fireButton=document.querySelector('#fire');
- fireButton.addEventListener('pointerdown',e=>{e.preventDefault();fireHeld=true;fireButton.setPointerCapture(e.pointerId);shoot()});
+ fireButton.addEventListener('pointerdown',e=>{e.preventDefault();fireHeld=true;fireButton.setPointerCapture(e.pointerId);shoot();if(fireMode==='BURST')burstRemaining=2});
  const stopFire=()=>{fireHeld=false};fireButton.addEventListener('pointerup',stopFire);fireButton.addEventListener('pointercancel',stopFire);fireButton.addEventListener('lostpointercapture',stopFire);
  document.querySelector('#reload').onclick=reloadWeapon;
  document.querySelector('#medkit').onclick=useMedkit;
  document.querySelector('#weaponSwitch').onclick=switchWeapon;
+ document.querySelector('#fireMode').onclick=cycleFireMode;
  document.querySelector('#inventoryToggle').onclick=toggleInventory;
  document.querySelector('#loot').onclick=takeLoot;
 }
 function reloadWeapon(){
- if(reloadTimer>0||ammo>=currentWeapon().mag)return;
- fireHeld=false;reloadTimer=currentWeapon().reload;statusEl.textContent='RECARREGANDO';
+ if(reloadTimer>0||ammo>=currentWeapon().mag||reserveAmmo[weaponIndex]<=0)return;
+ fireHeld=false;burstRemaining=0;reloadTimer=currentWeapon().reload;statusEl.textContent='RECARREGANDO '+currentWeapon().name;
  document.querySelector('#reload').classList.add('active');
 }
 function shoot(){
  if(reloadTimer>0||fireCooldown>0)return;
- if(ammo<=0){statusEl.textContent='RECARREGUE';fireHeld=false;return}
- ammo--;weaponAmmo[weaponIndex]=ammo;ammoEl.textContent='MUNIÇÃO '+ammo;document.querySelector('#ammoLarge').textContent=ammo;refreshInventory();
- fireCooldown=currentWeapon().rate*(aiming?.82:1);
+ if(ammo<=0){statusEl.textContent=reserveAmmo[weaponIndex]>0?'RECARREGUE':'SEM MUNIÇÃO';fireHeld=false;burstRemaining=0;return}
+ ammo--;weaponAmmo[weaponIndex]=ammo;refreshAmmo();
+ fireCooldown=currentWeapon().rate*(aiming?.86:1);
  const dir=new THREE.Vector3();camera.getWorldDirection(dir);
  const movement=THREE.MathUtils.clamp(playerVelocity.length()/7.1,0,1);
- const aimAccuracy=aiming?Math.max(.12,.22-scopeLevel*.025):1;
- const movementPenalty=1+movement*(aiming?.75:1.35);
+ const aimAccuracy=aiming?Math.max(.1,.22-scopeLevel*.028):1;
+ const movementPenalty=1+movement*(aiming?.72:1.35);
  const recoilPenalty=1+recoil*1.8;
- const spread=currentWeapon().spread*aimAccuracy*movementPenalty*recoilPenalty;
+ const spread=currentWeapon().spread*aimAccuracy*movementPenalty*recoilPenalty*(1-attachmentLevel*.085);
  const cameraRight=new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion);
  const cameraUp=new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion);
- dir.addScaledVector(cameraRight,(Math.random()-.5)*spread).addScaledVector(cameraUp,(Math.random()-.5)*spread);dir.normalize();
  const origin=playerRig.holder.position.clone().add(new THREE.Vector3(0,1.42,0)).add(dir.clone().multiplyScalar(.8));
- muzzleFlash(origin,dir);document.querySelector('#crosshair')?.classList.add('firing');setTimeout(()=>document.querySelector('#crosshair')?.classList.remove('firing'),85);recoil=Math.min(.42,recoil+(aiming?.045:.075));
- const mesh=new THREE.Mesh(new THREE.CylinderGeometry(.014,.014,.72,6),new THREE.MeshBasicMaterial({color:0xffdf91,transparent:true,opacity:.95}));
- mesh.position.copy(origin).add(dir.clone().multiplyScalar(.48));mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir);scene.add(mesh);bullets.push({mesh,dir,life:.22,damage:currentWeapon().damage});
- statusEl.textContent=ammo===0?'RECARREGUE':(aiming?'MIRA PRECISA':'DISPARANDO');
+ for(let n=0;n<(currentWeapon().pellets||1);n++){
+  const shotDir=dir.clone().addScaledVector(cameraRight,(Math.random()-.5)*spread).addScaledVector(cameraUp,(Math.random()-.5)*spread).normalize();
+  const mesh=new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,.72,5),new THREE.MeshBasicMaterial({color:0xffdf91,transparent:true,opacity:.92}));
+  mesh.position.copy(origin).add(shotDir.clone().multiplyScalar(.48));mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),shotDir);scene.add(mesh);
+  bullets.push({mesh,dir:shotDir,life:currentWeapon().range/72,damage:currentWeapon().damage,travelled:0,range:currentWeapon().range});
+ }
+ muzzleFlash(origin,dir);document.querySelector('#crosshair')?.classList.add('firing');setTimeout(()=>document.querySelector('#crosshair')?.classList.remove('firing'),85);
+ recoil=Math.min(.55,recoil+(aiming?.055:.085)*(currentWeapon().pellets?1.4:1));
+ statusEl.textContent=ammo===0?(reserveAmmo[weaponIndex]>0?'RECARREGUE':'SEM MUNIÇÃO'):(aiming?'MIRA PRECISA':'DISPARANDO');
 }
 let radarClock=0;
 function updateRadar(){
@@ -632,10 +650,11 @@ function animate(){
   playerRig.jumpV=(playerRig.jumpV||0)-15*dt;p.position.y=Math.max(0,p.position.y+(playerRig.jumpV||0)*dt);if(p.position.y===0&&playerRig.jumpV<0)playerRig.jumpV=0;
   applyBodyMotion(playerRig,playerVelocity.dot(forward),playerVelocity.dot(right),dt);playerRig.update(dt);
  for(const e of enemies){if(!e.alive)continue;const ep=e.rig.holder,delta=p.position.clone().sub(ep.position);const dist=delta.length();if(dist>2.3){delta.normalize();ep.position.addScaledVector(delta,1.35*dt);ep.rotation.y=Math.atan2(delta.x,delta.z);if(e.anim!=='run'){e.anim='run';play(e.rig,'run')}}else{if(e.anim!=='idle'){e.anim='idle';play(e.rig,'idle')}e.attack+=dt;if(e.attack>1.5){e.attack=0;const raw=4,blocked=Math.min(armor,raw*.5);armor-=blocked;health=Math.max(0,health-(raw-blocked));refreshVitals();statusEl.textContent='SOB ATAQUE';setTimeout(()=>{if(health>0)statusEl.textContent='PRONTO'},450)}}applyBodyMotion(e.rig,dist>2.3?1.35:0,0,dt);e.rig.update(dt)}
- for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];b.mesh.position.addScaledVector(b.dir,72*dt);b.life-=dt;let hit=false;for(const e of enemies){if(e.alive&&b.mesh.position.distanceTo(e.rig.holder.position.clone().add(new THREE.Vector3(0,.9,0)))<1.05){e.hp-=b.damage;hitMarkerTimer=.18;document.querySelector('#crosshair')?.classList.add('hit');burst(b.mesh.position,12,0xffa34d,4.8);hit=true;if(e.hp<=0){e.alive=false;burst(e.rig.holder.position.clone().add(new THREE.Vector3(0,1,0)),22,0xffd06b,5);scene.remove(e.rig.holder);e.rig.dispose();kills++;scoreEl.textContent=String(kills);document.querySelector('#remainingEnemies').textContent=String(enemies.filter(x=>x.alive).length)}break}}if(hit||b.life<=0){scene.remove(b.mesh);b.mesh.geometry.dispose();b.mesh.material.dispose();bullets.splice(i,1)}}
+ for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];b.mesh.position.addScaledVector(b.dir,72*dt);b.life-=dt;let hit=false;for(const e of enemies){if(e.alive){const base=e.rig.holder.position,head=base.clone().add(new THREE.Vector3(0,1.72,0)),torso=base.clone().add(new THREE.Vector3(0,.96,0));const headHit=b.mesh.position.distanceTo(head)<.42,bodyHit=b.mesh.position.distanceTo(torso)<.72;if(headHit||bodyHit){const falloff=Math.max(.52,1-(b.travelled/Math.max(1,b.range))*.42),dealt=b.damage*falloff*(headHit?2.15:1);e.hp-=dealt;hitMarkerTimer=.18;document.querySelector('#crosshair')?.classList.add('hit');burst(b.mesh.position,headHit?16:10,headHit?0xffe16b:0xffa34d,4.8);statusEl.textContent=headHit?'TIRO NA CABEÇA!':'ACERTO';hit=true;if(e.hp<=0){e.alive=false;burst(e.rig.holder.position.clone().add(new THREE.Vector3(0,1,0)),22,0xffd06b,5);scene.remove(e.rig.holder);e.rig.dispose();kills++;scoreEl.textContent=String(kills);document.querySelector('#remainingEnemies').textContent=String(enemies.filter(x=>x.alive).length)}break}}}b.travelled+=72*dt;if(hit||b.life<=0||b.travelled>=b.range){scene.remove(b.mesh);b.mesh.geometry.dispose();b.mesh.material.dispose();bullets.splice(i,1)}}
  fireCooldown=Math.max(0,fireCooldown-dt);
- if(gameSettings.autoFire&&fireHeld&&fireCooldown<=0&&reloadTimer<=0)shoot();
- if(reloadTimer>0){reloadTimer-=dt;if(reloadTimer<=0){reloadTimer=0;weaponAmmo[weaponIndex]=currentWeapon().mag;refreshAmmo();document.querySelector('#reload').classList.remove('active');statusEl.textContent='PRONTO'}}
+ if(burstRemaining>0&&fireCooldown<=0&&reloadTimer<=0){shoot();burstRemaining--;}
+ else if(gameSettings.autoFire&&fireMode==='AUTO'&&fireHeld&&fireCooldown<=0&&reloadTimer<=0&&currentWeapon().modes.includes('AUTO'))shoot();
+ if(reloadTimer>0){reloadTimer-=dt;if(reloadTimer<=0){reloadTimer=0;const need=currentWeapon().mag-weaponAmmo[weaponIndex],loaded=Math.min(need,reserveAmmo[weaponIndex]);weaponAmmo[weaponIndex]+=loaded;reserveAmmo[weaponIndex]-=loaded;refreshAmmo();document.querySelector('#reload').classList.remove('active');statusEl.textContent='PRONTO'}}
  recoil=Math.max(0,recoil-dt*(aiming?.72:.9));
   aimBlend=THREE.MathUtils.damp(aimBlend,aiming?1:0,13,dt);
   const forwardView=new THREE.Vector3(Math.sin(worldYaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(worldYaw)*Math.cos(pitch));
@@ -648,7 +667,7 @@ function animate(){
   const shoulder=THREE.MathUtils.lerp(.62,.22,aimBlend);
   const desiredCamera=lookTarget.clone().add(forwardView.clone().multiplyScalar(-cameraDistance)).add(rightView.multiplyScalar(shoulder));
   const smooth=1-Math.exp(-15*dt);camera.position.lerp(desiredCamera,smooth);cameraLook.lerp(lookTarget,smooth);camera.lookAt(cameraLook);
-  const wantedFov=THREE.MathUtils.lerp(sprintHeld&&!aiming?70:66,48,aimBlend);if(Math.abs(camera.fov-wantedFov)>.08){camera.fov=THREE.MathUtils.lerp(camera.fov,wantedFov,smooth);camera.updateProjectionMatrix();}
+  const wantedFov=THREE.MathUtils.lerp(sprintHeld&&!aiming?70:66,Math.max(36,48-scopeLevel*3.5),aimBlend);if(Math.abs(camera.fov-wantedFov)>.08){camera.fov=THREE.MathUtils.lerp(camera.fov,wantedFov,smooth);camera.updateProjectionMatrix();}
   const crosshair=document.querySelector('#crosshair');if(crosshair){const movementBloom=THREE.MathUtils.clamp(playerVelocity.length()/7.1,0,1)*(aiming?.18:.34);const bloomScale=THREE.MathUtils.clamp((aiming?.72:1)+movementBloom+recoil*.7,.68,1.55);crosshair.style.scale=String(bloomScale);}
  updateSafeZone(dt);
  if(hitMarkerTimer>0){hitMarkerTimer-=dt;if(hitMarkerTimer<=0)document.querySelector('#crosshair')?.classList.remove('hit')}updateEffects(dt);radarClock-=dt;if(radarClock<=0){radarClock=.35;updateRadar()}renderer.render(scene,camera);
