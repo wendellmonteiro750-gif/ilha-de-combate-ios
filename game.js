@@ -443,7 +443,34 @@ async function createFighter(isEnemy=false,index=0){
    if(current)next.crossFadeFrom(current,opts.fade??.2,false);
    current=next;playing=clip;return Promise.resolve(true);
   },
-  update(dt){mixer.update(dt)},
+  stanceMode:'stand',
+  _stanceApplied:[],
+  _stanceBlend:0,
+  update(dt){
+   for(const item of this._stanceApplied)this.bones.get(item.name)?.quaternion.multiply(item.inverse);
+   this._stanceApplied.length=0;
+   mixer.update(dt);
+   const target=this.stanceMode==='crouch'||this.stanceMode==='prone'?1:0;
+   this._stanceBlend=THREE.MathUtils.damp(this._stanceBlend,target,10,dt);
+   const prone=this.stanceMode==='prone',crouch=this.stanceMode==='crouch';
+   const pose=[
+    ['mixamorigHips',prone ? .82 : crouch ? .42 : 0,0,0],
+    ['mixamorigSpine',prone ? .48 : crouch ? -.10 : 0,0,0],
+    ['mixamorigSpine1',prone ? .22 : crouch ? -.08 : 0,0,0],
+    ['mixamorigLeftUpLeg',prone ? -.42 : crouch ? -.52 : 0,0,0],
+    ['mixamorigRightUpLeg',prone ? -.42 : crouch ? -.52 : 0,0,0],
+    ['mixamorigLeftLeg',prone ? .18 : crouch ? 1.02 : 0,0,0],
+    ['mixamorigRightLeg',prone ? .18 : crouch ? 1.02 : 0,0,0],
+    ['mixamorigLeftArm',prone ? -.22 : crouch ? -.08 : 0,0,0],
+    ['mixamorigRightArm',prone ? -.22 : crouch ? -.08 : 0,0,0]
+   ];
+   for(const [name,x,y,z] of pose){
+    const bone=this.bones.get(name);if(!bone)continue;
+    const delta=new THREE.Quaternion().setFromEuler(new THREE.Euler(x*this._stanceBlend,y*this._stanceBlend,z*this._stanceBlend,'XYZ'));
+    bone.quaternion.multiply(delta);
+    this._stanceApplied.push({name,inverse:delta.clone().invert()});
+   }
+  },
   setHeight(h){const b=new THREE.Box3().setFromObject(model),v=b.max.y-b.min.y;if(v>0){holder.scale.setScalar(h/v);model.position.y=-b.min.y}}
  };
  const torso=bones.get('mixamorigSpine2')||bones.get('mixamorigSpine1')||bones.get('mixamorigSpine');
@@ -484,14 +511,15 @@ function setMovementMode(mode){
  movementMode=mode;sprintHeld=false;
  const crouch=document.querySelector('#crouch'),prone=document.querySelector('#prone'),sprint=document.querySelector('#sprint');
  crouch?.classList.toggle('active',mode==='crouch');prone?.classList.toggle('active',mode==='prone');crouch?.setAttribute('aria-pressed',String(mode==='crouch'));prone?.setAttribute('aria-pressed',String(mode==='prone'));sprint?.classList.remove('active');
- if(playerRig){const scale=mode==='crouch'?.84:mode==='prone'?.60:1;playerRig.root.scale.y=scale;playerRig.root.position.y=playerRig.baseRootY*scale;}
- statusEl.textContent=mode==='crouch'?'AGACHADO':mode==='prone'?'RASTEJANDO':'EM COMBATE';
+ if(playerRig)playerRig.stanceMode=mode;
+ statusEl.textContent=mode==='crouch'?'AGACHADO':mode==='prone'?'DEITADO':'EM COMBATE';
 }
 function applyBodyMotion(rig,forwardSpeed,lateralSpeed,dt){
  if(!rig)return;
  const holder=rig.holder;
  const run=THREE.MathUtils.clamp(Math.abs(forwardSpeed)/5.4,0,1);
- const targetPitch=-run*.055;
+ const stance=rig.stanceMode==='prone' ? -.10 : rig.stanceMode==='crouch' ? -.035 : 0;
+ const targetPitch=-run*.055+stance;
  const targetRoll=THREE.MathUtils.clamp(-lateralSpeed*.018,-.07,.07);
  const blend=1-Math.exp(-8*dt);
  holder.rotation.x=THREE.MathUtils.lerp(holder.rotation.x,targetPitch,blend);
@@ -671,7 +699,7 @@ function animate(){
    const desiredYaw=aiming?worldYaw+Math.PI:Math.atan2(playerVelocity.x,playerVelocity.z);
    const turn=THREE.MathUtils.euclideanModulo(desiredYaw-p.rotation.y+Math.PI,Math.PI*2)-Math.PI;
    p.rotation.y+=turn*Math.min(1,(aiming?14:11)*dt);
-   const role=canSprint?'run':'walk';play(playerRig,role,canSprint?1.22:movementMode==='prone'?.58:movementMode==='crouch'?.72:aiming?.78:1.02);
+   const role=canSprint?'run':'walk';play(playerRig,role,canSprint?1.28:movementMode==='prone'?.48:movementMode==='crouch'?.68:aiming?.78:1.02);
   }else{
    const faceYaw=worldYaw+Math.PI,turn=THREE.MathUtils.euclideanModulo(faceYaw-p.rotation.y+Math.PI,Math.PI*2)-Math.PI;
    p.rotation.y+=turn*Math.min(1,(aiming||fireHeld?12:5)*dt);play(playerRig,fireHeld?'cast':'idle');
@@ -688,7 +716,7 @@ function animate(){
   aimBlend=THREE.MathUtils.damp(aimBlend,aiming?1:0,13,dt);
   const forwardView=new THREE.Vector3(Math.sin(worldYaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(worldYaw)*Math.cos(pitch));
   const rightView=new THREE.Vector3(Math.cos(worldYaw),0,Math.sin(worldYaw));
-  const stanceHeight=movementMode==='prone'?.48:movementMode==='crouch'?.98:1.46;
+  const stanceHeight=movementMode==='prone' ? .40 : movementMode==='crouch' ? .91 : 1.46;
   const movingBob=playerVelocity.length()>.25?Math.sin(clock.elapsedTime*(aiming?7.5:10.5))*.025*(aiming?.35:1)*(movementMode==='stand'?1:.25):0;
   const aimForward=THREE.MathUtils.lerp(1.35,2.15,aimBlend);
   const lookTarget=p.position.clone().add(new THREE.Vector3(0,stanceHeight+movingBob+recoil*.72,0)).add(forwardView.clone().multiplyScalar(aimForward));
