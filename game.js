@@ -55,7 +55,9 @@ function initSettings(){
  const end=()=>{if(!hudDrag)return;let saved={};try{saved=JSON.parse(localStorage.getItem('ic-hud-layout')||'{}')}catch{}const r=hudDrag.el.getBoundingClientRect();saved[hudDrag.id]={x:r.left,y:r.top};try{localStorage.setItem('ic-hud-layout',JSON.stringify(saved))}catch{}hudDrag=null};hud.addEventListener('pointerup',end);hud.addEventListener('pointercancel',end);
  applyHudSettings();
 }
-function getAimSensitivity(){return [gameSettings.red,gameSettings.two,gameSettings.four,gameSettings.awm][Math.min(3,scopeLevel)]/100}\nfunction getCameraSensitivity(){return (gameSettings.general/100)*(aiming?getAimSensitivity():(gameSettings.look/100))}\nfunction toggleHudEditor(force){hudEditing=force;document.querySelector('#hud')?.classList.toggle('hud-editing',force);document.querySelector('#editHud').textContent=force?'CONCLUIR EDIÇÃO':'MOVER HUD';}
+function getAimSensitivity(){return [gameSettings.red,gameSettings.two,gameSettings.four,gameSettings.awm][Math.min(3,scopeLevel)]/100}
+function getCameraSensitivity(){return (gameSettings.general/100)*(aiming?getAimSensitivity():(gameSettings.look/100))}
+function toggleHudEditor(force){hudEditing=force;document.querySelector('#hud')?.classList.toggle('hud-editing',force);document.querySelector('#editHud').textContent=force?'CONCLUIR EDIÇÃO':'MOVER HUD';}
 
 
 function mat(color,roughness=.86,metalness=0){return new THREE.MeshStandardMaterial({color,roughness,metalness})}
