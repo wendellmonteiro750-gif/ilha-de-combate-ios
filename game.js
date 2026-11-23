@@ -35,7 +35,7 @@ function switchWeapon(){if(reloadTimer>0)return;weaponIndex=(weaponIndex+1)%weap
 
 const playerVelocity=new THREE.Vector3(),cameraLook=new THREE.Vector3(),_shotOrigin=new THREE.Vector3();
 let safeRing=null,zoneElapsed=0,zoneDamageClock=0,lootItems=[];const worldObstacles=[];
-const keys={forward:0,side:0},bullets=[],enemies=[],effects=[];const bulletGeometry=new THREE.CylinderGeometry(.012,.012,.72,5),bulletMaterial=new THREE.MeshBasicMaterial({color:0xffdf91,transparent:true,opacity:.92});let dustClock=0,recoil=0,aiming=false,aimBlend=0,hitMarkerTimer=0,fireHeld=false,fireCooldown=0,reloadTimer=0,movementMode='stand';
+const keys={forward:0,side:0},bullets=[],enemies=[],effects=[];const bulletGeometry=new THREE.CylinderGeometry(.012,.012,.72,5),bulletMaterial=new THREE.MeshBasicMaterial({color:0xffdf91,transparent:true,opacity:.92});let dustClock=0,recoil=0,recoilPitch=0,aiming=false,aimBlend=0,hitMarkerTimer=0,fireHeld=false,fireCooldown=0,reloadTimer=0,movementMode='stand';
 const BASE='https://raw.githubusercontent.com/NoLimitNexus/game-models/main/';
 const defaultSettings={general:100,red:100,two:100,four:100,awm:100,look:100,autoFire:true,invertY:false,minimap:true,hudScale:100,hudOpacity:100,quality:'medium',shadows:false,vibration:false};
 let gameSettings={...defaultSettings};
@@ -759,9 +759,9 @@ function setupControls(){
  if(sprintButton){sprintButton.addEventListener('pointerdown',e=>{e.preventDefault();sprintHeld=true;sprintButton.classList.add('active');sprintButton.setPointerCapture(e.pointerId)});const stopSprint=()=>{sprintHeld=false;sprintButton.classList.remove('active')};sprintButton.addEventListener('pointerup',stopSprint);sprintButton.addEventListener('pointercancel',stopSprint);sprintButton.addEventListener('lostpointercapture',stopSprint)}
  const aimButton=document.querySelector('#aim');
  aimButton.setAttribute('aria-pressed','false');
- aimButton.onclick=()=>{aiming=!aiming;aimButton.classList.toggle('active',aiming);aimButton.setAttribute('aria-pressed',String(aiming));document.querySelector('#crosshair')?.classList.toggle('aiming',aiming);statusEl.textContent=aiming?'MIRA PRECISA':'EM COMBATE'};
+ aimButton.onclick=()=>{aiming=!aiming;if(aiming){sprintHeld=false;document.querySelector('#sprint')?.classList.remove('active')}aimButton.classList.toggle('active',aiming);aimButton.setAttribute('aria-pressed',String(aiming));document.querySelector('#crosshair')?.classList.toggle('aiming',aiming);statusEl.textContent=aiming?'MIRA PRECISA':'EM COMBATE'};
  const fireButton=document.querySelector('#fire');
- fireButton.addEventListener('pointerdown',e=>{e.preventDefault();fireHeld=true;fireButton.setPointerCapture(e.pointerId);shoot();if(fireMode==='BURST')burstRemaining=2});
+ fireButton.addEventListener('pointerdown',e=>{e.preventDefault();sprintHeld=false;document.querySelector('#sprint')?.classList.remove('active');fireHeld=true;fireButton.setPointerCapture(e.pointerId);shoot();if(fireMode==='BURST')burstRemaining=2});
  const stopFire=()=>{fireHeld=false};fireButton.addEventListener('pointerup',stopFire);fireButton.addEventListener('pointercancel',stopFire);fireButton.addEventListener('lostpointercapture',stopFire);
  document.querySelector('#reload').onclick=reloadWeapon;
  document.querySelector('#medkit').onclick=useMedkit;
@@ -783,9 +783,11 @@ function shoot(){
  const dir=new THREE.Vector3();camera.getWorldDirection(dir);
  const movement=THREE.MathUtils.clamp(playerVelocity.length()/7.1,0,1);
  const aimAccuracy=aiming?Math.max(.1,.22-scopeLevel*.028):1;
- const movementPenalty=1+movement*(aiming?.72:1.35);
+ const stanceAccuracy=movementMode==='prone'?.52:movementMode==='crouch'?.72:1;
+ const airborne=p.position.y>.08?1.55:1;
+ const movementPenalty=1+movement*(aiming?1.05:1.35);
  const recoilPenalty=1+recoil*1.8;
- const spread=currentWeapon().spread*aimAccuracy*movementPenalty*recoilPenalty*(1-attachmentLevel*.085);
+ const spread=currentWeapon().spread*aimAccuracy*stanceAccuracy*airborne*movementPenalty*recoilPenalty*(1-attachmentLevel*.085);
  const cameraRight=new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion);
  const cameraUp=new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion);
  playerRig.weaponMuzzle?.getWorldPosition(_shotOrigin);const origin=playerRig.weaponMuzzle?_shotOrigin.clone():playerRig.holder.position.clone().add(new THREE.Vector3(0,1.42,0)).add(dir.clone().multiplyScalar(.8));
@@ -796,7 +798,7 @@ function shoot(){
   bullets.push({mesh,dir:shotDir,life:currentWeapon().range/72,damage:currentWeapon().damage,travelled:0,range:currentWeapon().range});
  }
  muzzleFlash(origin,dir);document.querySelector('#crosshair')?.classList.add('firing');setTimeout(()=>document.querySelector('#crosshair')?.classList.remove('firing'),85);
- const recoilByWeapon=[.085,.065,.19,.17,.048,.125];recoil=Math.min(.55,recoil+(aiming?.055:.085)*(recoilByWeapon[weaponIndex]||.085)/.085*(currentWeapon().pellets?1.35:1));
+ const recoilByWeapon=[.085,.065,.19,.17,.048,.125];const kick=recoilByWeapon[weaponIndex]||.085;recoil=Math.min(.55,recoil+(aiming?.055:.085)*kick/.085*(currentWeapon().pellets?1.35:1));recoilPitch=Math.min(.24,recoilPitch+kick*(aiming?.48:1)*(currentWeapon().pellets?1.2:1));pitch=THREE.MathUtils.clamp(pitch+kick*(aiming?.48:1)*(currentWeapon().pellets?1.2:1),-.78,.78);
  statusEl.textContent=ammo===0?(reserveAmmo[weaponIndex]>0?'RECARREGUE':'SEM MUNIÇÃO'):(aiming?'MIRA PRECISA':'DISPARANDO');
 }
 let radarClock=0;
@@ -823,7 +825,7 @@ function animate(){
  lookDeltaX=lookDeltaY=0;
  const forward=new THREE.Vector3(Math.sin(worldYaw),0,-Math.cos(worldYaw)),right=new THREE.Vector3(Math.cos(worldYaw),0,Math.sin(worldYaw));
  const move=forward.clone().multiplyScalar(keys.forward).add(right.clone().multiplyScalar(keys.side));if(move.lengthSq()>1)move.normalize();
- const canSprint=sprintHeld&&keys.forward>.22&&!aiming&&movementMode==='stand';
+ const canSprint=sprintHeld&&keys.forward>.22&&!aiming&&!fireHeld&&movementMode==='stand';
   const moveSpeed=movementMode==='prone'?.95:movementMode==='crouch'?1.85:aiming?2.65:canSprint?7.1:5.35;
   const targetVelocity=move.clone().multiplyScalar(moveSpeed);
   const acceleration=movementMode==='prone'?7:movementMode==='crouch'?8:canSprint?11:9;
@@ -848,7 +850,7 @@ function animate(){
  if(burstRemaining>0&&fireCooldown<=0&&reloadTimer<=0){shoot();burstRemaining--;}
  else if(gameSettings.autoFire&&fireMode==='AUTO'&&fireHeld&&fireCooldown<=0&&reloadTimer<=0&&currentWeapon().modes.includes('AUTO'))shoot();
  if(reloadTimer>0){reloadTimer-=dt;if(reloadTimer<=0){reloadTimer=0;const need=currentWeapon().mag-weaponAmmo[weaponIndex],loaded=Math.min(need,reserveAmmo[weaponIndex]);weaponAmmo[weaponIndex]+=loaded;reserveAmmo[weaponIndex]-=loaded;refreshAmmo();document.querySelector('#reload').classList.remove('active');statusEl.textContent='PRONTO'}}
- recoil=Math.max(0,recoil-dt*(aiming?.72:.9));
+ recoil=Math.max(0,recoil-dt*(aiming?.72:.9));const recoilRecovery=Math.min(recoilPitch,dt*(aiming?.52:.78));pitch=THREE.MathUtils.clamp(pitch-recoilRecovery,-.78,.78);recoilPitch-=recoilRecovery;
   aimBlend=THREE.MathUtils.damp(aimBlend,aiming?1:0,13,dt);
   const forwardView=new THREE.Vector3(Math.sin(worldYaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(worldYaw)*Math.cos(pitch));
   const rightView=new THREE.Vector3(Math.cos(worldYaw),0,Math.sin(worldYaw));
