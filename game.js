@@ -805,13 +805,16 @@ function setupControls(){
  const sprintButton=document.querySelector('#sprint');
  if(sprintButton){
   sprintButton.setAttribute('aria-pressed','false');
-  sprintButton.addEventListener('click',()=>{
+  const toggleSprint=e=>{
+   e.preventDefault();
+   e.stopPropagation();
+   if(!sprintHeld&&movementMode!=='stand')setMovementMode('stand');
    sprintHeld=!sprintHeld;
    sprintButton.classList.toggle('active',sprintHeld);
    sprintButton.setAttribute('aria-pressed',String(sprintHeld));
-   if(sprintHeld&&movementMode!=='stand')setMovementMode('stand');
-   statusEl.textContent=sprintHeld?'CORRIDA ATIVADA':'EM COMBATE';
-  });
+   statusEl.textContent=sprintHeld?'CORRIDA ATIVADA — USE O JOYSTICK':'EM COMBATE';
+  };
+  sprintButton.addEventListener('pointerdown',toggleSprint,{passive:false});
  }
  const aimButton=document.querySelector('#aim');
  aimButton.setAttribute('aria-pressed','false');
@@ -880,7 +883,7 @@ function animate(){
  lookDeltaX=lookDeltaY=0;
  const forward=new THREE.Vector3(Math.sin(worldYaw),0,-Math.cos(worldYaw)),right=new THREE.Vector3(Math.cos(worldYaw),0,Math.sin(worldYaw));
  const move=forward.clone().multiplyScalar(keys.forward).add(right.clone().multiplyScalar(keys.side));if(move.lengthSq()>1)move.normalize();
- const canSprint=sprintHeld&&keys.forward>.22&&!aiming&&!fireHeld&&firePoseTimer<=0&&movementMode==='stand';
+ const canSprint=sprintHeld&&keys.forward>.12&&!aiming&&!fireHeld&&movementMode==='stand';
   const moveSpeed=movementMode==='prone'?.95:movementMode==='crouch'?1.85:aiming?2.65:canSprint?7.1:5.35;
   const targetVelocity=move.clone().multiplyScalar(moveSpeed);
   const acceleration=movementMode==='prone'?7:movementMode==='crouch'?8:canSprint?11:9;
