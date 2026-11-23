@@ -511,8 +511,8 @@ async function createFighter(isEnemy=false,index=0){
    this.gaitPhase=(this.gaitPhase||0)+dt*(this.sprintBlend?13.5:8.5)*(.25+locomotion*.75);
    const gait=Math.sin(this.gaitPhase),opposite=Math.sin(this.gaitPhase+Math.PI);
    const crouchFactor=this.stanceMode==='crouch'?.42:this.stanceMode==='prone'?.08:1;
-   const gaitAmount=locomotion*crouchFactor*(this.sprintBlend?.34:.19);
-   for(const [name,angle] of [['mixamorigLeftUpLeg',gait*.24],['mixamorigRightUpLeg',opposite*.24],['mixamorigLeftLeg',Math.max(0,-gait)*.28],['mixamorigRightLeg',Math.max(0,-opposite)*.28]]){
+   const gaitAmount=locomotion*crouchFactor*(this.sprintBlend?.72:.48);
+   for(const [name,angle] of [['mixamorigLeftUpLeg',gait*.42],['mixamorigRightUpLeg',opposite*.42],['mixamorigLeftLeg',Math.max(0,-gait)*.52],['mixamorigRightLeg',Math.max(0,-opposite)*.52]]){
     const bone=this.bones.get(name);if(!bone||gaitAmount<.001)continue;
     const delta=new THREE.Quaternion().setFromEuler(new THREE.Euler(angle*gaitAmount,0,0,'XYZ'));
     bone.quaternion.multiply(delta);this._stanceApplied.push({name,inverse:delta.clone().invert()});
@@ -525,21 +525,21 @@ async function createFighter(isEnemy=false,index=0){
    const pose=[
     ['mixamorigHips',prone ? .82 : crouch ? .42 : -(this.jumpBlend||0)*.16,0,0],
     ['mixamorigSpine',prone ? .48 : crouch ? -.10 : -.28*combatPose-(this.jumpBlend||0)*.08,0,0],
-    ['mixamorigSpine1',prone ? .22 : crouch ? -.08 : -.20*combatPose-(this.jumpBlend||0)*.04,0,0],
+    ['mixamorigSpine1',prone ? .22 : crouch ? -.08 : -.20*combatPose-(this.jumpBlend||0)*.04,0,0],\n     ['mixamorigSpine2',prone ? .10 : crouch ? -.04 : -.12*combatPose,0,0],\n     ['mixamorigNeck',0,0,0],\n     ['mixamorigHead',-(this.aimPitch||0)*.32,0,0],
     ['mixamorigLeftUpLeg',prone ? -.42 : crouch ? -.52 : -(this.jumpBlend||0)*.34,0,0],
     ['mixamorigRightUpLeg',prone ? -.42 : crouch ? -.52 : -(this.jumpBlend||0)*.28,0,0],
     ['mixamorigLeftLeg',prone ? .18 : crouch ? 1.02 : (this.jumpBlend||0)*.62,0,0],
     ['mixamorigRightLeg',prone ? .18 : crouch ? 1.02 : (this.jumpBlend||0)*.54,0,0],
-    ['mixamorigLeftArm',prone ? -.22 : crouch ? -.08 : -1.12*armReady-(this.jumpBlend||0)*.06,0,.13*armReady],
+    ['mixamorigLeftArm',prone ? -.22 : crouch ? -.08 : -1.20*armReady-(this.jumpBlend||0)*.06,0,.18*armReady],
     ['mixamorigLeftForeArm',0,0,-.08*elbowReady],
     ['mixamorigLeftHand',.08*ready,0,0],
-    ['mixamorigRightArm',prone ? -.22 : crouch ? -.08 : -1.02*armReady-(this.jumpBlend||0)*.06,0,-.13*armReady],
-    ['mixamorigRightForeArm',0,0,.06*elbowReady],
+    ['mixamorigRightArm',prone ? -.22 : crouch ? -.08 : -1.12*armReady-(this.jumpBlend||0)*.06,0,-.18*armReady],
+    ['mixamorigRightForeArm',-.12*elbowReady,0,.06*elbowReady],
     ['mixamorigRightHand',-.04*ready,0,0]
    ];
    for(const [name,x,y,z] of pose){
     const bone=this.bones.get(name);if(!bone)continue;
-    const torsoPose=/mixamorigSpine(1|2)?$/.test(name),poseAmount=torsoPose?combatPose:this._stanceBlend;
+    const torsoPose=/mixamorig(Spine(1|2)?|Neck|Head)$/.test(name),poseAmount=torsoPose?combatPose:this._stanceBlend;
     const delta=new THREE.Quaternion().setFromEuler(new THREE.Euler(x*(torsoPose?1:this._stanceBlend),y*(torsoPose?1:this._stanceBlend),z*(torsoPose?1:this._stanceBlend),'XYZ'));
     const armPose=/mixamorig(Left|Right)(Arm|ForeArm|Hand)$/.test(name);
     const poseBlend=armPose?1:poseAmount;
@@ -561,7 +561,7 @@ async function createFighter(isEnemy=false,index=0){
    // CCD IK keeps the left hand on the rifle foregrip.
    if(this.weaponPivot&&this.weaponSpec){
     const upper=this.bones.get('mixamorigLeftArm'),fore=this.bones.get('mixamorigLeftForeArm'),hand=this.bones.get('mixamorigLeftHand');
-    if(upper&&fore&&hand){model.updateMatrixWorld(true);const target=this.weaponPivot.localToWorld(new THREE.Vector3(0,-.145,-this.weaponSpec.length*.29));
+    if(upper&&fore&&hand){model.updateMatrixWorld(true);const reload=THREE.MathUtils.clamp(this.reloadBlend||0,0,1);const target=this.weaponPivot.localToWorld(new THREE.Vector3(0,THREE.MathUtils.lerp(-.145,-.20,reload),THREE.MathUtils.lerp(-this.weaponSpec.length*.29,-.04,reload)));
      for(let pass=0;pass<8;pass++)for(const joint of [fore,upper]){
       model.updateMatrixWorld(true);const jp=joint.getWorldPosition(new THREE.Vector3()),eff=hand.getWorldPosition(new THREE.Vector3());
       const a=eff.sub(jp),b=target.clone().sub(jp);if(a.lengthSq()<1e-7||b.lengthSq()<1e-7)continue;
@@ -809,7 +809,7 @@ function animate(){
    const faceYaw=worldYaw+Math.PI,turn=THREE.MathUtils.euclideanModulo(faceYaw-p.rotation.y+Math.PI,Math.PI*2)-Math.PI;
    p.rotation.y+=turn*Math.min(1,(aiming||fireHeld?12:5)*dt);play(playerRig,p.position.y>.04?'jump':'idle');
   }
-  playerRig.weaponAimBlend=aimBlend;
+  playerRig.weaponAimBlend=aimBlend;\n    playerRig.aimPitch=pitch*aimBlend;\n    playerRig.reloadBlend=reloadTimer>0?THREE.MathUtils.clamp(reloadTimer/currentWeapon().reload,0,1):0;
    playerRig.weaponFireBlend=THREE.MathUtils.damp(playerRig.weaponFireBlend||0,fireHeld?1:THREE.MathUtils.clamp(recoil*5,0,1),14,dt);
    playerRig.runBlend=canSprint?1:0;
    playerRig.sprintBlend=canSprint?1:0;
