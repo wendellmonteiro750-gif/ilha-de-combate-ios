@@ -534,7 +534,7 @@ async function createFighter(isEnemy=false,index=0){
  // O arquivo tem escala real de aproximadamente 1,81 m; não criar outro corpo por cima dele.
  const bounds=new THREE.Box3().setFromObject(model),height=bounds.max.y-bounds.min.y;
  if(!Number.isFinite(height)||height<.5)throw new Error('O modelo masculino 3D carregou sem uma malha humana válida.');
- const scale=1.82/height;
+ const scale=1.95/height;
  model.scale.setScalar(scale);
  model.position.y=-bounds.min.y*scale;
  holder.add(model);
