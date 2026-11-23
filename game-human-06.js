@@ -940,7 +940,7 @@ function animate(){
   const movingBob=playerVelocity.length()>.25?Math.sin(clock.elapsedTime*(aiming?7.5:10.5))*.025*(aiming?.35:1)*(movementMode==='stand'?1:.25):0;
   const aimForward=THREE.MathUtils.lerp(1.35,2.15,aimBlend);
   const lookTarget=p.position.clone().add(new THREE.Vector3(0,stanceHeight+movingBob+recoil*.72,0)).add(forwardView.clone().multiplyScalar(aimForward));
-  const cameraDistance=THREE.MathUtils.lerp(sprintHeld&&!aiming?6.15:5.9,3.45,aimBlend);
+  const cameraDistance=THREE.MathUtils.lerp(sprintHeld&&!aiming?10.455:10.03,5.865,aimBlend);
   const shoulder=THREE.MathUtils.lerp(.62,.22,aimBlend);
   let desiredCamera=lookTarget.clone().add(forwardView.clone().multiplyScalar(-cameraDistance)).add(rightView.multiplyScalar(shoulder));
   const interior=getHouseAtPosition(p.position);
