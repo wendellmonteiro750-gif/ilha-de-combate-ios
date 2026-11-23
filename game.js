@@ -93,7 +93,7 @@ function boneCapsule(parent,r,length,material,y=-length/2){const m=mesh(parent,n
 function joint(parent,r,material){return mesh(parent,new THREE.SphereGeometry(r,10,8),material,[0,0,0])}
 function createHumanoidRig(){
  hero=new THREE.Group();hero.position.set(0,0,0);scene.add(hero);
- const pelvis=bone(hero,'Hips',0,1.02,0);joint(pelvis,.19,uniformMat);
+ const pelvis=bone(hero,'Hips',0,1.20,0);joint(pelvis,.19,uniformMat);
  const spine=bone(pelvis,'Spine',0,.08,0);boneCapsule(pelvis,.19,.30,uniformMat,.20);
  const chest=bone(spine,'Chest',0,.31,0);boneCapsule(spine,.235,.40,uniformMat,.18);
  const neck=bone(chest,'Neck',0,.34,0);boneCapsule(chest,.075,.16,skinMat,.09);
@@ -143,8 +143,8 @@ function animateRig(dt,speed,sprinting,crouch,prone){
  const moving=speed>.18,phase=performance.now()*.009*(sprinting?1.55:1);
  const stride=moving?Math.sin(phase)*Math.min(1,speed/3.2):0;
  const bob=moving?Math.abs(Math.cos(phase))*.025:0;
- const low=prone?-.60:crouch?-.30:0;
- rig.pelvis.position.y=1.02+low+bob+(grounded?0:hero.position.y*.12);
+ const low=prone?-.55:crouch?-.16:0;
+ rig.pelvis.position.y=1.20+low+bob+(grounded?0:hero.position.y*.12);
  rig.spine.rotation.x=prone?-.95:crouch?.24:sprinting?.10:0;
  rig.chest.rotation.x=aim&&weaponEquipped?-.08:0;
  rig.head.rotation.x=aim?-.04:0;
