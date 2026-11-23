@@ -118,24 +118,32 @@ function solveArmIK(upper,lower,hand,targetWorld){
  }
  characterVisual.updateMatrixWorld(true);
 }
+function setBoneWorldRotation(bone,worldRotation){
+ if(!bone||!bone.parent)return;
+ const parentRotation=bone.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
+ bone.quaternion.copy(parentRotation.multiply(worldRotation));
+}
 function applyCombatWeaponPose(crouch,prone,dt){
  if(!weaponEquipped||!weaponModel||!characterVisual)return;
+ // Rifle stays level in front of the chest; it is not parented to a wrist.
+ const height=prone?.56:crouch?1.02:1.28;
+ const forward=prone?.72:aim?.58:.48;
+ weaponModel.position.set(.19,height,forward);
+ weaponModel.rotation.y=Math.PI;
+ if(performance.now()<firePoseUntil)weaponModel.rotation.x=THREE.MathUtils.damp(weaponModel.rotation.x,.055,22,dt);
+ else weaponModel.rotation.x=THREE.MathUtils.damp(weaponModel.rotation.x,0,15,dt);
  characterVisual.updateMatrixWorld(true);
- const height=prone?.50:crouch?1.00:1.27;
- const forward=aim?.62:.42;
- const rightTarget=characterVisual.localToWorld(new THREE.Vector3(.24,height,forward));
- solveArmIK(combatBones.upperarm_r,combatBones.lowerarm_r,combatBones.hand_r,rightTarget);
+ weaponModel.updateMatrixWorld(true);
+ const rightGrip=weaponModel.localToWorld(new THREE.Vector3(0,-.075,.105));
+ solveArmIK(combatBones.upperarm_r,combatBones.lowerarm_r,combatBones.hand_r,rightGrip);
  characterVisual.updateMatrixWorld(true);
- const leftGrip=weaponModel.localToWorld(new THREE.Vector3(0,-.105,-.43));
+ weaponModel.updateMatrixWorld(true);
+ const leftGrip=weaponModel.localToWorld(new THREE.Vector3(0,-.015,-.43));
  solveArmIK(combatBones.upperarm_l,combatBones.lowerarm_l,combatBones.hand_l,leftGrip);
- if(combatBones.hand_l){
-  characterVisual.updateMatrixWorld(true);
-  const weaponQ=weaponModel.getWorldQuaternion(new THREE.Quaternion());
-  const parentQ=combatBones.hand_l.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
-  combatBones.hand_l.quaternion.copy(parentQ.multiply(weaponQ));
- }
- if(performance.now()<firePoseUntil){weaponModel.rotation.x=.045}
- else weaponModel.rotation.x=THREE.MathUtils.damp(weaponModel.rotation.x,0,16,dt);
+ characterVisual.updateMatrixWorld(true);
+ const rifleRotation=weaponModel.getWorldQuaternion(new THREE.Quaternion());
+ setBoneWorldRotation(combatBones.hand_r,rifleRotation);
+ setBoneWorldRotation(combatBones.hand_l,rifleRotation);
 }
 function createPlayerAnchor(){
  hero=new THREE.Group();hero.position.set(0,0,0);scene.add(hero);
@@ -156,7 +164,7 @@ function createPlayerAnchor(){
   for(const clip of library.animations)characterActions.set(clip.name,characterMixer.clipAction(clip));
   for(const name of Object.keys(combatBones))combatBones[name]=getCombatBone(name);
   const hand=combatBones.hand_r||characterVisual.getObjectByName('hand_r');
-  if(hand)createCombatWeapon(hand);
+  if(hand)createCombatWeapon();
   characterReady=true;
   playCharacterClip('Idle_Loop',false);
   $('message').textContent='SOLDADO 3D PRONTO';
@@ -168,16 +176,45 @@ function createPlayerAnchor(){
   const box=$('error');box.hidden=false;box.textContent='Não foi possível carregar o modelo 3D. Verifique a conexão e recarregue a página.';
  });
 }
-function createCombatWeapon(hand){
- weaponModel=new THREE.Group();weaponModel.name='Rifle_3D_Attachment';hand.add(weaponModel);
- weaponModel.position.set(.015,-.035,.045);weaponModel.rotation.set(0,Math.PI,0);weaponModel.scale.setScalar(.72);weaponModel.visible=weaponEquipped;
- const gun=mat(0x202722,.48),metal=mat(0x59615b,.36),polymer=mat(0x343b35,.72);
- cube(weaponModel,.105,.105,.66,gun,0,0,-.20);
- cube(weaponModel,.078,.18,.23,polymer,0,-.12,-.04);
- cube(weaponModel,.052,.052,.48,metal,0,.052,-.48);
- cube(weaponModel,.13,.09,.19,gun,0,-.015,.19);
- cube(weaponModel,.07,.23,.075,polymer,0,-.16,-.18);
- cube(weaponModel,.07,.07,.13,metal,0,.09,-.06);
+function createCombatWeapon(){
+ // Low-poly but proportionate carbine: stock, receiver, handguard, barrel,
+ // muzzle, magazine, pistol grip, top rail, sights and optic.
+ weaponModel=new THREE.Group();weaponModel.name='Rifle_3D_Attachment';characterVisual.add(weaponModel);
+ weaponModel.position.set(.19,1.28,.48);weaponModel.rotation.set(0,Math.PI,0);
+ weaponModel.scale.setScalar(.86);weaponModel.visible=weaponEquipped;
+ const receiver=mat(0x202722,.42),steel=mat(0x68716b,.3),polymer=mat(0x303832,.68);
+ const dark=mat(0x111713,.52),glass=new THREE.MeshStandardMaterial({color:0x263b3b,metalness:.65,roughness:.18});
+ // Main receiver and upper/lower receiver
+ cube(weaponModel,.115,.125,.48,receiver,0,0,-.18);
+ cube(weaponModel,.12,.045,.34,steel,0,.078,-.28);
+ // Handguard with heat slots
+ cube(weaponModel,.105,.105,.34,polymer,0,.005,-.53);
+ for(let i=0;i<6;i++)cube(weaponModel,.108,.012,.018,dark,0,.061,-.405-i*.043);
+ // Barrel and muzzle brake
+ const barrel=mesh(weaponModel,new THREE.CylinderGeometry(.018,.018,.43,12),steel,[0,.012,-.88]);
+ barrel.rotation.x=Math.PI/2;
+ const muzzle=mesh(weaponModel,new THREE.CylinderGeometry(.027,.022,.075,12),dark,[0,.012,-1.105]);
+ muzzle.rotation.x=Math.PI/2;
+ // Buttstock, buffer tube and cheek rest
+ cube(weaponModel,.095,.115,.23,polymer,0,-.005,.19);
+ cube(weaponModel,.07,.07,.16,steel,0,.005,.105);
+ cube(weaponModel,.105,.025,.16,dark,0,.063,.205);
+ // Pistol grip and magazine
+ cube(weaponModel,.072,.19,.09,polymer,0,-.145,.075);
+ cube(weaponModel,.078,.205,.12,dark,0,-.18,-.16);
+ cube(weaponModel,.082,.025,.125,steel,0,-.29,-.16);
+ // Top Picatinny rail, rear/front sights and compact optic
+ cube(weaponModel,.055,.025,.40,dark,0,.105,-.25);
+ cube(weaponModel,.025,.075,.035,steel,0,.155,-.07);
+ cube(weaponModel,.025,.06,.035,steel,0,.145,-.72);
+ cube(weaponModel,.075,.07,.13,dark,0,.17,-.28);
+ const optic=mesh(weaponModel,new THREE.CylinderGeometry(.032,.032,.075,16),glass,[0,.195,-.28]);
+ optic.rotation.x=Math.PI/2;
+ cube(weaponModel,.085,.018,.12,polymer,0,.235,-.28);
+ // Sling points and trigger guard
+ cube(weaponModel,.018,.025,.035,steel,.061,-.045,.12);
+ cube(weaponModel,.018,.025,.035,steel,-.061,-.045,-.62);
+ cube(weaponModel,.075,.012,.09,steel,0,-.105,-.015);
 }
 function setWeaponMode(equipped){
  weaponEquipped=equipped;
