@@ -578,9 +578,9 @@ async function createFighter(isEnemy=false,index=0){
    animClock+=dt;
    for(const item of this._stanceApplied)this.bones.get(item.name)?.quaternion.multiply(item.inverse);
    this._stanceApplied.length=0;
-   const moving=playing==='Walk'&&this.stanceMode==='stand',phase=animClock*(moving?9:1.8),swing=moving?Math.sin(phase)*.48:Math.sin(phase)*.018;
+   const speed=THREE.MathUtils.clamp((this.motionSpeed||0)/6.8,0,1),air=THREE.MathUtils.clamp(this.airBlend||0,0,1),moving=playing==='Walk'&&this.stanceMode==='stand'&&speed>.025,phase=animClock*(moving?THREE.MathUtils.lerp(7.2,11.8,speed):1.8),swing=moving?Math.sin(phase)*THREE.MathUtils.lerp(.22,.58,speed):Math.sin(animClock*1.8)*.012;
    for(const [name,value] of [['mixamorigLeftUpLeg',swing],['mixamorigRightUpLeg',-swing],['mixamorigLeftArm',-swing*.72],['mixamorigRightArm',swing*.72]]){
-    const b=this.bones.get(name);if(b)b.rotation.x=value;
+    const b=this.bones.get(name);if(b){const jumpOffset=name.includes('UpLeg')?-.22*air:name.includes('Leg')?.42*air:name.includes('Arm')?-.28*air:0;b.rotation.x=value+jumpOffset;}
    }
    const target=this.stanceMode==='crouch'||this.stanceMode==='prone'?1:0;
    this._stanceBlend=THREE.MathUtils.damp(this._stanceBlend,target,10,dt);
@@ -589,10 +589,10 @@ async function createFighter(isEnemy=false,index=0){
     ['mixamorigHips',prone?.82:crouch?.42:0,0,0],
     ['mixamorigSpine',prone?.48:crouch?-.10:0,0,0],
     ['mixamorigSpine1',prone?.22:crouch?-.08:0,0,0],
-    ['mixamorigLeftUpLeg',prone?-.42:crouch?-.52:0,0,0],
-    ['mixamorigRightUpLeg',prone?-.42:crouch?-.52:0,0,0],
-    ['mixamorigLeftLeg',prone?.18:crouch?1.02:0,0,0],
-    ['mixamorigRightLeg',prone?.18:crouch?1.02:0,0,0],
+    ['mixamorigLeftUpLeg',prone?-.42:crouch?-.62:0,0,0],
+    ['mixamorigRightUpLeg',prone?-.42:crouch?-.62:0,0,0],
+    ['mixamorigLeftLeg',prone?.18:crouch?1.12:0,0,0],
+    ['mixamorigRightLeg',prone?.18:crouch?1.12:0,0,0],
     ['mixamorigLeftArm',prone?-.22:crouch?-.08:0,0,0],
     ['mixamorigRightArm',prone?-.22:crouch?-.08:0,0,0]
    ];
@@ -843,7 +843,7 @@ function animate(){
    p.rotation.y+=turn*Math.min(1,(aiming||fireHeld?12:5)*dt);play(playerRig,fireHeld?'cast':'idle');
   }
   playerRig.jumpV=(playerRig.jumpV||0)-15*dt;p.position.y=Math.max(0,p.position.y+(playerRig.jumpV||0)*dt);if(p.position.y===0&&playerRig.jumpV<0)playerRig.jumpV=0;
-  applyBodyMotion(playerRig,playerVelocity.dot(forward),playerVelocity.dot(right),dt);playerRig.update(dt);if(p.position.y<=.025){playerRig.root.position.y=0;playerRig.root.updateMatrixWorld(true);const groundBounds=new THREE.Box3().setFromObject(playerRig.root);if(Number.isFinite(groundBounds.min.y)&&groundBounds.min.y<0)playerRig.root.position.y=-groundBounds.min.y+.012;}if(playerRig.weaponPivot){playerRig.weaponKick=Math.max(0,(playerRig.weaponKick||0)-dt*1.35);playerRig.weaponPivot.rotation.x=-.08-(playerRig.weaponKick||0);}
+  playerRig.motionSpeed=playerVelocity.length();playerRig.airBlend=THREE.MathUtils.clamp(p.position.y/.72,0,1);applyBodyMotion(playerRig,playerVelocity.dot(forward),playerVelocity.dot(right),dt);playerRig.update(dt);if(p.position.y<=.025){playerRig.root.position.y=0;playerRig.root.updateMatrixWorld(true);const groundBounds=new THREE.Box3().setFromObject(playerRig.root);if(Number.isFinite(groundBounds.min.y)&&groundBounds.min.y<0)playerRig.root.position.y=-groundBounds.min.y+.012;}if(playerRig.weaponPivot){playerRig.weaponKick=Math.max(0,(playerRig.weaponKick||0)-dt*1.35);playerRig.weaponPivot.rotation.x=-.08-(playerRig.weaponKick||0);}
  for(const e of enemies){if(!e.alive)continue;const ep=e.rig.holder,delta=p.position.clone().sub(ep.position);const dist=delta.length();if(dist>2.3){delta.normalize();ep.position.addScaledVector(delta,1.35*dt);ep.rotation.y=Math.atan2(delta.x,delta.z);if(e.anim!=='run'){e.anim='run';play(e.rig,'run')}}else{if(e.anim!=='idle'){e.anim='idle';play(e.rig,'idle')}e.attack+=dt;if(e.attack>1.5){e.attack=0;const raw=4,blocked=Math.min(armor,raw*.5);armor-=blocked;health=Math.max(0,health-(raw-blocked));refreshVitals();statusEl.textContent='SOB ATAQUE';setTimeout(()=>{if(health>0)statusEl.textContent='PRONTO'},450)}}applyBodyMotion(e.rig,dist>2.3?1.35:0,0,dt);e.rig.update(dt);if(e.rig.weaponPivot){e.rig.weaponKick=Math.max(0,(e.rig.weaponKick||0)-dt*.9);e.rig.weaponPivot.rotation.x=-.08-(e.rig.weaponKick||0)}}
  for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];b.mesh.position.addScaledVector(b.dir,72*dt);b.life-=dt;let hit=false;for(const e of enemies){if(e.alive){const base=e.rig.holder.position,head=base.clone().add(new THREE.Vector3(0,1.72,0)),torso=base.clone().add(new THREE.Vector3(0,.96,0));const headHit=b.mesh.position.distanceTo(head)<.42,bodyHit=b.mesh.position.distanceTo(torso)<.72;if(headHit||bodyHit){const falloff=Math.max(.52,1-(b.travelled/Math.max(1,b.range))*.42),dealt=b.damage*falloff*(headHit?2.15:1);e.hp-=dealt;hitMarkerTimer=.18;document.querySelector('#crosshair')?.classList.add('hit');burst(b.mesh.position,headHit?16:10,headHit?0xffe16b:0xffa34d,4.8);statusEl.textContent=headHit?'TIRO NA CABEÇA!':'ACERTO';hit=true;if(e.hp<=0){e.alive=false;burst(e.rig.holder.position.clone().add(new THREE.Vector3(0,1,0)),22,0xffd06b,5);scene.remove(e.rig.holder);e.rig.dispose();kills++;scoreEl.textContent=String(kills);document.querySelector('#remainingEnemies').textContent=String(enemies.filter(x=>x.alive).length)}break}}}b.travelled+=72*dt;if(hit||b.life<=0||b.travelled>=b.range){scene.remove(b.mesh);bullets.splice(i,1)}}
  fireCooldown=Math.max(0,fireCooldown-dt);
