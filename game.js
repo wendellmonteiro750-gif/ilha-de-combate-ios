@@ -118,7 +118,7 @@ function solveArmIK(upper,lower,hand,targetWorld){
  }
  characterVisual.updateMatrixWorld(true);
 }
-function applyCombatWeaponPose(crouch,prone){
+function applyCombatWeaponPose(crouch,prone,dt){
  if(!weaponEquipped||!weaponModel||!characterVisual)return;
  characterVisual.updateMatrixWorld(true);
  const height=prone?.50:crouch?1.00:1.27;
@@ -135,7 +135,7 @@ function applyCombatWeaponPose(crouch,prone){
   combatBones.hand_l.quaternion.copy(parentQ.multiply(weaponQ));
  }
  if(performance.now()<firePoseUntil){weaponModel.rotation.x=.045}
- else weaponModel.rotation.x=THREE.MathUtils.damp(weaponModel.rotation.x,0,16,clock?.getDelta?.()||.016);
+ else weaponModel.rotation.x=THREE.MathUtils.damp(weaponModel.rotation.x,0,16,dt);
 }
 function createPlayerAnchor(){
  hero=new THREE.Group();hero.position.set(0,0,0);scene.add(hero);
@@ -217,7 +217,7 @@ function animateRig(dt,speed,sprinting,crouch,prone){
  else if(moving)clip=sprinting?sprint:walk;
  if(clip!==activeCharacterClip)playCharacterClip(clip);
  characterMixer.update(dt);
- applyCombatWeaponPose(crouch,prone);
+ applyCombatWeaponPose(crouch,prone,dt);
 }
 function bind(){
  const stick=$('stick'),knob=$('knob');let sid=null,rect=null;
