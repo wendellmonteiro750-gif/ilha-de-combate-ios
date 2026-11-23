@@ -415,16 +415,14 @@ async function createFighter(isEnemy=false,index=0){
  model.updateMatrixWorld(true);
  const bounds=new THREE.Box3().setFromObject(model),height=Math.max(.1,bounds.max.y-bounds.min.y);
  holder.scale.setScalar(1.82/height);model.position.y=-bounds.min.y;
- const bones=new Map(),palette=['#35483d','#5a4938','#3c4b5d','#4c3d35','#4b5144','#51443b'],outfitColor=isEnemy?palette[index%palette.length]:'#17191d';
+ const bones=new Map();
+ // Visual neutro: remove paletas de skins, texturas de roupa e acessórios visuais antigos.
+ const humanoidMaterial=new THREE.MeshStandardMaterial({color:0xb98b70,roughness:.88,metalness:0});
  model.traverse(o=>{
   if(o.isBone)bones.set(o.name,o);
   if(o.isMesh){
    o.castShadow=true;o.receiveShadow=true;o.frustumCulled=false;
-   const label=(o.name+' '+(o.material?.name||'')).toLowerCase();
-   if(/outfit|shirt|jacket|top|trouser|pants|shoe/.test(label)){
-    if(Array.isArray(o.material))o.material=o.material.map(m=>{const c=m.clone();c.color.multiply(new THREE.Color(outfitColor));return c});
-    else if(o.material){o.material=o.material.clone();o.material.color.multiply(new THREE.Color(outfitColor))}
-   }
+   o.material=humanoidMaterial;
   }
  });
  const mixer=new THREE.AnimationMixer(model),actions=new Map();
@@ -473,30 +471,6 @@ async function createFighter(isEnemy=false,index=0){
   },
   setHeight(h){const b=new THREE.Box3().setFromObject(model),v=b.max.y-b.min.y;if(v>0){holder.scale.setScalar(h/v);model.position.y=-b.min.y}}
  };
- const torso=bones.get('mixamorigSpine2')||bones.get('mixamorigSpine1')||bones.get('mixamorigSpine');
- if(torso){
-  const outfit=new THREE.Group();
-  const shirt=new THREE.MeshStandardMaterial({color:isEnemy?0x343d36:0x101114,roughness:.9});
-  const pants=new THREE.MeshStandardMaterial({color:isEnemy?0x514637:0x17191d,roughness:.96});
-  const gold=new THREE.MeshStandardMaterial({color:0xd6a52e,roughness:.48,metalness:.38});
-  const dark=new THREE.MeshStandardMaterial({color:0x090a0c,roughness:.82});
-  const make=(parent,w,h,d,m,x,y,z)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o};
-  if(isEnemy){
-   make(outfit,.43,.48,.18,shirt,0,.02,.045);make(outfit,.34,.31,.035,gold,0,.025,.145);
-   for(const x of [-.22,.22])make(outfit,.075,.39,.09,shirt,x,.02,.02);
-   torso.add(outfit);
-  }else{
-   // A roupa improvisada em caixas foi removida para não atravessar o corpo
-   // nem deformar durante corrida, salto e mira. O operador mantém o rig original.
-  }
- }
- const head=bones.get('mixamorigHead')||bones.get('Head');
- if(head&&isEnemy){
-  const helmet=new THREE.Group(),shell=new THREE.Mesh(new THREE.SphereGeometry(.145,24,16),new THREE.MeshStandardMaterial({color:0x454d43,roughness:.72,metalness:.08}));
-  shell.scale.set(1.12,.76,1.1);shell.position.y=.095;helmet.add(shell);
-  const rim=new THREE.Mesh(new THREE.TorusGeometry(.145,.012,8,28),new THREE.MeshStandardMaterial({color:0x1b2422,roughness:.8}));
-  rim.position.y=.04;rim.rotation.x=Math.PI/2;helmet.add(rim);head.add(helmet);
- }
  addRifle(rig);scene.add(holder);await rig.playRole('idle');return rig;
 }
 function resolvePlayerObstacles(){
