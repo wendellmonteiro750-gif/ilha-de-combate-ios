@@ -120,7 +120,14 @@ function addHouse(x,z,rotation=0,style=0){
  // Paredes: frente com vão de porta e traseira com duas janelas de verdade.
  box(g,.95,2.62,.22,wall,-2.55,1.93,-2.52);box(g,1.66,2.62,.22,wall,0,1.93,-2.52);box(g,.95,2.62,.22,wall,2.55,1.93,-2.52);
  box(g,.22,2.62,5.05,wall,-2.92,1.93,0);box(g,.22,2.62,5.05,wall,2.92,1.93,0);
- box(g,1.55,2.62,.22,wall,-2.12,1.93,2.52);box(g,1.55,2.62,.22,wall,2.12,1.93,2.52);
+ // Paredes frontais recortadas para janelas reais nos dois lados da entrada.
+ for(const sx of [-1,1]){
+  const cx=sx*2.12;
+  box(g,1.55,.58,.22,wall,cx,.78,2.52);
+  box(g,1.55,.72,.22,wall,cx,2.88,2.52);
+  box(g,.38,1.32,.22,wall,cx-sx*.585,1.93,2.52);
+  box(g,.38,1.32,.22,wall,cx+sx*.585,1.93,2.52);
+ }
  box(g,2.95,.62,.22,wall,0,3.25,2.52);
  // Porta de madeira com moldura e puxador.
  const doorPivot=new THREE.Group();doorPivot.position.set(-1.02,0,2.64);doorPivot.rotation.y=-.82;g.add(doorPivot);
