@@ -580,10 +580,28 @@ function makeHumanoidModel(){
   const hand=bone(side<0?'mixamorigLeftHand':'mixamorigRightHand',fore,0,-.275,0);
   ellipsoid(hand,'palm',0,-.035,.005,.052,.07,.035,skin);
   ellipsoid(hand,'knuckles',0,-.075,.018,.052,.035,.026,skinHighlight);
-  for(let f=0;f<4;f++)ellipsoid(hand,'finger_knuckle',(f-1.5)*.021,-.087,.027,.011,.012,.009,skin);
+  ellipsoid(hand,'palm_heel',0,-.045,-.012,.048,.045,.031,skinShadow);
   ellipsoid(hand,'glove_cuff',0,-.018,0,.06,.035,.042,belt);
-  for(let f=0;f<4;f++)capsule(hand,'finger',.065,.009,skin,(f-1.5)*.021,-.095,.008);
-  capsule(hand,'thumb',.06,.012,skin,side*.052,-.045,.012);
+  // Quatro dedos separados, cada um com três falanges articuladas.
+  const fingerLabels=['Index','Middle','Ring','Pinky'];
+  for(let f=0;f<4;f++){
+   const fx=(f-1.5)*.021, label=fingerLabels[f];
+   const proximal=bone('mixamorig'+(side<0?'Left':'Right')+label+'1',hand,fx,-.078,.018);
+   capsule(proximal,'finger_'+label.toLowerCase()+'_proximal',.029,.0082,skin,0,-.014,0);
+   ellipsoid(proximal,'finger_'+label.toLowerCase()+'_joint',0,-.028,.002,.0085,.008,.0085,skinHighlight);
+   const middle=bone('mixamorig'+(side<0?'Left':'Right')+label+'2',proximal,0,-.028,0);
+   capsule(middle,'finger_'+label.toLowerCase()+'_middle',.022,.0072,skin,0,-.011,0);
+   const distal=bone('mixamorig'+(side<0?'Left':'Right')+label+'3',middle,0,-.021,0);
+   capsule(distal,'finger_'+label.toLowerCase()+'_distal',.018,.0065,skin,0,-.009,0);
+   ellipsoid(distal,'fingernail_'+label.toLowerCase(),0,-.016,.006,.0045,.006,.002,skinHighlight);
+  }
+  // Polegar em dois segmentos, posicionado na lateral da palma para formar a pega.
+  const thumbBase=bone('mixamorig'+(side<0?'Left':'Right')+'Thumb1',hand,side*.045,-.045,.012);
+  thumbBase.rotation.z=side*-.42;
+  capsule(thumbBase,'thumb_proximal',.034,.0105,skin,side*.006,-.014,.004);
+  const thumbTip=bone('mixamorig'+(side<0?'Left':'Right')+'Thumb2',thumbBase,side*.014,-.027,.006);
+  thumbTip.rotation.z=side*-.22;
+  capsule(thumbTip,'thumb_distal',.027,.009,skin,side*.003,-.011,.002);
   const upLeg=bone(side<0?'mixamorigLeftUpLeg':'mixamorigRightUpLeg',hips,side*.105,-.055,0);
   capsule(upLeg,'thigh',.445,.095,skin,0,-.015,0);
   capsule(upLeg,'cargo_trouser',.455,.108,pants,0,-.015,-.003);
