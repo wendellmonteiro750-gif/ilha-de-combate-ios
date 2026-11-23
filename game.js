@@ -141,6 +141,11 @@ function loadRealHero(){
   model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.side=THREE.FrontSide}}});
   hero.add(model);
   realHero=model;
+  // Transfere o rifle para o personagem real antes de esconder o rig procedural.
+  // Mantém a posição que ele tinha no tronco e deixa a arma visível no modelo GLB.
+  weapon.position.y += rig.body.position.y;
+  hero.add(weapon);
+  weapon.rotation.y = Math.PI;
   rig.body.visible=false;
   if(gltf.animations&&gltf.animations.length){
    realMixer=new THREE.AnimationMixer(model);
@@ -260,13 +265,13 @@ function update(dt){
  });
  // Small breathing/idle motion and recoil.
  rig.body.position.y+=moving?Math.abs(gait)*.018:Math.sin(walkT*1.7)*.012;
- weapon.position.y=aim?.55:moving?.51:.50;
+ weapon.position.y=aim?1.58:moving?1.54:1.53;
  // Compensa a inclinação do tronco para o cano continuar apontado à frente,
  // paralelo ao chão durante a posição deitada.
  weapon.rotation.x=THREE.MathUtils.lerp(weapon.rotation.x,proneBlend*1.12+(1-proneBlend)*(aim?-.035:0),1-Math.exp(-dt*10));
  // Inclina le spalle e accompagna il fucile durante la mira e il movimento.
  rig.pelvis.rotation.y=THREE.MathUtils.lerp(rig.pelvis.rotation.y,aim?-.025*strafe:0,1-Math.exp(-dt*7));
- weapon.rotation.x=THREE.MathUtils.lerp(weapon.rotation.x,aim?-.035:0,1-Math.exp(-dt*12));
+ weapon.rotation.x=THREE.MathUtils.lerp(weapon.rotation.x,aim?-.035:proneBlend*.08,1-Math.exp(-dt*12));
  if(shoot)fireShot();
  // Shoulder camera follows the player and tightens when aiming.
  const target=hero.position.clone().add(new THREE.Vector3(0,THREE.MathUtils.lerp(crouch?1.55:2.02,.62,proneBlend),0));
