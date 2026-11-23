@@ -1,6 +1,6 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
-import { BattleSystems } from './battle-systems.js?v=island-final-07';
+import { BattleSystems } from './battle-systems.js?v=island-final-08';
 const $=id=>document.getElementById(id);
 const root=$('game');
 let battleSystems=null;
