@@ -240,15 +240,32 @@ function loadRealHero(){
   hero.add(weapon);
   weapon.rotation.y = Math.PI;
   rig.body.visible=false;
+  // Só escondemos o rig procedural quando o GLB realmente oferece
+  // animações de locomoção reconhecíveis. Muitos GLBs carregam sem clips
+  // (ou apenas clips de pose), o que deixava o personagem completamente parado.
   if(gltf.animations&&gltf.animations.length){
    realMixer=new THREE.AnimationMixer(model);
    for(const clip of gltf.animations){
     const key=clip.name.toLowerCase().replace(/[^a-z0-9]/g,'');
     realActions[key]=realMixer.clipAction(clip);
    }
-   playRealAnimation('idle');
   }
-  $('message').textContent='MODELO HUMANO 3D DETALHADO CARREGADO';
+  const clipNames=Object.keys(realActions);
+  const hasWalk=clipNames.some(k=>/walk|walking|locomotion|run|running|sprint/.test(k));
+  if(hasWalk){
+   rig.body.visible=false;
+   playRealAnimation('idle');
+   $('message').textContent='PERSONAGEM 3D COM ANIMAÇÕES CARREGADO';
+  }else{
+   // Fallback garantido: exibe o humanoide articulado interno, que já possui
+   // ciclos próprios de caminhada, corrida, salto, agachamento e postura deitada.
+   model.visible=false;
+   rig.body.visible=true;
+   realMixer=null;
+   realActions={};
+   activeRealAction='';
+   $('message').textContent='PERSONAGEM ANIMADO — MODO DE SEGURANÇA';
+  }
  },undefined,error=>{
   console.error('Falha ao carregar personagem GLB:',error);
   $('message').textContent='Falha ao carregar o modelo humano 3D';
