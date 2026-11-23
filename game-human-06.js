@@ -963,7 +963,7 @@ function animate(){
   const targetVelocity=move.clone().multiplyScalar(moveSpeed);
   const acceleration=movementMode==='prone'?7:movementMode==='crouch'?8:canSprint?11:9;
   playerVelocity.lerp(targetVelocity,1-Math.exp(-acceleration*dt));
-  const collisionSteps=Math.max(1,Math.ceil(playerVelocity.length()*dt/.12));const collisionStep=dt/collisionSteps;for(let step=0;step<collisionSteps;step++){const previousPlayerPosition=p.position.clone();p.position.addScaledVector(playerVelocity,collisionStep);resolvePlayerObstacles(previousPlayerPosition);}p.position.x=THREE.MathUtils.clamp(p.position.x,-158,158);p.position.z=THREE.MathUtils.clamp(p.position.z,-158,158);
+  const collisionSteps=Math.max(1,Math.ceil(playerVelocity.length()*dt/.12));const collisionStep=dt/collisionSteps;for(let step=0;step<collisionSteps;step++){const previousPlayerPosition=p.position.clone();p.position.addScaledVector(playerVelocity,collisionStep);resolvePlayerObstacles(previousPlayerPosition);}p.position.x=THREE.MathUtils.clamp(p.position.x,-158,158);p.position.z=THREE.MathUtils.clamp(p.position.z,-158,158);const islandDistance=Math.hypot(p.position.x,p.position.z);if(islandDistance>158){const edgeScale=158/islandDistance;p.position.x*=edgeScale;p.position.z*=edgeScale;}
  const grounded=p.position.y<=.001;
   const moving=playerVelocity.length()>.16;
   if(moving){dustClock-=dt;if(dustClock<=0){dustClock=movementMode==='prone'?.34:playerVelocity.length()>4.2?.12:.24;const foot=p.position.clone().add(new THREE.Vector3((Math.random()-.5)*.55,.12,(Math.random()-.5)*.55));for(let n=0;n<(movementMode==='prone'?1:3);n++)addParticle(foot,0xc6b58a,1.1,.055,.3)}
