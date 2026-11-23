@@ -455,7 +455,7 @@ function addRifle(rig,index=0){
  const leftHandGrip=new THREE.Object3D();leftHandGrip.name='left-hand-grip';leftHandGrip.position.set(0,-.145,spec.kind==='pistol'?.015:-L*.29);g.add(leftHandGrip);
  const leftReloadGrip=new THREE.Object3D();leftReloadGrip.name='left-hand-reload';leftReloadGrip.position.set(0,spec.kind==='pistol' ? -.245 : -.235,spec.kind==='pistol' ? .045 : -.055);g.add(leftReloadGrip);
  g.scale.setScalar(.78);g.position.set(.105,-.105,-.115);g.rotation.set(-.20,.14,-.10);hand.add(g);
- rig.weaponPivot=g;rig.weaponMuzzle=muzzle;rig.weaponLeftGrip=leftHandGrip;rig.weaponLeftReloadGrip=leftReloadGrip;rig.weaponSpec=spec;rig.weaponBasePosition=g.position.clone();rig.weaponBaseRotation=g.rotation.clone();
+ rig.weaponPivot=g;rig.weaponMuzzle=muzzle;rig.weaponLeftGrip=leftHandGrip;rig.weaponLeftReloadGrip=leftReloadGrip;rig.weaponSpec=spec;rig.leftGripOrientationOffset=null;rig.weaponBasePosition=g.position.clone();rig.weaponBaseRotation=g.rotation.clone();
 }
 async function createFighter(isEnemy=false,index=0){
  if(!humanModelPromise)humanModelPromise=new GLTFLoader().loadAsync(HUMAN_MODEL_URL);
@@ -488,27 +488,27 @@ async function createFighter(isEnemy=false,index=0){
   }
  });
  // Normaliza os nomes dos ossos para rigs Mixamo com prefixos diferentes.
- const boneAliases={
-  mixamorigHips:/hips|pelvis/,
-  mixamorigSpine:/spine$/,
-  mixamorigSpine1:/spine1|spine_01/,
-  mixamorigSpine2:/spine2|spine_02/,
-  mixamorigHead:/head$/,
-  mixamorigLeftUpLeg:/(left.*upleg|upleg.*left)/,
-  mixamorigRightUpLeg:/(right.*upleg|upleg.*right)/,
-  mixamorigLeftLeg:/(left.*leg$|left.*knee)/,
-  mixamorigRightLeg:/(right.*leg$|right.*knee)/,
-  mixamorigLeftArm:/(left.*arm$|left.*upperarm)/,
-  mixamorigRightArm:/(right.*arm$|right.*upperarm)/,
-  mixamorigLeftForeArm:/(left.*forearm|left.*lowerarm)/,
-  mixamorigRightForeArm:/(right.*forearm|right.*lowerarm)/,
-  mixamorigLeftHand:/left.*hand$/,
-  mixamorigRightHand:/right.*hand$/
- };
  const normalizedBones=[...bones.entries()].map(([name,bone])=>[name.toLowerCase().replace(/[^a-z0-9]/g,''),bone]);
- for(const [alias,pattern] of Object.entries(boneAliases)){
+ const boneAliases={
+  mixamorigHips:[/hips$/, /pelvis$/],
+  mixamorigSpine2:[/spine2$/, /spine02$/, /chest$/],
+  mixamorigSpine1:[/spine1$/, /spine01$/, /chest1$/],
+  mixamorigSpine:[/spine$/, /spine0[0]?$/],
+  mixamorigHead:[/head$/],
+  mixamorigLeftUpLeg:[/leftupleg$/, /leftthigh$/, /thighleft$/],
+  mixamorigRightUpLeg:[/rightupleg$/, /rightthigh$/, /thighright$/],
+  mixamorigLeftLeg:[/leftleg$/, /leftlowerleg$/, /leftcalf$/, /leftknee$/],
+  mixamorigRightLeg:[/rightleg$/, /rightlowerleg$/, /rightcalf$/, /rightknee$/],
+  mixamorigLeftArm:[/leftarm$/, /leftupperarm$/, /leftuparm$/],
+  mixamorigRightArm:[/rightarm$/, /rightupperarm$/, /rightuparm$/],
+  mixamorigLeftForeArm:[/leftforearm$/, /leftlowerarm$/, /leftelbow$/],
+  mixamorigRightForeArm:[/rightforearm$/, /rightlowerarm$/, /rightelbow$/],
+  mixamorigLeftHand:[/lefthand$/],
+  mixamorigRightHand:[/righthand$/]
+ };
+ for(const [alias,patterns] of Object.entries(boneAliases)){
   if(bones.has(alias))continue;
-  const found=normalizedBones.find(([name])=>pattern.test(name));
+  const found=normalizedBones.find(([name])=>patterns.some(pattern=>pattern.test(name)));
   if(found)bones.set(alias,found[1]);
  }
  const mixer=new THREE.AnimationMixer(model),actions=new Map();
@@ -651,6 +651,14 @@ async function createFighter(isEnemy=false,index=0){
     // A arma fica presa à mão direita: não mover novamente o punho para um ponto fixo do corpo,
     // pois isso cria uma segunda âncora e faz a arma escapar da empunhadura.
     // A mão esquerda segue um socket real criado na geometria de cada arma longa.
+    const rightUpper=this.bones.get('mixamorigRightArm'),rightFore=this.bones.get('mixamorigRightForeArm'),rightHand=this.bones.get('mixamorigRightHand');
+    // A mão direita é a âncora da arma; resolvemos o cotovelo em torno dessa
+    // posição fixa antes de calcular o apoio da mão esquerda.
+    if(rightUpper&&rightFore&&rightHand){
+     model.updateMatrixWorld(true);
+     const triggerGrip=rightHand.getWorldPosition(new THREE.Vector3());
+     solveHand(rightUpper,rightFore,rightHand,triggerGrip);
+    }
     const leftUpper=this.bones.get('mixamorigLeftArm'),leftFore=this.bones.get('mixamorigLeftForeArm'),leftHand=this.bones.get('mixamorigLeftHand');
     const reload=THREE.MathUtils.clamp(this.reloadBlend||0,0,1);
     if(leftUpper&&leftFore&&leftHand&&this.weaponLeftGrip&&(this.weaponSpec.kind!=='pistol'||reload>.02)){
@@ -922,8 +930,11 @@ function animate(){
  const canSprint=sprintHeld&&keys.forward>.12&&!aiming&&!fireHeld&&movementMode==='stand';
   const moveSpeed=movementMode==='prone'?.95:movementMode==='crouch'?1.85:aiming?2.65:canSprint?7.1:5.35;
   const targetVelocity=move.clone().multiplyScalar(moveSpeed);
-  const acceleration=movementMode==='prone'?7:movementMode==='crouch'?8:canSprint?11:9;
+  const hasInput=move.lengthSq()>.0025;
+  const acceleration=hasInput?(movementMode==='prone'?7:movementMode==='crouch'?8:canSprint?11:9):19;
   playerVelocity.lerp(targetVelocity,1-Math.exp(-acceleration*dt));
+  // Freio mais firme ao soltar o joystick: evita o efeito de patinação ao parar.
+  if(!hasInput&&playerVelocity.lengthSq()<.0064)playerVelocity.set(0,0,0);
   p.position.addScaledVector(playerVelocity,dt);resolvePlayerObstacles();p.position.x=THREE.MathUtils.clamp(p.position.x,-124,124);p.position.z=THREE.MathUtils.clamp(p.position.z,-124,124);
  const grounded=p.position.y<=.001;
   const moving=playerVelocity.length()>.16;
