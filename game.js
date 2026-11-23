@@ -129,16 +129,20 @@ function applyCombatWeaponPose(crouch,prone,dt){
  // on the pistol grip and support hand extended beneath the handguard.
  const height=prone?.52:crouch?.99:1.22;
  const forward=prone?.70:aim?.56:.43;
- weaponModel.position.set(.13,height,forward);
- weaponModel.rotation.set(prone?-.10:-.035,Math.PI-.62,0);
+ weaponModel.position.set(.10,height,forward);
+ // O cano aponta no eixo local -Z. Como o corpo está virado em Y=PI,
+ // a arma também gira PI: as rotações se compensam e o cano fica no -Z mundial.
+ weaponModel.rotation.set(prone?-.10:-.035,Math.PI,0);
  if(performance.now()<firePoseUntil)weaponModel.rotation.x=THREE.MathUtils.damp(weaponModel.rotation.x,.015,22,dt);
  characterVisual.updateMatrixWorld(true);
  weaponModel.updateMatrixWorld(true);
  // Wrist targets sit inside the grip volumes, not at the center of the rifle.
+ // Centro do punho da empunhadura, dentro do grip traseiro.
  const rightGrip=weaponModel.localToWorld(new THREE.Vector3(0,-.145,.075));
  solveArmIK(combatBones.upperarm_r,combatBones.lowerarm_r,combatBones.hand_r,rightGrip);
  characterVisual.updateMatrixWorld(true);
  weaponModel.updateMatrixWorld(true);
+ // A mão esquerda apoia o handguard, à frente do carregador.
  const leftGrip=weaponModel.localToWorld(new THREE.Vector3(0,-.005,-.53));
  solveArmIK(combatBones.upperarm_l,combatBones.lowerarm_l,combatBones.hand_l,leftGrip);
  characterVisual.updateMatrixWorld(true);
@@ -184,7 +188,7 @@ function createCombatWeapon(){
  // Low-poly but proportionate carbine: stock, receiver, handguard, barrel,
  // muzzle, magazine, pistol grip, top rail, sights and optic.
  weaponModel=new THREE.Group();weaponModel.name='Rifle_3D_Attachment';characterVisual.add(weaponModel);
- weaponModel.position.set(.12,1.24,.42);weaponModel.rotation.set(0,Math.PI-.62,0);
+ weaponModel.position.set(.10,1.22,.43);weaponModel.rotation.set(0,Math.PI,0);
  weaponModel.scale.setScalar(.86);weaponModel.visible=weaponEquipped;
  const receiver=mat(0x202722,.42),steel=mat(0x68716b,.3),polymer=mat(0x303832,.68);
  const dark=mat(0x111713,.52),glass=new THREE.MeshStandardMaterial({color:0x263b3b,metalness:.65,roughness:.18});
