@@ -405,7 +405,7 @@ function play(rig,role,speed=1){if(!rig)return;const clip=rig.lib.role(role)?.cl
 function setMovementMode(mode){
  movementMode=mode;sprintHeld=false;
  const crouch=document.querySelector('#crouch'),prone=document.querySelector('#prone'),sprint=document.querySelector('#sprint');
- crouch?.classList.toggle('active',mode==='crouch');prone?.classList.toggle('active',mode==='prone');sprint?.classList.remove('active');
+ crouch?.classList.toggle('active',mode==='crouch');prone?.classList.toggle('active',mode==='prone');crouch?.setAttribute('aria-pressed',String(mode==='crouch'));prone?.setAttribute('aria-pressed',String(mode==='prone'));sprint?.classList.remove('active');
  if(playerRig){const scale=mode==='crouch'?.84:mode==='prone'?.60:1;playerRig.root.scale.y=scale;playerRig.root.position.y=playerRig.baseRootY*scale;}
  statusEl.textContent=mode==='crouch'?'AGACHADO':mode==='prone'?'RASTEJANDO':'EM COMBATE';
 }
