@@ -33,7 +33,7 @@ function switchWeapon(){if(reloadTimer>0)return;weaponIndex=(weaponIndex+1)%weap
 
 const playerVelocity=new THREE.Vector3(),cameraLook=new THREE.Vector3(),_shotOrigin=new THREE.Vector3();
 let safeRing=null,zoneElapsed=0,zoneDamageClock=0,lootItems=[];const worldObstacles=[];
-const keys={forward:0,side:0},bullets=[],enemies=[],effects=[];const bulletGeometry=new THREE.CylinderGeometry(.012,.012,.72,5),bulletMaterial=new THREE.MeshBasicMaterial({color:0xffdf91,transparent:true,opacity:.92});let dustClock=0,recoil=0,recoilPitch=0,aiming=false,aimBlend=0,hitMarkerTimer=0,fireHeld=false,fireCooldown=0,reloadTimer=0,movementMode='stand';
+const keys={forward:0,side:0},bullets=[],enemies=[],effects=[];const bulletGeometry=new THREE.CylinderGeometry(.012,.012,.72,5),bulletMaterial=new THREE.MeshBasicMaterial({color:0xffdf91,transparent:true,opacity:.92}),particleGeometry=new THREE.SphereGeometry(1,5,4);let dustClock=0,recoil=0,recoilPitch=0,aiming=false,aimBlend=0,hitMarkerTimer=0,fireHeld=false,fireCooldown=0,reloadTimer=0,movementMode='stand';
 const BASE='https://raw.githubusercontent.com/NoLimitNexus/game-models/main/';
 const defaultSettings={general:100,red:100,two:100,four:100,awm:100,look:100,autoFire:true,invertY:false,minimap:true,hudScale:100,hudOpacity:100,quality:'ultra',shadows:true,vibration:false};
 let gameSettings={...defaultSettings};
@@ -751,14 +751,15 @@ function applyBodyMotion(rig,forwardSpeed,lateralSpeed,dt){
  holder.rotation.z=THREE.MathUtils.lerp(holder.rotation.z,targetRoll,blend);
 }
 function addParticle(position,color=0xffb34d,speed=3,size=.09,life=.35){
- if(effects.length>(innerWidth<700?28:75))return;
- const mesh=new THREE.Mesh(new THREE.SphereGeometry(size,6,6),new THREE.MeshBasicMaterial({color,transparent:true,opacity:1}));
- mesh.position.copy(position);scene.add(mesh);
+ if(effects.length>=(innerWidth<700?18:75))return;
+ const mesh=new THREE.Mesh(particleGeometry,new THREE.MeshBasicMaterial({color,transparent:true,opacity:1}));
+ mesh.position.copy(position);mesh.scale.setScalar(size);scene.add(mesh);
  const velocity=new THREE.Vector3((Math.random()-.5)*speed,(Math.random()*.85)*speed,(Math.random()-.5)*speed);
- effects.push({mesh,velocity,life,maxLife:life,gravity:5,kind:'particle'});
+ effects.push({mesh,velocity,life,maxLife:life,gravity:5,kind:'particle',baseScale:size});
 }
 function burst(position,count=9,color=0xffa33d,speed=4){
- for(let i=0;i<count;i++)addParticle(position,color,speed,.045+Math.random()*.045,.22+Math.random()*.24);
+ const amount=innerWidth<700?Math.min(count,5):count;
+ for(let i=0;i<amount;i++)addParticle(position,color,speed,.045+Math.random()*.045,.22+Math.random()*.24);
 }
 function muzzleFlash(position,direction){
  if(innerWidth<700)return;
@@ -774,7 +775,7 @@ function updateEffects(dt){
   const fx=effects[i];fx.life-=dt;
   if(fx.kind==='particle'){
    fx.velocity.y-=fx.gravity*dt;fx.mesh.position.addScaledVector(fx.velocity,dt);
-   const k=Math.max(0,fx.life/fx.maxLife);fx.mesh.material.opacity=k;fx.mesh.scale.setScalar(.45+k*.55);
+   const k=Math.max(0,fx.life/fx.maxLife);fx.mesh.material.opacity=k;fx.mesh.scale.setScalar(fx.baseScale*(.45+k*.55));
   }else if(fx.kind==='flash'){
    const k=Math.max(0,fx.life/fx.maxLife);fx.mesh.scale.setScalar(.55+k*.7);fx.light.intensity=5*k;
   }
@@ -867,7 +868,7 @@ function reloadWeapon(){
 function shoot(){
  if(reloadTimer>0||fireCooldown>0)return;
  if(ammo<=0){statusEl.textContent=reserveAmmo[weaponIndex]>0?'RECARREGUE':'SEM MUNIÇÃO';fireHeld=false;burstRemaining=0;return}
- ammo--;weaponAmmo[weaponIndex]=ammo;refreshAmmo();
+ ammo--;weaponAmmo[weaponIndex]=ammo;ammoEl.textContent='MUNIÇÃO '+ammo;document.querySelector('#ammoLarge').textContent=ammo;
  fireCooldown=currentWeapon().rate*(aiming?.86:1);
  const cameraRight=new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion);const horizontalOffset=.06*Math.tan(THREE.MathUtils.degToRad(camera.fov*.5))*(window.innerWidth/window.innerHeight);const dir=new THREE.Vector3();camera.getWorldDirection(dir);dir.addScaledVector(cameraRight,horizontalOffset).normalize();
  const movement=THREE.MathUtils.clamp(playerVelocity.length()/7.1,0,1);
@@ -881,7 +882,7 @@ function shoot(){
  playerRig.weaponMuzzle?.getWorldPosition(_shotOrigin);const origin=playerRig.weaponMuzzle?_shotOrigin.clone():playerRig.holder.position.clone().add(new THREE.Vector3(0,1.42,0)).add(dir.clone().multiplyScalar(.8));
  for(let n=0;n<(currentWeapon().pellets||1);n++){
   const shotDir=dir.clone().addScaledVector(cameraRight,(Math.random()-.5)*spread).addScaledVector(cameraUp,(Math.random()-.5)*spread).normalize();
-  if(bullets.length>36)continue;const mesh=new THREE.Mesh(bulletGeometry,bulletMaterial);
+  if(bullets.length>=(innerWidth<700?12:36))continue;const mesh=new THREE.Mesh(bulletGeometry,bulletMaterial);
   mesh.position.copy(origin).add(shotDir.clone().multiplyScalar(.48));mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),shotDir);scene.add(mesh);
   bullets.push({mesh,dir:shotDir,life:currentWeapon().range/72,damage:currentWeapon().damage,travelled:0,range:currentWeapon().range});
  }
