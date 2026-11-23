@@ -55,7 +55,7 @@ function initSettings(){
  const end=()=>{if(!hudDrag)return;let saved={};try{saved=JSON.parse(localStorage.getItem('ic-hud-layout')||'{}')}catch{}const r=hudDrag.el.getBoundingClientRect();saved[hudDrag.id]={x:r.left,y:r.top};try{localStorage.setItem('ic-hud-layout',JSON.stringify(saved))}catch{}hudDrag=null};hud.addEventListener('pointerup',end);hud.addEventListener('pointercancel',end);
  applyHudSettings();
 }
-function toggleHudEditor(force){hudEditing=force;document.querySelector('#hud')?.classList.toggle('hud-editing',force);document.querySelector('#editHud').textContent=force?'CONCLUIR EDIÇÃO':'MOVER HUD';}
+function getAimSensitivity(){return [gameSettings.red,gameSettings.two,gameSettings.four,gameSettings.awm][Math.min(3,scopeLevel)]/100}\nfunction getCameraSensitivity(){return (gameSettings.general/100)*(aiming?getAimSensitivity():(gameSettings.look/100))}\nfunction toggleHudEditor(force){hudEditing=force;document.querySelector('#hud')?.classList.toggle('hud-editing',force);document.querySelector('#editHud').textContent=force?'CONCLUIR EDIÇÃO':'MOVER HUD';}
 
 
 function mat(color,roughness=.86,metalness=0){return new THREE.MeshStandardMaterial({color,roughness,metalness})}
@@ -604,9 +604,9 @@ function updateRadar(){
 function animate(){
  const dt=Math.min(clock.getDelta(),.04),p=playerRig.holder;
  if(scene.fog&&scene.fog.isFogExp2){scene.fog.density=.00145+Math.sin(clock.elapsedTime*.035)*.00008;}
- worldYaw-=lookDeltaX*.0048*(gameSettings.general/100)*(aiming?(gameSettings.red/100):1);
+ worldYaw-=lookDeltaX*.0048*getCameraSensitivity();
  // Controle vertical progressivo, com faixa ampla para acompanhar alvos acima e abaixo.
- pitch=THREE.MathUtils.clamp(pitch-lookDeltaY*.0038*(gameSettings.general/100)*(gameSettings.invertY?-1:1)*(aiming?(gameSettings.red/100):1),-.78,.78);
+ pitch=THREE.MathUtils.clamp(pitch-lookDeltaY*.0038*getCameraSensitivity()*(gameSettings.invertY?-1:1),-.78,.78);
  lookDeltaX=lookDeltaY=0;
  const forward=new THREE.Vector3(Math.sin(worldYaw),0,-Math.cos(worldYaw)),right=new THREE.Vector3(Math.cos(worldYaw),0,Math.sin(worldYaw));
  const move=forward.clone().multiplyScalar(keys.forward).add(right.clone().multiplyScalar(keys.side));if(move.lengthSq()>1)move.normalize();
