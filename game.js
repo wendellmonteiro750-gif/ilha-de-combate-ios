@@ -91,6 +91,7 @@ const ANIMATION_URL='https://cdn.jsdelivr.net/gh/Seyamalam/blood-league-kickoff@
 const ANIMATION2_URL=new URL('./assets/UAL2_Standard.glb',import.meta.url).href;
 // UAL2 Standard adicionada ao projeto para as transições IdleToLay/LayToIdle.
 // As duas animações são conferidas no pacote antes da publicação.
+// A entrada no chão usa LayToIdle em reprodução reversa.
 let characterVisual=null,characterMixer=null,characterActions=new Map(),activeCharacterClip='',characterReady=false;
 let proneState=false,proneTransition=null,proneTransitionUntil=0,proneActionMissing=false;
 let weaponEquipped=true,weaponModel=null,weaponMagazine=null,reloadPoseUntil=0,firePoseUntil=0,weaponBasePosition=new THREE.Vector3(),weaponBaseRotation=new THREE.Euler(),weaponRecoil=0;
