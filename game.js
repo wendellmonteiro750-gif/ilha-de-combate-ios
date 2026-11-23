@@ -98,3 +98,5 @@ const stick=$('stick'),knob=$('knob');let stickId=null;stick.addEventListener('p
 let lookId=null,lastX=0,lastY=0;renderer.domElement.addEventListener('pointerdown',e=>{if(e.clientX<innerWidth*.35&&e.clientY>innerHeight*.5)return;lookId=e.pointerId;lastX=e.clientX;lastY=e.clientY;renderer.domElement.setPointerCapture(lookId)});renderer.domElement.addEventListener('pointermove',e=>{if(e.pointerId!==lookId)return;yaw-=(e.clientX-lastX)*.006;pitch=THREE.MathUtils.clamp(pitch+(e.clientY-lastY)*.004,-.65,.45);lastX=e.clientX;lastY=e.clientY});['pointerup','pointercancel'].forEach(t=>renderer.domElement.addEventListener(t,()=>lookId=null));
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,mobile?1.35:2))});
 updateHud();camera.position.set(0,6,18);camera.lookAt(0,1,0);animate();
+
+// Operation Nine prototype build: initial branch validation.
