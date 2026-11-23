@@ -52,9 +52,16 @@ export class BattleSystems {
       for(let j=0;j<4;j++){
         const ox=(j%2)*7-3.5,oz=Math.floor(j/2)*7-3.5;
         const w=4.8,h=2.7,d=4.8;
-        const wall=new T.Mesh(new T.BoxGeometry(w,h,d),mat([0xb7a17d,0x9eaa9d,0xb78b69][(i+j)%3]));wall.position.set(ox,h/2,oz);wall.castShadow=true;group.add(wall);
+        const wallMat=mat([0xb7a17d,0x9eaa9d,0xb78b69][(i+j)%3]);
+        const walls=[
+          [w,h,.18,ox,h/2,oz-d/2],[.18,h,d,ox-w/2,h/2,oz],[.18,h,d,ox+w/2,h/2,oz],
+          [(w-1.05)/2,h,.18,ox-(w+1.05)/4,h/2,oz+d/2],
+          [(w-1.05)/2,h,.18,ox+(w+1.05)/4,h/2,oz+d/2]
+        ];
+        walls.forEach(([ww,hh,dd,px,py,pz])=>{const part=new T.Mesh(new T.BoxGeometry(ww,hh,dd),wallMat);part.position.set(px,py,pz);part.castShadow=true;group.add(part)});
+        const floor=new T.Mesh(new T.BoxGeometry(w,.12,d),mat(0x796b55));floor.position.set(ox,.02,oz);group.add(floor);
         const roof=new T.Mesh(new T.ConeGeometry(3.9,1.5,4),mat(0x58483d));roof.position.set(ox,h+.7,oz);roof.rotation.y=Math.PI/4;group.add(roof);
-        const door=new T.Mesh(new T.BoxGeometry(.9,1.9,.08),mat(0x342b24));door.position.set(ox,0.95,oz+d/2+.045);group.add(door);
+        const openDoor=new T.Mesh(new T.BoxGeometry(.08,1.9,1.0),mat(0x342b24));openDoor.position.set(ox-.48,.95,oz+d/2);openDoor.rotation.y=.35;group.add(openDoor);
         const window=new T.Mesh(new T.BoxGeometry(1,.75,.08),mat(0x668d91));window.position.set(ox-1.35,1.8,oz+d/2+.05);group.add(window);
       }
     });
