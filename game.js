@@ -466,15 +466,15 @@ function update(dt){
  const horizontalSpeed=Math.hypot(velocityX,velocityZ);
  animateRig(dt,horizontalSpeed,sprinting,crouch,prone);
  const target=new THREE.Vector3(hero.position.x,hero.position.y+(prone?.48:crouch?1.20:1.58),hero.position.z);
- const baseDist=aim?3.15:sprinting?5.15:5.6;
- const shoulder=aim?.72:1.18;
+ const baseDist=(aim?3.15:sprinting?5.15:5.6)*.55; // câmera 45% mais próxima do personagem
+ const shoulder=(aim?.72:1.18)*.55;
  const offset=new THREE.Vector3(Math.sin(yaw)*baseDist*Math.cos(pitch)+Math.cos(yaw)*shoulder,baseDist*(.30+Math.sin(-pitch)),Math.cos(yaw)*baseDist*Math.cos(pitch)-Math.sin(yaw)*shoulder);
  cameraDesired.copy(target).add(offset);
  cameraRay.set(target,offset.clone().normalize());cameraRay.far=baseDist;
  // Não colidir com o próprio personagem: isso colocava a câmera dentro do corpo.
  const cameraObstacles=scene.children.filter(object=>object!==hero);
  const cameraHits=cameraRay.intersectObjects(cameraObstacles,true);
- cameraCurrentDistance=THREE.MathUtils.damp(cameraCurrentDistance,cameraHits.length?Math.max(2.8,cameraHits[0].distance-.22):baseDist,18,dt);
+ cameraCurrentDistance=THREE.MathUtils.damp(cameraCurrentDistance,cameraHits.length?Math.max(1.45,cameraHits[0].distance-.22):baseDist,18,dt);
  cameraDesired.copy(target).addScaledVector(offset.normalize(),cameraCurrentDistance);
  camera.position.lerp(cameraDesired,1-Math.exp(-dt*(aim?13:8)));
  camera.position.y+=cameraShake*.22;
