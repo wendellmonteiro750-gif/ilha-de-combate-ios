@@ -498,14 +498,13 @@ function update(dt){
  // ou para trás sem perder a direção da mira.
  // Ao mirar, o corpo inteiro acompanha a direção horizontal da câmera,
  // mesmo parado. Sem mirar, mantém a rotação de movimento 360° já aprovada.
- // Com a arma equipada, o corpo inteiro acompanha a direção horizontal
- // da mira, mesmo quando o jogador apenas arrasta a câmera e está parado.
- // Sem arma e sem mirar, preserva a orientação 360° baseada no movimento.
- if(aim||weaponEquipped||inputMagnitude>.08){
-  const followsAim=aim||weaponEquipped;
-  const facing=followsAim?yaw:Math.atan2(inputDir.x,inputDir.z)-Math.PI;
+ // Sem arma/mira, a orientação continua seguindo o movimento 360°.
+ // Quando há arma equipada, a rotação do corpo é aplicada depois que a câmera
+ // atualiza seu lookAt, usando a direção mundial real da mira.
+ if(!(aim||weaponEquipped)&&inputMagnitude>.08){
+  const facing=Math.atan2(inputDir.x,inputDir.z)-Math.PI;
   const turn=THREE.MathUtils.euclideanModulo(facing-hero.rotation.y+Math.PI,Math.PI*2)-Math.PI;
-  hero.rotation.y+=turn*(1-Math.exp(-dt*(followsAim?15:12)));
+  hero.rotation.y+=turn*(1-Math.exp(-dt*12));
  }
  const targetVX=inputDir.x*speed*inputMagnitude;
  const targetVZ=inputDir.z*speed*inputMagnitude;
@@ -542,7 +541,21 @@ function update(dt){
  cameraShake=THREE.MathUtils.damp(cameraShake,0,12,dt);
  camera.fov=THREE.MathUtils.damp(camera.fov,aim?53:sprinting?68:65,8,dt);camera.updateProjectionMatrix();
  camera.lookAt(target.clone().add(new THREE.Vector3(0,cameraRecoil+cameraShake*.12,0)));
- // Atualiza a arma depois da câmera: o cano aponta para a mira já atualizada neste frame.
+ camera.updateMatrixWorld(true);
+ // Rotação corporal de terceira pessoa: primeiro lê a direção horizontal
+ // REAL para onde a câmera olha; depois gira o root do personagem inteiro.
+ // Assim tronco, quadril e pernas acompanham a mira, não apenas os braços.
+ if(aim||weaponEquipped){
+  const aimDirection=camera.getWorldDirection(new THREE.Vector3());
+  aimDirection.y=0;
+  if(aimDirection.lengthSq()>.0001){
+   aimDirection.normalize();
+   const bodyFacing=Math.atan2(-aimDirection.x,-aimDirection.z);
+   const bodyTurn=THREE.MathUtils.euclideanModulo(bodyFacing-hero.rotation.y+Math.PI,Math.PI*2)-Math.PI;
+   hero.rotation.y+=bodyTurn*(1-Math.exp(-dt*11));
+  }
+ }
+ // Recalcula a arma e os IK das mãos após a rotação do corpo neste frame.
  applyCombatWeaponPose(crouch,prone,dt);
  if(shoot&&weaponEquipped){firePoseUntil=performance.now()+180;fireShot()}
  const cross=$('hud').querySelector('.crosshair');
