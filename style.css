@@ -392,3 +392,10 @@
   .ammo-panel{bottom:151px}
   .sprint-btn{left:119px!important;bottom:43px!important}
 }
+
+
+/* Resposta visual da mira: aproximação, estabilidade e expansão durante movimento/recuo */
+#crosshair{scale:1;transition:scale .12s ease,filter .12s ease!important;transform-origin:center}
+#crosshair.aiming{filter:drop-shadow(0 0 3px #ffe7a3)}
+#crosshair.firing{filter:drop-shadow(0 0 7px #ffd27a)}
+#crosshair.hit{filter:drop-shadow(0 0 8px #ff352b)}
