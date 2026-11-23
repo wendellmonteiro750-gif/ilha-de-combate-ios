@@ -173,7 +173,28 @@ function move(dt){
  });
  if(hero.position.y>0||jumpVelocity>0){jumpVelocity-=19*dt;hero.position.y=Math.max(0,hero.position.y+jumpVelocity*dt);if(hero.position.y===0)jumpVelocity=0}
 }
-function cameraUpdate(dt){const target=hero.position.clone().add(new THREE.Vector3(0,THREE.MathUtils.lerp(2,.72,poseBlend),0));const dist=aim?4:6.8,shoulder=aim?1.05:1.35;const desired=target.clone().add(new THREE.Vector3(Math.sin(yaw)*dist*Math.cos(pitch)+Math.cos(yaw)*shoulder,dist*(.2+Math.sin(-pitch)),Math.cos(yaw)*dist*Math.cos(pitch)-Math.sin(yaw)*shoulder));camera.position.lerp(desired,1-Math.exp(-8*dt));camera.lookAt(target)}
+const cameraRay=new THREE.Raycaster();
+const cameraLookTarget=new THREE.Vector3(),cameraDesired=new THREE.Vector3(),cameraForward=new THREE.Vector3(),cameraSide=new THREE.Vector3();
+function cameraUpdate(dt){
+ cameraForward.set(-Math.sin(yaw),0,-Math.cos(yaw));
+ cameraSide.set(Math.cos(yaw),0,-Math.sin(yaw));
+ cameraLookTarget.copy(hero.position).add(new THREE.Vector3(0,THREE.MathUtils.lerp(2.05,.88,poseBlend),0));
+ const distance=aim?3.8:7.0,shoulder=aim?.82:1.18;
+ const height=aim?2.35:THREE.MathUtils.lerp(4.0,2.25,poseBlend);
+ cameraDesired.copy(hero.position).addScaledVector(cameraForward,-distance).addScaledVector(cameraSide,shoulder);
+ cameraDesired.y=hero.position.y+height+Math.sin(-pitch)*distance*.52;
+ // Recuo suave e limite de obstáculos para não atravessar paredes.
+ const offset=cameraDesired.clone().sub(cameraLookTarget),length=offset.length(),direction=offset.normalize();
+ cameraRay.set(cameraLookTarget,direction);cameraRay.far=length;
+ const obstacle=cameraRay.intersectObjects(world.children,true).find(hit=>hit.distance>.3);
+ if(obstacle)cameraDesired.copy(cameraLookTarget).addScaledVector(direction,Math.max(1.25,obstacle.distance-.42));
+ camera.position.lerp(cameraDesired,1-Math.exp(-10*dt));
+ const lookAhead=aim?8:3;
+ const lookAt=cameraLookTarget.clone().addScaledVector(cameraForward,lookAhead);
+ camera.lookAt(lookAt);
+ const targetFov=aim?39:65;
+ camera.fov=THREE.MathUtils.damp(camera.fov,targetFov,9,dt);camera.updateProjectionMatrix();
+}
 let audioCtx=null;
 function sound(freq=140,duration=.07,kind='sawtooth',volume=.035){try{audioCtx ||= new (window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();osc.type=kind;osc.frequency.setValueAtTime(freq,audioCtx.currentTime);osc.frequency.exponentialRampToValueAtTime(Math.max(35,freq*.38),audioCtx.currentTime+duration);gain.gain.setValueAtTime(volume,audioCtx.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+duration);osc.connect(gain);gain.connect(audioCtx.destination);osc.start();osc.stop(audioCtx.currentTime+duration)}catch(e){}}
 function hitEffect(point,color=0xffd27a){const p=new THREE.Mesh(new THREE.SphereGeometry(.13,8,8),new THREE.MeshBasicMaterial({color}));p.position.copy(point);scene.add(p);effects.push({o:p,t:.22})}
