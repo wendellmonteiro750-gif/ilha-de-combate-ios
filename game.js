@@ -690,8 +690,52 @@ async function createFighter(isEnemy=false,index=0){
    for(const x of [-.22,.22])make(outfit,.075,.39,.09,shirt,x,.02,.02);
    torso.add(outfit);
   }else{
-   // A roupa improvisada em caixas foi removida para não atravessar o corpo
-   // nem deformar durante corrida, salto e mira. O operador mantém o rig original.
+   // Novo equipamento tático do operador: peças leves presas ao osso do tronco,
+   // para acompanhar a corrida, a mira, o recuo e as mudanças de postura.
+   const olive=new THREE.MeshStandardMaterial({color:0x354333,roughness:.9});
+   const darkOlive=new THREE.MeshStandardMaterial({color:0x202a24,roughness:.88});
+   const fabric=new THREE.MeshStandardMaterial({color:0x59604a,roughness:.98});
+   const webbing=new THREE.MeshStandardMaterial({color:0x171e1a,roughness:.94});
+   const armor=new THREE.MeshStandardMaterial({color:0x343d36,roughness:.76,metalness:.08});
+   const pouchMat=new THREE.MeshStandardMaterial({color:0x414b38,roughness:.95});
+   const detail=new THREE.MeshStandardMaterial({color:0x9b9b78,roughness:.75});
+   const sphere=(parent,radius,material,x,y,z,sx=1,sy=1,sz=1)=>{const o=new THREE.Mesh(new THREE.SphereGeometry(radius,12,10),material);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.castShadow=true;parent.add(o);return o};
+   // Colete balístico, placas frontal/traseira, ombreiras e tiras.
+   make(outfit,.49,.58,.27,olive,0,.015,.035);
+   make(outfit,.38,.43,.035,armor,0,.025,.185);
+   make(outfit,.36,.42,.035,darkOlive,0,.025,-.145);
+   make(outfit,.51,.075,.29,webbing,0,-.235,.025);
+   for(const x of [-.17,-.055,.055,.17]){
+    make(outfit,.075,.15,.075,pouchMat,x,-.12,.215);
+    make(outfit,.078,.035,.08,webbing,x,-.035,.22);
+   }
+   for(const x of [-.245,.245]){
+    sphere(outfit,.13,armor,x,.205,.015,1.2,.68,1.05);
+    make(outfit,.095,.22,.12,fabric,x,-.005,.025);
+   }
+   // Rádio, fivela e mochila compacta.
+   make(outfit,.105,.18,.08,darkOlive,-.29,.12,.02);
+   make(outfit,.075,.045,.025,detail,.0,-.235,.18);
+   make(outfit,.31,.42,.17,darkOlive,0,.045,-.235);
+   make(outfit,.25,.12,.19,olive,0,-.18,-.235);
+   torso.add(outfit);
+   // Joelheiras e botas acompanham os ossos das pernas, não ficam soltas no cenário.
+   for(const [side,label] of [[-1,'Left'],[1,'Right']]){
+    const thigh=bones.get('mixamorig'+label+'UpLeg');
+    const shin=bones.get('mixamorig'+label+'Leg');
+    if(thigh){
+     const pad=new THREE.Group();
+     sphere(pad,.105,armor,0,-.30,.075,1.05,.72,.55);
+     make(pad,.13,.055,.025,webbing,0,-.30,.12);
+     thigh.add(pad);
+    }
+    if(shin){
+     const boot=new THREE.Group();
+     make(boot,.15,.23,.22,darkOlive,0,-.34,.035);
+     make(boot,.16,.045,.23,webbing,0,-.445,.045);
+     shin.add(boot);
+    }
+   }
   }
  }
  const head=bones.get('mixamorigHead')||bones.get('Head');
@@ -700,6 +744,20 @@ async function createFighter(isEnemy=false,index=0){
   shell.scale.set(1.12,.76,1.1);shell.position.y=.095;helmet.add(shell);
   const rim=new THREE.Mesh(new THREE.TorusGeometry(.145,.012,8,28),new THREE.MeshStandardMaterial({color:0x1b2422,roughness:.8}));
   rim.position.y=.04;rim.rotation.x=Math.PI/2;helmet.add(rim);head.add(helmet);
+ }else if(head&&!isEnemy){
+  // Capacete do operador, com aba frontal, proteção lateral e headset.
+  const helmet=new THREE.Group();
+  const shell=new THREE.Mesh(new THREE.SphereGeometry(.155,20,14),new THREE.MeshStandardMaterial({color:0x3c4939,roughness:.78}));
+  shell.scale.set(1.12,.78,1.12);shell.position.y=.075;helmet.add(shell);
+  const brim=new THREE.Mesh(new THREE.BoxGeometry(.23,.035,.19),new THREE.MeshStandardMaterial({color:0x202820,roughness:.85}));
+  brim.position.set(0,.015,.105);helmet.add(brim);
+  const band=new THREE.Mesh(new THREE.TorusGeometry(.145,.012,7,24),new THREE.MeshStandardMaterial({color:0x1c241e,roughness:.8}));
+  band.position.y=.025;band.rotation.x=Math.PI/2;helmet.add(band);
+  for(const x of [-.145,.145]){
+   const ear=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.075,10),new THREE.MeshStandardMaterial({color:0x202820,roughness:.85}));
+   ear.rotation.z=Math.PI/2;ear.position.set(x,-.005,0);helmet.add(ear);
+  }
+  head.add(helmet);
  }
  addRifle(rig);scene.add(holder);await rig.playRole('idle');return rig;
 }
