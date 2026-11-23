@@ -7,26 +7,34 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Battle Island — Treinamento</title>
-<link rel="stylesheet" href="./style.css?v=crosshair-camera-center-29">
+<link rel="stylesheet" href="./style.css?v=freefire-hud-48">
 </head>
 <body>
 <div id="game"></div>
-<div id="hud">
- <div class="topbar"><div class="brand"><b>BI</b><span>BATTLE ISLAND<small>CAMPO DE TREINAMENTO</small></span></div><div class="stats"><span id="health">VIDA 100</span><span id="stamina">FÔLEGO 100</span><span id="ammo">30 / 90</span></div></div>
- <div class="tip" id="tip">JOYSTICK: MOVER · ARRASTE A TELA: CÂMERA</div>
+<div id="hud" class="ff-hud">
+ <div class="ff-map"><div class="map-grid"></div><span class="map-road road-a"></span><span class="map-road road-b"></span><span class="map-pin">▲</span><small>ILHA DE COMBATE</small></div>
+ <div class="ff-team"><div><b>1</b> SOLDADO 1 <i>◆</i></div><div><b>2</b> SOLDADO 2 <i>◆</i></div><div><b>3</b> SOLDADO 3 <i>◆</i></div><div><b>4</b> SOLDADO 4 <i>◆</i></div></div>
+ <div class="ff-utility"><span>◖))</span><span>☺</span><span>◉</span><span>●</span><span>✉</span></div>
+ <div class="ff-top-center"><span>◀</span><span>↶</span><span class="save">▣</span></div>
+ <div class="ff-top-right"><div class="ff-counter">♥ <b>100</b></div><div class="ff-counter">◉ <b>500</b></div><div class="ff-counter">♟ <b>0</b></div><div class="ff-counter">☠ <b>0</b></div><div class="ff-counter">⚙</div></div>
+ <div class="ff-weapon-panel"><div class="ff-current"><strong id="ammo">30 / 90</strong><span>▰━━━▰</span><b>AK</b></div><div class="ff-slots"><span>▰<small>80</small></span><span>▱<small>50</small></span><span>∞</span></div></div>
+ <div class="ff-items"><span>ITEM</span><span>ITEM</span><span>ITEM</span><span>ITEM</span></div>
+ <div class="ff-tip" id="tip">JOYSTICK: MOVER · ARRASTE A TELA: CÂMERA</div>
  <div class="crosshair"><i></i><b></b></div>
- <div class="bottom-info"><span id="poseLabel">POSTURA: EM PÉ</span><span id="message">ÁREA DE TREINO</span></div>
+ <div class="ff-status"><span id="health">VIDA 100</span><span id="stamina">FÔLEGO 100</span><span id="poseLabel">POSTURA: EM PÉ</span><span id="message">ÁREA DE TREINO</span></div>
 </div>
-<div id="controls">
+<div id="controls" class="ff-controls">
  <div id="stick"><div id="knob"></div></div>
- <button class="control run" id="run" aria-label="Correr" title="Correr">↗</button>
- <button class="control jump" id="jump" aria-label="Pular" title="Pular">↑</button>
- <button class="control crouch" id="crouch" aria-label="Agachar" title="Agachar">▾</button>
- <button class="control prone" id="prone" aria-label="Deitar" title="Deitar">▰</button>
- <button class="control aim" id="aim" aria-label="Mirar" title="Mirar">◎</button>
- <button class="control reload" id="reload" aria-label="Recarregar" title="Recarregar">↻</button>
- <button class="control weapon" id="weapon" aria-label="Guardar arma" title="Alternar arma">⚔</button>
- <button class="control fire" id="fire" aria-label="Atirar" title="Atirar">✦</button>
+ <button class="control ff-action grenade" aria-label="Granada">◉<small>GRANADA</small></button>
+ <button class="control run" id="run" aria-label="Correr">➤</button>
+ <button class="control jump" id="jump" aria-label="Pular">↟</button>
+ <button class="control crouch" id="crouch" aria-label="Agachar">▾</button>
+ <button class="control prone" id="prone" aria-label="Deitar">━</button>
+ <button class="control aim" id="aim" aria-label="Mirar">◎</button>
+ <button class="control reload" id="reload" aria-label="Recarregar">↻</button>
+ <button class="control weapon" id="weapon" aria-label="Guardar arma">⚔</button>
+ <button class="control fire" id="fire" aria-label="Atirar">✦</button>
+ <div class="ff-extra"><span>✚</span><span>◉</span><span>▣</span></div>
 </div>
 <div id="lobby"><div class="lobby-card"><div class="eyebrow">OPERAÇÃO • ILHA TROPICAL</div><h1>BATTLE<br><em>ISLAND</em></h1><p>Prepare seu equipamento. Entre na zona de treinamento e domine o campo de combate.</p><button id="play">INICIAR MISSÃO&nbsp; →</button><small>CAMPO DE TREINAMENTO • MODO TERCEIRA PESSOA</small></div></div>
 <div id="error" hidden></div>
