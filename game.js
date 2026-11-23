@@ -103,13 +103,13 @@ function loadSoldierModel(){
    const b=findBone(soldierModel,n.replace('Bip01 ',''));
    if(b){soldierBones[n]=b;soldierRest[n]=b.rotation.clone()}
   });
-  if(gltf.animations&&gltf.animations.length){soldierMixer=new THREE.AnimationMixer(soldierModel);gltf.animations.forEach(clip=>soldierMixer.clipAction(clip).play())}
+  // Evita tocar todos os clips importados simultaneamente: root motion/escala pode causar zoom aparente. O rig usa animação procedural.
   torso.visible=false;soldierLoadState='loaded';setMsg('PERSONAGEM 3D ORIGINAL CARREGADO');
  },undefined,error=>{soldierLoadState='fallback';console.warn('GLB não encontrado; mantendo personagem provisório.',error)});
 }
 function animateSoldierRig(dt){
  if(!soldierModel)return;
- if(soldierMixer){soldierMixer.update(dt);return}
+ if(soldierMixer)soldierMixer.update(dt);
  const moving=Math.abs(mx)+Math.abs(my)>.08,phase=performance.now()*.008*(run?1.5:1),stride=moving?Math.sin(phase)*(run?.62:.34):0;
  const blend=poseBlend||0,idle=Math.sin(performance.now()*.0022),aimBlend=aim?1:0;
  reloadAnim=Math.max(0,reloadAnim-.72*dt);recoilAnim=Math.max(0,recoilAnim-5.5*dt);
