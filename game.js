@@ -579,6 +579,7 @@ function update(dt){
   const turn=THREE.MathUtils.euclideanModulo(facing-hero.rotation.y+Math.PI,Math.PI*2)-Math.PI;
   hero.rotation.y+=turn*(1-Math.exp(-dt*12));
  }
+ if(prone){velocityX=0;velocityZ=0;}
  const targetVX=inputDir.x*speed*inputMagnitude;
  const targetVZ=inputDir.z*speed*inputMagnitude;
  const accel=moving?(sprinting?12:aim?16:14):20;
