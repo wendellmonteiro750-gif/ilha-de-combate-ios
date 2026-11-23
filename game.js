@@ -88,8 +88,9 @@ function house(x,z,color){
 // Personagem humano real Quaternius: malha skinned, esqueleto completo e clips humanoides.
 const CHARACTER_URL='https://cdn.jsdelivr.net/gh/Seyamalam/blood-league-kickoff@main/public/assets/vendor/quaternius/night-striker.glb';
 const ANIMATION_URL='https://cdn.jsdelivr.net/gh/Seyamalam/blood-league-kickoff@main/public/assets/vendor/quaternius/universal-animation-library.glb';
+const ANIMATION2_URL=new URL('./assets/UAL2_Standard.glb',import.meta.url).href;
 let characterVisual=null,characterMixer=null,characterActions=new Map(),activeCharacterClip='',characterReady=false;
-let proneState=false,proneTransition=null,proneTransitionUntil=0;
+let proneState=false,proneTransition=null,proneTransitionUntil=0,proneActionMissing=false;
 let weaponEquipped=true,weaponModel=null,weaponMagazine=null,reloadPoseUntil=0,firePoseUntil=0,weaponBasePosition=new THREE.Vector3(),weaponBaseRotation=new THREE.Euler(),weaponRecoil=0;
 let combatBones={upperarm_l:null,lowerarm_l:null,hand_l:null,upperarm_r:null,lowerarm_r:null,hand_r:null};
 const combatV1=new THREE.Vector3(),combatV2=new THREE.Vector3(),combatQ1=new THREE.Quaternion(),combatQ2=new THREE.Quaternion();
@@ -196,7 +197,14 @@ function createPlayerAnchor(){
  hero=new THREE.Group();hero.position.set(0,0,0);scene.add(hero);
  const loader=new GLTFLoader();
  $('message').textContent='CARREGANDO SOLDADO 3D';
- Promise.all([loader.loadAsync(CHARACTER_URL),loader.loadAsync(ANIMATION_URL)]).then(([character,library])=>{
+ Promise.all([
+  loader.loadAsync(CHARACTER_URL),
+  loader.loadAsync(ANIMATION_URL),
+  loader.loadAsync(ANIMATION2_URL).catch(error=>{
+   console.warn('UAL2 ainda não disponível; transição de deitar será desativada:',error);
+   return {animations:[],scene:new THREE.Group()};
+  })
+ ]).then(([character,library,library2])=>{
   characterVisual=character.scene;
   characterVisual.name='BattleIsland_Quaternius_Human';
   characterVisual.rotation.y=Math.PI;
@@ -208,7 +216,13 @@ function createPlayerAnchor(){
   });
   hero.add(characterVisual);
   characterMixer=new THREE.AnimationMixer(characterVisual);
-  for(const clip of library.animations)characterActions.set(clip.name,characterMixer.clipAction(clip));
+  for(const clip of library.animations)characterActions.set(clip.name,clip);
+  // UAL2 Standard é o pacote oficial complementar da Quaternius. Ele traz
+  // IdleToLay e LayToIdle, ausentes na UAL1 Standard que estava no jogo.
+  for(const clip of library2.animations)characterActions.set(clip.name,clip);
+  if(!characterActions.has('IdleToLay')||!characterActions.has('LayToIdle')){
+   console.error('UAL2 carregada sem os clips IdleToLay/LayToIdle',library2.animations.map(c=>c.name));
+  }
   for(const name of Object.keys(combatBones))combatBones[name]=getCombatBone(name);
   const hand=combatBones.hand_r||characterVisual.getObjectByName('hand_r');
   if(hand)createCombatWeapon();
@@ -216,7 +230,9 @@ function createPlayerAnchor(){
   playCharacterClip('Idle_Loop',false);
   $('message').textContent='SOLDADO 3D PRONTO';
   // A biblioteca contém apenas os clips; descarta-se a cena auxiliar para poupar GPU.
-  library.scene.traverse(node=>{if(node.isMesh){node.geometry.dispose();const ms=Array.isArray(node.material)?node.material:[node.material];ms.forEach(m=>m.dispose())}});
+  for(const sourceScene of [library.scene,library2.scene]){
+   sourceScene.traverse(node=>{if(node.isMesh){node.geometry.dispose();const ms=Array.isArray(node.material)?node.material:[node.material];ms.forEach(m=>m.dispose())}});
+  }
  }).catch(error=>{
   console.error('Falha ao carregar personagem humano 3D:',error);
   $('message').textContent='ERRO AO CARREGAR SOLDADO 3D';
@@ -307,14 +323,22 @@ function playCharacterClip(name,restart=false){
 }
 function playProneTransition(name,now){
  const clipName=exactClip(name);
- if(!clipName)return false;
- const next=characterActions.get(clipName);
+ if(!clipName){
+  proneActionMissing=true;
+  console.error('Animação de postura não encontrada:',name,'Clipes disponíveis:',[...characterActions.keys()]);
+  $('message').textContent='ANIMAÇÃO DEITAR NÃO CARREGADA';
+  return false;
+ }
+ proneActionMissing=false;
+ const next=characterMixer.clipAction(characterActions.get(clipName));
  const previous=characterActions.get(activeCharacterClip);
- if(previous&&previous!==next)previous.fadeOut(.10);
+ if(previous&&previous!==next)previous.fadeOut(.12);
+ next.enabled=true;
  next.reset();
+ next.setEffectiveWeight(1);
  next.setLoop(THREE.LoopOnce,1);
  next.clampWhenFinished=true;
- next.fadeIn(.10).play();
+ next.fadeIn(.12).play();
  activeCharacterClip=clipName;
  proneTransition=clipName;
  proneTransitionUntil=now+Math.max(.15,next.getClip().duration)*1000;
@@ -328,29 +352,49 @@ function animateRig(dt,speed,sprinting,crouch,prone){
  const sprint=exactClip('Sprint_Loop','Run_Fwd_Loop')||walk;
  const crouchIdle=exactClip('Crouch_Idle_Loop')||idle;
  const crouchMove=exactClip('Crouch_Fwd_Loop','Crouch_Fwd_L_Loop')||walk;
- const proneIdle=exactClip('Crawl_Idle_Loop','Prone_Idle_Loop')||idle;
- const proneMove=exactClip('Crawl_Fwd_Loop','Prone_Crawl_Loop')||proneIdle;
 
- // Entrada e saída do chão usam os clipes dedicados da biblioteca UAL.
- // Crawl_Enter anima a descida; Crawl_Exit anima o retorno a ficar em pé.
+ // A UAL2 Standard fornece transições completas de humanoide:
+ // IdleToLay = em pé para deitado; LayToIdle = deitado para em pé.
  if(prone!==proneState){
   proneState=prone;
-  playProneTransition(prone?'Crawl_Enter':'Crawl_Exit',now);
+  playProneTransition(prone?'IdleToLay':'LayToIdle',now);
  }
- const inTransition=!!proneTransition&&now<proneTransitionUntil;
- if(!inTransition)proneTransition=null;
-
+ const transitionActive=!!proneTransition&&now<proneTransitionUntil;
+ if(proneTransition==='IdleToLay'&&proneState){
+  // Ao terminar, a ação one-shot fica congelada no último frame deitado.
+  // Não trocar para Idle_Loop: isso levantaria o personagem imediatamente.
+  if(transitionActive){
+   characterMixer.update(dt);
+   return;
+  }
+  characterMixer.update(dt);
+  return;
+ }
+ if(proneTransition==='LayToIdle'&&!proneState){
+  if(transitionActive){
+   characterMixer.update(dt);
+   return;
+  }
+  proneTransition=null;
+  playCharacterClip(idle);
+ }
+ if(proneState){
+  // Até integrar um ciclo de rastejo compatível, o personagem permanece
+  // realmente deitado; não desliza pelo chão com animação de pé.
+  characterMixer.update(dt);
+  return;
+ }
+ if(proneTransition==='LayToIdle'&&!proneState&&now>=proneTransitionUntil)proneTransition=null;
  let clip=idle;
- if(prone)clip=moving?proneMove:proneIdle;
- else if(crouch)clip=moving?crouchMove:crouchIdle;
+ if(crouch)clip=moving?crouchMove:crouchIdle;
  else if(!grounded)clip=exactClip('Jump_Loop','Jump_Start')||idle;
  else if(moving)clip=sprinting?sprint:walk;
- if(!crouch&&!prone&&!moving&&!inTransition){
+ if(!crouch&&!moving&&!transitionActive){
   if(reloading)clip=exactClip('Rifle_Reload_Loop','Rifle_Reload','Reload_Rifle')||clip;
   else if(now<firePoseUntil)clip=exactClip('Rifle_Fire_Loop','Rifle_Fire','Fire_Rifle')||clip;
   else if(aim)clip=exactClip('Rifle_Aim_Loop','Rifle_Aiming_Loop','Aim_Rifle_Loop')||clip;
  }
- if(!inTransition&&clip!==activeCharacterClip)playCharacterClip(clip);
+ if(clip!==activeCharacterClip)playCharacterClip(clip);
  characterMixer.update(dt);
 }
 function bind(){
@@ -510,7 +554,7 @@ function update(dt){
  const sprinting=(run||fullForward)&&!aim&&!crouch&&!prone&&moving&&stamina>1;
  if(sprinting)stamina=Math.max(0,stamina-22*dt);else stamina=Math.min(100,stamina+14*dt);
  $('stamina').textContent='FÔLEGO '+Math.round(stamina);
- const speed=prone?.58:crouch?1.55:aim?2.35:sprinting?6.25:3.25;
+ const speed=prone?0:crouch?1.55:aim?2.35:sprinting?6.25:3.25;
  // Direção do joystick fica independente do giro livre da câmera enquanto
  // o jogador mantém o analógico pressionado. Assim é possível orbitar 360°
  // e enxergar a frente do soldado sem mudar a trajetória da corrida.
