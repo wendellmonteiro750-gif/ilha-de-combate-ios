@@ -585,84 +585,20 @@ function makeHumanoidModel(){
  root.updateMatrixWorld(true);
  return {root,bones};
 }
-// Modelo masculino humano completo, externo, com malha skinned, texturas PBR e esqueleto Biped.
-const HUMAN_MODEL_URL='https://models.vinish.dev/people/soldier.glb';
-let humanModelPromise=null,humanSkeletonUtils=null;
-async function loadHumanModel(){
- if(!humanModelPromise)humanModelPromise=(async()=>{
-  const [{GLTFLoader},utils]=await Promise.all([
-   import('three/addons/loaders/GLTFLoader.js'),
-   import('three/addons/utils/SkeletonUtils.js')
-  ]);
-  humanSkeletonUtils=utils;
-  return new GLTFLoader().loadAsync(HUMAN_MODEL_URL);
- })();
- return humanModelPromise;
-}
+// Personagem militar humano criado localmente: sem GLB remoto, CORS ou dependência de rede.
 async function createFighter(isEnemy=false,index=0){
- const holder=new THREE.Group();holder.name=isEnemy?'enemy-human-character':'player-human-character';
- let model,bones=new Map();
- try{
-  const gltf=await loadHumanModel();
-  model=humanSkeletonUtils.clone(gltf.scene);
-  model.name='VinishSoldier_SkinnedHuman';
- }catch(loadError){
-  humanModelPromise=null;
-  console.error('Não foi possível carregar o novo operador 3D.',loadError);
-  throw new Error('Modelo 3D: '+(loadError?.message||'falha de rede ou CORS')+'. Confira a conexão e tente novamente.');
- }
- const boneByKey=new Map();
- model.traverse(o=>{
-  if(o.isBone){
-   bones.set(o.name,o);
-   const key=o.name.replace(/[^a-z0-9]/gi,'').toLowerCase();
-   boneByKey.set(key,o);
-  }
-  if(o.isMesh){
-   o.castShadow=true;o.receiveShadow=true;
-   if(o.material){
-    for(const mat of (Array.isArray(o.material)?o.material:[o.material])){
-     if(mat){mat.roughness=Math.max(mat.roughness??.72,.58);mat.needsUpdate=true;}
-    }
-   }
-  }
- });
- const aliases={
-  mixamorigHips:['hips','pelvis','bip001pelvis'],
-  mixamorigSpine:['spine','spine1','spine2','chest'],
-  mixamorigNeck:['neck'],
-  mixamorigHead:['head'],
-  mixamorigLeftArm:['leftarm','leftupperarm','upperarml'],
-  mixamorigRightArm:['rightarm','rightupperarm','upperarmr'],
-  mixamorigLeftForeArm:['leftforearm','lowerarml','forearml'],
-  mixamorigRightForeArm:['rightforearm','lowerarmr','forearmr'],
-  mixamorigLeftHand:['lefthand','handl'],
-  mixamorigRightHand:['righthand','handr'],
-  mixamorigLeftUpLeg:['leftupleg','thighl','upperlegl'],
-  mixamorigRightUpLeg:['rightupleg','thighr','upperlegr'],
-  mixamorigLeftLeg:['leftleg','calfl','lowerlegl'],
-  mixamorigRightLeg:['rightleg','calfr','lowerlegr'],
-  mixamorigLeftFoot:['leftfoot','footl'],
-  mixamorigRightFoot:['rightfoot','footr']
- };
- for(const [alias,keys] of Object.entries(aliases)){
-  const found=[...boneByKey.entries()].find(([key])=>keys.some(k=>key===k||key.endsWith(k)));
-  if(found)bones.set(alias,found[1]);
- }
- // O arquivo tem escala real de aproximadamente 1,81 m; não criar outro corpo por cima dele.
- const bounds=new THREE.Box3().setFromObject(model),height=bounds.max.y-bounds.min.y;
- if(!Number.isFinite(height)||height<.5)throw new Error('O modelo masculino 3D carregou sem uma malha humana válida.');
- const scale=1.95/height;
- model.scale.setScalar(scale);
- model.position.y=-bounds.min.y*scale;
- holder.add(model);
- const poseNames=['mixamorigHips','mixamorigSpine','mixamorigLeftArm','mixamorigRightArm','mixamorigLeftForeArm','mixamorigRightForeArm','mixamorigLeftUpLeg','mixamorigRightUpLeg','mixamorigLeftLeg','mixamorigRightLeg','mixamorigLeftFoot','mixamorigRightFoot'];
- const poseBases=new Map(poseNames.map(name=>[name,bones.get(name)?.quaternion.clone()]).filter(x=>x[1]));
+ const holder=new THREE.Group();
+ holder.name=isEnemy?'enemy-human-character':'player-human-character';
+ const made=makeHumanoidModel(),model=made.root,bones=made.bones;
+ holder.add(model);model.name='IlhaCombat_MilitaryHumanoid_Local';
+ const poseNames=['mixamorigHips','mixamorigSpine','mixamorigSpine1','mixamorigSpine2','mixamorigNeck','mixamorigHead','mixamorigLeftArm','mixamorigRightArm','mixamorigLeftForeArm','mixamorigRightForeArm','mixamorigLeftUpLeg','mixamorigRightUpLeg','mixamorigLeftLeg','mixamorigRightLeg','mixamorigLeftFoot','mixamorigRightFoot'];
+ const poseBases=new Map(poseNames.map(name=>[name,bones.get(name)?.quaternion.clone()]).filter(([,q])=>q));
  let animClock=0,playing='Idle';
  const rig={
-  holder,root:model,bones,baseRootY:0,lib:{role(role){return {clip:role==='run'||role==='walk'?'Walk':'Idle',loop:true}}},
+  holder,root:model,bones,baseRootY:0,
+  lib:{role(role){return {clip:role==='run'||role==='walk'?'Walk':'Idle',loop:true}}},
   get playing(){return playing},
-  playRole(role,opts={}){playing=role==='run'?'Run':role==='walk'?'Walk':role==='cast'?'Idle':'Idle';return Promise.resolve(true)},
+  playRole(role){playing=role==='run'?'Run':role==='walk'?'Walk':'Idle';return Promise.resolve(true)},
   stanceMode:'stand',_stanceBlend:0,
   update(dt){
    animClock+=dt;
@@ -672,8 +608,8 @@ async function createFighter(isEnemy=false,index=0){
    const wave=moving?Math.sin(phase):0,counter=-wave;
    for(const [name,base] of poseBases){const b=bones.get(name);if(b)b.quaternion.copy(base);}
    const crouch=this.stanceMode==='crouch',prone=this.stanceMode==='prone';
-   const stride=moving?(this.stanceMode==='prone'?.12:crouch?.25:THREE.MathUtils.lerp(.24,.58,speed)):0;
-   const apply=(name,x,y=0,z=0)=>{const b=bones.get(name);if(b){b.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(x,y,z,'XYZ')));}};
+   const stride=moving?(prone?.12:crouch?.25:THREE.MathUtils.lerp(.24,.58,speed)):0;
+   const apply=(name,x,y=0,z=0)=>{const b=bones.get(name);if(b)b.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(x,y,z,'XYZ')))};
    apply('mixamorigLeftUpLeg',wave*stride+(crouch?.38:prone?1.05:0));
    apply('mixamorigRightUpLeg',counter*stride+(crouch?.38:prone?1.05:0));
    apply('mixamorigLeftLeg',Math.max(0,-wave)*stride*1.15+(crouch?-.72:prone?-.12:0));
@@ -682,11 +618,12 @@ async function createFighter(isEnemy=false,index=0){
    apply('mixamorigRightArm',-counter*stride*1.1-(moving?0:.035));
    apply('mixamorigSpine',crouch?.12:prone?.28:0);
    apply('mixamorigHips',crouch?-.10:prone?.15:0);
+   apply('mixamorigHead',Math.sin(animClock*1.3)*.012,0,0);
   },
   setHeight(h){const b=new THREE.Box3().setFromObject(model),v=b.max.y-b.min.y;if(v>0)holder.scale.setScalar(h/v)},
-  dispose(){}
+  dispose(){holder.removeFromParent();holder.traverse(o=>{if(o.isMesh){o.geometry?.dispose();if(o.material&&!Array.isArray(o.material))o.material.dispose()}})}
  };
- addRifle(rig);scene.add(holder);await rig.playRole('idle');return rig;
+ addRifle(rig,weaponIndex||0);await rig.playRole('idle');return rig;
 }
 function getHouseAtPosition(position){
  for(const o of worldObstacles){if(o.type!=='house')continue;const dx=position.x-o.x,dz=position.z-o.z,c=Math.cos(o.rotation),sn=Math.sin(o.rotation),lx=dx*c-dz*sn,lz=dx*sn+dz*c;if(Math.abs(lx)<4.0&&Math.abs(lz)<3.45)return {obstacle:o,lx,lz,c,sn};}
