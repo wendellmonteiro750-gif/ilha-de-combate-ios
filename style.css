@@ -236,3 +236,7 @@
 .inventory-supplies{margin:11px 0;padding:9px;border-radius:7px;background:#0a151dcc;color:#a9f0bd;font-size:10px;font-weight:800}
 #inventoryPanel>small{font-size:8px;color:#c5d0d1}
 @media(orientation:portrait) and (max-width:699px){#inventoryToggle{font-size:8px;padding:5px 6px}#inventoryPanel{width:90vw}}
+
+
+/* Ajuste final: mira um pouco mais alta, no estilo battle royale mobile. */
+#crosshair{top:44%!important;}
