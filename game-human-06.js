@@ -520,6 +520,28 @@ function makeHumanoidModel(){
  ellipsoid(spine2,'right_pectoral',.092,.055,.073,.105,.105,.055,shirt);
  ellipsoid(spine2,'upper_abdomen',0,-.075,.075,.125,.105,.052,shirt);
  ellipsoid(spine2,'lower_abdomen',0,-.155,.06,.115,.07,.045,shirtDark);
+ // Colete balístico de tecido acolchoado, com placas curvas e bolsos individuais.
+ const vestMat=new THREE.MeshStandardMaterial({color:0x3d5142,roughness:.97});
+ const vestEdge=new THREE.MeshStandardMaterial({color:0x26372e,roughness:.94});
+ const vestPlate=new THREE.MeshStandardMaterial({color:0x53634e,roughness:.95});
+ const vestProfile=[new THREE.Vector2(.17,-.17),new THREE.Vector2(.18,-.11),new THREE.Vector2(.19,.015),new THREE.Vector2(.205,.13),new THREE.Vector2(.19,.22),new THREE.Vector2(.145,.25)];
+ const vestGeo=new THREE.LatheGeometry(vestProfile,32);vestGeo.scale(1,1,.76);
+ const vest=new THREE.Mesh(vestGeo,vestMat);vest.name='tactical_vest_shell';vest.position.set(0,.045,.035);vest.castShadow=true;vest.receiveShadow=true;spine2.add(vest);
+ // Painel frontal anatômico, costuras e fitas do colete.
+ const plate=new THREE.Mesh(new THREE.SphereGeometry(1,28,20),vestPlate);plate.name='front_ballistic_plate';plate.position.set(0,.045,.139);plate.scale.set(.145,.16,.035);plate.castShadow=true;spine2.add(plate);
+ for(const side of [-1,1]){
+  const strap=box(spine2,.052,.29,.045,vestEdge,side*.125,.13,.105);strap.rotation.z=side*.13;
+  box(spine2,.112,.105,.045,vestMat,side*.105,-.025,.17);
+  box(spine2,.105,.018,.05,vestEdge,side*.105,-.083,.17);
+  box(spine2,.085,.085,.045,vestPlate,side*.105,.105,.174);
+  box(spine2,.025,.12,.035,vestEdge,side*.178,.005,.04);
+ }
+ box(spine2,.095,.065,.055,vestEdge,0,-.145,.12);
+ // Rádio preso à alça do ombro e pequenas presilhas utilitárias.
+ box(spine2,.065,.12,.045,vestEdge,-.17,.105,.045);
+ box(spine2,.035,.07,.018,metal,-.17,.115,.075);
+ for(let k=0;k<3;k++)box(spine2,.018,.045,.018,vestPlate,.18,.04-k*.055,.045);
+
  for(const side of [-1,1])ellipsoid(spine2,'clavicle',side*.105,.145,.055,.13,.025,.035,shirt);
  // Gola, costuras e bolsos discretos.
  ellipsoid(spine2,'shirt_collar',0,.12,.005,.105,.055,.105,shirtDark);
@@ -578,6 +600,10 @@ function makeHumanoidModel(){
   ellipsoid(fore,'elbow_guard',0,-.015,.045,.058,.045,.025,shirtDark);
   ellipsoid(fore,'wrist',0,-.235,.004,.042,.055,.042,skin);
   ellipsoid(fore,'sleeve_cuff',0,-.19,0,.067,.045,.067,shirtDark);
+  // Luva tática com reforço na palma e costura no punho.
+  const gloveMat=new THREE.MeshStandardMaterial({color:0x343b32,roughness:.98});
+  ellipsoid(fore,'tactical_glove_cuff',0,-.255,.003,.052,.045,.05,gloveMat);
+
   const hand=bone(side<0?'mixamorigLeftHand':'mixamorigRightHand',fore,0,-.275,0);
   ellipsoid(hand,'palm',0,-.035,.005,.052,.07,.035,skin);
   ellipsoid(hand,'knuckles',0,-.075,.018,.052,.035,.026,skinHighlight);
