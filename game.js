@@ -448,34 +448,63 @@ async function createFighter(isEnemy=false,index=0){
  };
  const torso=bones.get('mixamorigSpine2')||bones.get('mixamorigSpine1')||bones.get('mixamorigSpine');
  if(torso){
-  const outfit=new THREE.Group(),shirt=new THREE.MeshStandardMaterial({color:isEnemy?0x343d36:0x2477b8,roughness:.94}),shorts=new THREE.MeshStandardMaterial({color:isEnemy?0x514637:0x30343b,roughness:.96}),trim=new THREE.MeshStandardMaterial({color:0xd8d4c7,roughness:.88});
+  const outfit=new THREE.Group();
+  const shirt=new THREE.MeshStandardMaterial({color:isEnemy?0x343d36:0x101114,roughness:.9});
+  const pants=new THREE.MeshStandardMaterial({color:isEnemy?0x514637:0x17191d,roughness:.96});
+  const gold=new THREE.MeshStandardMaterial({color:0xd6a52e,roughness:.48,metalness:.38});
+  const dark=new THREE.MeshStandardMaterial({color:0x090a0c,roughness:.82});
   const make=(parent,w,h,d,m,x,y,z)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o};
   if(isEnemy){
-   make(outfit,.43,.48,.18,shirt,0,.02,.045);make(outfit,.34,.31,.035,trim,0,.025,.145);
+   make(outfit,.43,.48,.18,shirt,0,.02,.045);make(outfit,.34,.31,.035,gold,0,.025,.145);
    for(const x of [-.22,.22])make(outfit,.075,.39,.09,shirt,x,.02,.02);
    torso.add(outfit);
   }else{
-   // Camiseta casual azul, sem colete tático.
-   const tee=new THREE.Mesh(new THREE.CapsuleGeometry(.205,.28,4,8),shirt);tee.scale.set(1,1,.58);tee.position.set(0,-.005,.025);tee.castShadow=true;outfit.add(tee);
-   for(const x of [-.235,.235]){const sleeve=new THREE.Mesh(new THREE.CapsuleGeometry(.075,.17,3,7),shirt);sleeve.position.set(x,.105,.02);sleeve.rotation.z=x<0?-.28:.28;sleeve.castShadow=true;outfit.add(sleeve)}
+   // Camiseta preta com acabamento dourado, modelada sobre o torso animado.
+   const tee=new THREE.Mesh(new THREE.CapsuleGeometry(.205,.28,5,10),shirt);tee.scale.set(1.04,1.02,.62);tee.position.set(0,-.005,.025);tee.castShadow=true;outfit.add(tee);
+   for(const x of [-.235,.235]){
+    const sleeve=new THREE.Mesh(new THREE.CapsuleGeometry(.075,.17,4,8),shirt);sleeve.position.set(x,.105,.02);sleeve.rotation.z=x<0?-.28:.28;sleeve.castShadow=true;outfit.add(sleeve);
+    make(outfit,.145,.035,.105,gold,x,.105,.035);
+   }
+   make(outfit,.105,.12,.018,gold,.105,.035,.215);
+   const slash=make(outfit,.075,.39,.018,gold,.105,-.12,.205);slash.rotation.z=-.48;
    torso.add(outfit);
    const pelvis=bones.get('mixamorigHips')||bones.get('Hips');
    if(pelvis){
-    const shortsGroup=new THREE.Group();
-    make(shortsGroup,.43,.27,.24,shorts,0,-.105,.015);
-    make(shortsGroup,.19,.29,.245,shorts,-.115,-.285,.015);
-    make(shortsGroup,.19,.29,.245,shorts,.115,-.285,.015);
-    make(shortsGroup,.44,.045,.25,trim,0,.025,.018);pelvis.add(shortsGroup);
+    const trousers=new THREE.Group();
+    make(trousers,.43,.19,.24,pants,0,-.035,.015);
+    make(trousers,.19,.36,.225,pants,-.115,-.29,.012);
+    make(trousers,.19,.36,.225,pants,.115,-.29,.012);
+    make(trousers,.44,.045,.255,gold,0,.075,.018);
+    make(trousers,.095,.09,.018,gold,.105,.075,.15);
+    make(trousers,.085,.18,.045,dark,-.215,-.29,.045);
+    make(trousers,.085,.18,.045,dark,.215,-.29,.045);
+    make(trousers,.09,.035,.052,gold,-.215,-.22,.075);
+    make(trousers,.09,.035,.052,gold,.215,-.22,.075);
+    pelvis.add(trousers);
    }
-   // Sandálias presas aos pés para acompanhar as animações.
    for(const side of ['Left','Right']){
+    const upper=bones.get('mixamorig'+side+'UpLeg')||bones.get(side+'UpLeg');
+    const lower=bones.get('mixamorig'+side+'Leg')||bones.get(side+'Leg');
+    if(upper){const leg=new THREE.Group();make(leg,.19,.39,.22,pants,0,-.19,.012);make(leg,.205,.045,.235,gold,0,-.34,.012);upper.add(leg)}
+    if(lower){const shin=new THREE.Group();make(shin,.17,.34,.195,pants,0,-.17,.008);make(shin,.18,.035,.205,dark,0,-.31,.012);lower.add(shin)}
     const foot=bones.get('mixamorig'+side+'Foot')||bones.get(side+'Foot');
     if(foot){
-     const sandal=new THREE.Group(),sole=new THREE.MeshStandardMaterial({color:0x29231e,roughness:1}),strap=new THREE.MeshStandardMaterial({color:0xc49a62,roughness:.9});
-     make(sandal,.19,.045,.34,sole,0,-.035,.055);
-     make(sandal,.17,.035,.055,strap,0,.005,.02);
-     make(sandal,.035,.035,.15,strap,-.055,.005,.065);make(sandal,.035,.035,.15,strap,.055,.005,.065);foot.add(sandal);
+     const shoe=new THREE.Group();
+     make(shoe,.205,.085,.34,dark,0,-.025,.055);
+     make(shoe,.205,.035,.345,gold,0,-.068,.055);
+     make(shoe,.18,.105,.19,shirt,0,.025,-.015);
+     make(shoe,.07,.018,.16,gold,0,.083,.035);
+     foot.add(shoe);
     }
+   }
+   const headBone=bones.get('mixamorigHead')||bones.get('Head');
+   if(headBone){
+    const hat=new THREE.Group();
+    const brim=new THREE.Mesh(new THREE.CylinderGeometry(.235,.235,.035,24),dark);brim.position.y=.105;brim.castShadow=true;hat.add(brim);
+    const crown=new THREE.Mesh(new THREE.CylinderGeometry(.125,.15,.19,20),dark);crown.position.y=.205;crown.castShadow=true;hat.add(crown);
+    const band=new THREE.Mesh(new THREE.CylinderGeometry(.153,.153,.035,20),gold);band.position.y=.145;hat.add(band);
+    make(hat,.045,.07,.012,gold,0,.22,.151);
+    hat.position.set(0,.11,0);headBone.add(hat);
    }
   }
  }
