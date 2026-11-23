@@ -129,7 +129,7 @@ function buildHero(){
 }
 function loadRealHero(){
  const loader=new GLTFLoader();
- const url='https://grab3d.com/dl/soldier-rigged/soldier-rigged.glb';
+ const url='https://threejs.org/examples/models/gltf/Soldier.glb';
  loader.load(url,gltf=>{
   const model=gltf.scene;
   model.updateMatrixWorld(true);
@@ -148,10 +148,10 @@ function loadRealHero(){
    const first=Object.keys(realActions)[0];
    if(first){realActions[first].play();activeRealAction=first}
   }
-  $('message').textContent='PERSONAGEM 3D CARREGADO';
+  $('message').textContent='PERSONAGEM HUMANOIDE 3D CARREGADO';
  },undefined,error=>{
   console.error('Falha ao carregar personagem GLB:',error);
-  $('message').textContent='Não foi possível carregar o personagem 3D';
+  $('message').textContent='Falha ao carregar o modelo humanoide 3D';
  });
 }
 function playRealAnimation(name){
