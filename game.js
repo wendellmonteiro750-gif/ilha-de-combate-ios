@@ -574,20 +574,42 @@ async function createFighter(isEnemy=false,index=0){
    // IK de duas mãos: a direita ancora a arma junto ao ombro; a esquerda
    // alcança o guarda-mão calculado na própria geometria da arma.
    if(this.weaponPivot&&this.weaponSpec){
-    const solveHand=(upper,fore,hand,target,passes=12)=>{
+    const solveHand=(upper,fore,hand,target)=>{
      if(!upper||!fore||!hand)return;
-     for(let pass=0;pass<passes;pass++)for(const joint of [fore,upper]){
+     model.updateMatrixWorld(true);
+     const shoulder=upper.getWorldPosition(new THREE.Vector3());
+     const elbow=fore.getWorldPosition(new THREE.Vector3());
+     const wrist=hand.getWorldPosition(new THREE.Vector3());
+     const upperLength=shoulder.distanceTo(elbow),foreLength=elbow.distanceTo(wrist);
+     const toTarget=target.clone().sub(shoulder),distance=toTarget.length();
+     if(upperLength<1e-4||foreLength<1e-4||distance<1e-4)return;
+     const direction=toTarget.multiplyScalar(1/distance);
+     const reach=Math.min(distance,upperLength+foreLength-1e-4);
+     const along=THREE.MathUtils.clamp((upperLength*upperLength+reach*reach-foreLength*foreLength)/(2*reach),0,upperLength);
+     const height=Math.sqrt(Math.max(0,upperLength*upperLength-along*along));
+     // Pole vector: mantém o cotovelo no mesmo lado da dobra da animação-base,
+     // evitando que o braço atravesse o corpo quando a mão alcança o guarda-mão.
+     const pole=elbow.clone().sub(shoulder).addScaledVector(direction,-elbow.clone().sub(shoulder).dot(direction));
+     if(pole.lengthSq()<1e-6){
+      pole.set(1,0,0).applyQuaternion(holder.getWorldQuaternion(new THREE.Quaternion()));
+      pole.addScaledVector(direction,-pole.dot(direction));
+     }
+     if(pole.lengthSq()<1e-6)return;
+     pole.normalize();
+     const desiredElbow=shoulder.clone().addScaledVector(direction,along).addScaledVector(pole,height);
+     const rotateJoint=(joint,child,desired)=>{
       model.updateMatrixWorld(true);
-      const jointPos=joint.getWorldPosition(new THREE.Vector3()),effector=hand.getWorldPosition(new THREE.Vector3());
-      const from=effector.sub(jointPos),to=target.clone().sub(jointPos);
-      if(from.lengthSq()<1e-7||to.lengthSq()<1e-7)continue;
-      from.normalize();to.normalize();
-      const worldDelta=new THREE.Quaternion().setFromUnitVectors(from,to);
+      const origin=joint.getWorldPosition(new THREE.Vector3()),current=child.getWorldPosition(new THREE.Vector3());
+      const from=current.sub(origin),to=desired.clone().sub(origin);
+      if(from.lengthSq()<1e-8||to.lengthSq()<1e-8)return;
+      const worldDelta=new THREE.Quaternion().setFromUnitVectors(from.normalize(),to.normalize());
       const parentWorld=joint.parent.getWorldQuaternion(new THREE.Quaternion());
       const localDelta=parentWorld.clone().invert().multiply(worldDelta).multiply(parentWorld);
       if(!this._ikRestore.some(item=>item.bone===joint))this._ikRestore.push({bone:joint,quaternion:joint.quaternion.clone()});
       joint.quaternion.premultiply(localDelta);
-     }
+     };
+     rotateJoint(upper,fore,desiredElbow);
+     rotateJoint(fore,hand,target);
     };
     // A arma fica presa à mão direita: não mover novamente o punho para um ponto fixo do corpo,
     // pois isso cria uma segunda âncora e faz a arma escapar da empunhadura.
@@ -600,7 +622,7 @@ async function createFighter(isEnemy=false,index=0){
      const reloadSocket=this.weaponLeftReloadGrip||this.weaponLeftGrip;
      const reloadTarget=reloadSocket.getWorldPosition(new THREE.Vector3());
      const handTarget=support.lerp(reloadTarget,reload);
-     solveHand(leftUpper,leftFore,leftHand,handTarget,14);
+     solveHand(leftUpper,leftFore,leftHand,handTarget);
     }
    }
   },
