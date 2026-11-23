@@ -365,7 +365,7 @@ async function createFighter(isEnemy=false,index=0){
   }
  });
  const mixer=new THREE.AnimationMixer(model),actions=new Map();
- for(const clip of source.animations)actions.set(clip.name,mixer.clipAction(clip));
+ for(const sourceClip of source.animations){const clip=sourceClip.clone();for(const track of clip.tracks){if(/Hips.*position/i.test(track.name)){for(let k=0;k<track.values.length;k+=3){track.values[k]=0;track.values[k+2]=0;}}}actions.set(clip.name,mixer.clipAction(clip));}
  let current=null,playing='';
  const rig={
   holder,root:model,bones,
