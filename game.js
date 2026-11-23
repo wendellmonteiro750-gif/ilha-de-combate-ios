@@ -20,26 +20,26 @@ function init(){
 }
 function buildIsland(){
  const waterMat=new THREE.MeshStandardMaterial({color:0x237e9a,roughness:.24,metalness:.12});
- const water=mesh(scene,new THREE.CircleGeometry(145,96),waterMat,[0,-.62,0]);water.rotation.x=-Math.PI/2;
- const landGeo=new THREE.CircleGeometry(68,112);
+ const water=mesh(scene,new THREE.CircleGeometry(210,112),waterMat,[0,-.62,0]);water.rotation.x=-Math.PI/2;
+ const landGeo=new THREE.CircleGeometry(108,144);
  const pos=landGeo.attributes.position,colors=[];
  for(let i=0;i<pos.count;i++){
   const x=pos.getX(i),z=pos.getY(i),r=Math.hypot(x,z);
   const wave=(Math.sin(x*.34)*Math.cos(z*.29)+Math.sin((x+z)*.19))*.11;
   pos.setZ(i,wave+Math.max(0,1-r/43)*.08);
   const patch=(Math.sin(x*1.7+z*.8)*Math.cos(z*1.35-x*.55)+1)*.5;
-  const edge=THREE.MathUtils.smoothstep(r,62,67.8);
+  const edge=THREE.MathUtils.smoothstep(r,100,107.8);
   const color=new THREE.Color().setRGB(.16+.07*patch,.34+.13*patch,.12+.045*patch).lerp(new THREE.Color(0x9a9560),edge*.32);
   colors.push(color.r,color.g,color.b);
  }
  landGeo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));landGeo.computeVertexNormals();
  const landMat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:1});
  const land=new THREE.Mesh(landGeo,landMat);land.rotation.x=-Math.PI/2;land.position.y=-.13;land.receiveShadow=true;scene.add(land);
- const beach=mesh(scene,new THREE.RingGeometry(65,68,112),mat(0xd4bd83,1),[0,-.085,0]);beach.rotation.x=-Math.PI/2;
+ const beach=mesh(scene,new THREE.RingGeometry(104,108,144),mat(0xd4bd83,1),[0,-.085,0]);beach.rotation.x=-Math.PI/2;
  const roadMat=new THREE.MeshStandardMaterial({color:0x666b62,roughness:1});
- const road=cube(scene,7,.07,76,roadMat,0,.015,-1);
+ const road=cube(scene,8,.07,150,roadMat,0,.015,-1);
  const roadEdge=mat(0xb5a77f,1);
- for(const side of [-1,1])cube(scene,.13,.035,48,roadEdge,side*3.62,.06,-1);
+ for(const side of [-1,1])cube(scene,.13,.035,48,roadEdge,side*4.12,.06,-1);
  house(-10,-8,0xc99b63);house(12,-13,0xb7c2b0);house(-13,15,0xc9825d);
  addGrass();
  buildForest();
@@ -48,13 +48,13 @@ function buildIsland(){
 }
 function tree(x,z,s){const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);mesh(g,new THREE.CylinderGeometry(.18*s,.27*s,2*s,9),mat(0x65452d,1),[0,s,0]);const green=mat(0x245b35,1),light=mat(0x367b43,1);mesh(g,new THREE.SphereGeometry(1.18*s,12,10),green,[0,2.35*s,0]);mesh(g,new THREE.SphereGeometry(.86*s,12,10),light,[.48*s,2.72*s,.08]);mesh(g,new THREE.SphereGeometry(.72*s,12,10),green,[-.48*s,2.68*s,-.08]);}
 function buildForest(){
- const count=30,dummy=new THREE.Object3D();
+ const count=62,dummy=new THREE.Object3D();
  const trunk=new THREE.InstancedMesh(new THREE.CylinderGeometry(.18,.27,2,9),mat(0x65452d,1),count);
  const crown=new THREE.InstancedMesh(new THREE.SphereGeometry(1.18,12,10),mat(0x245b35,1),count);
  const crownA=new THREE.InstancedMesh(new THREE.SphereGeometry(.86,12,10),mat(0x367b43,1),count);
  const crownB=new THREE.InstancedMesh(new THREE.SphereGeometry(.72,12,10),mat(0x2c693b,1),count);
  for(let i=0;i<count;i++){
-  const a=i/count*Math.PI*2,r=14+Math.random()*21,scale=.72+Math.random()*.72,x=Math.cos(a)*r,z=Math.sin(a)*r;
+  const a=i/count*Math.PI*2,r=24+Math.random()*39,scale=.72+Math.random()*.72,x=Math.cos(a)*r,z=Math.sin(a)*r;
   if(r>17)worldBlockers.push({x,z,r:.55*scale});
   dummy.position.set(x,scale,z);dummy.scale.setScalar(scale);dummy.updateMatrix();trunk.setMatrixAt(i,dummy.matrix);
   dummy.position.set(x,2.35*scale,z);dummy.scale.setScalar(scale);dummy.updateMatrix();crown.setMatrixAt(i,dummy.matrix);
@@ -67,7 +67,7 @@ function addGrass(){
  const count=260,dummy=new THREE.Object3D();
  const grass=new THREE.InstancedMesh(new THREE.ConeGeometry(.075,.42,4),mat(0x6f8e42,1),count);
  for(let i=0;i<count;i++){
-  const a=Math.random()*Math.PI*2,r=Math.sqrt(Math.random())*37,x=Math.cos(a)*r,z=Math.sin(a)*r;
+  const a=Math.random()*Math.PI*2,r=Math.sqrt(Math.random())*68,x=Math.cos(a)*r,z=Math.sin(a)*r;
   dummy.position.set(x,.08,z);dummy.rotation.set((Math.random()-.5)*.18,Math.random()*Math.PI,(Math.random()-.5)*.18);
   const scale=.55+Math.random()*.8;dummy.scale.set(scale,scale,scale);dummy.updateMatrix();grass.setMatrixAt(i,dummy.matrix);
  }
@@ -679,8 +679,8 @@ function update(dt){
  let blocked=false;
  for(const b of worldBlockers){const dx=nextX-b.x,dz=nextZ-b.z,min=b.r+.42;if(dx*dx+dz*dz<min*min){blocked=true;break}}
  if(!blocked){hero.position.x=nextX;hero.position.z=nextZ}else{velocityX*=.18;velocityZ*=.18}
- hero.position.x=THREE.MathUtils.clamp(hero.position.x,-62,62);
- hero.position.z=THREE.MathUtils.clamp(hero.position.z,-62,62);
+ hero.position.x=THREE.MathUtils.clamp(hero.position.x,-100,100);
+ hero.position.z=THREE.MathUtils.clamp(hero.position.z,-100,100);
  if(!grounded){
   velocityY-=17*dt;
   hero.position.y+=velocityY*dt;
