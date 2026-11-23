@@ -187,11 +187,12 @@ function cameraUpdate(dt){
   activeIndoorBuilding=indoor;
  }
  const inside=!!indoor;
- const distance=inside?(aim?2.15:3.15):(aim?3.8:7.0);
- const shoulder=inside?(aim?.30:.48):(aim?.82:1.18);
- const targetHeight=inside?THREE.MathUtils.lerp(1.38,.82,poseBlend):THREE.MathUtils.lerp(2.05,.88,poseBlend);
+ // Interior close-follow framing: roughly 70% tighter than the previous indoor view.
+ const distance=inside?(aim?0.95:1.45):(aim?3.8:7.0);
+ const shoulder=inside?(aim?.12:.22):(aim?.82:1.18);
+ const targetHeight=inside?THREE.MathUtils.lerp(1.48,.86,poseBlend):THREE.MathUtils.lerp(2.05,.88,poseBlend);
  cameraLookTarget.copy(hero.position).add(new THREE.Vector3(0,targetHeight,0));
- const height=inside?(aim?1.62:2.05):(aim?2.35:THREE.MathUtils.lerp(4.0,2.25,poseBlend));
+ const height=inside?(aim?1.52:1.72):(aim?2.35:THREE.MathUtils.lerp(4.0,2.25,poseBlend));
  cameraDesired.copy(hero.position).addScaledVector(cameraForward,-distance).addScaledVector(cameraSide,shoulder);
  cameraDesired.y=hero.position.y+height+Math.sin(-pitch)*distance*(inside?.30:.52);
  const offset=cameraDesired.clone().sub(cameraLookTarget),length=offset.length(),direction=offset.normalize();
@@ -199,10 +200,10 @@ function cameraUpdate(dt){
  const obstacle=cameraRay.intersectObjects(world.children,true).find(hit=>hit.distance>.28);
  if(obstacle)cameraDesired.copy(cameraLookTarget).addScaledVector(direction,Math.max(.72,obstacle.distance-.32));
  camera.position.lerp(cameraDesired,1-Math.exp(-(inside?14:10)*dt));
- const lookAhead=inside?(aim?5:1.35):(aim?8:3);
+ const lookAhead=inside?(aim?.85:.48):(aim?8:3);
  const lookAt=cameraLookTarget.clone().addScaledVector(cameraForward,lookAhead);
  camera.lookAt(lookAt);
- const targetFov=inside?(aim?42:59):(aim?39:65);
+ const targetFov=inside?(aim?49:66):(aim?39:65);
  camera.fov=THREE.MathUtils.damp(camera.fov,targetFov,inside?13:9,dt);camera.updateProjectionMatrix();
 }
 let audioCtx=null;
