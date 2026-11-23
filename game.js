@@ -155,8 +155,17 @@ function applyCombatWeaponPose(crouch=false,prone=false,dt=0){
  // encosta no pivô do ombro direito; as duas mãos são então resolvidas por IK.
  characterVisual.updateMatrixWorld(true);
  const shoulderLocal=characterVisual.worldToLocal(rightUpper.getWorldPosition(new THREE.Vector3()));
- weaponModel.rotation.copy(weaponBaseRotation);
- const stockEnd=new THREE.Vector3(0,0,.305*weaponModel.scale.x).applyEuler(weaponModel.rotation);
+ // O eixo do cano acompanha a direção real do centro da câmera/mira.
+ // Converte a direção mundial da câmera para o espaço local do personagem.
+ const aimWorldDirection=camera.getWorldDirection(new THREE.Vector3()).normalize();
+ const characterWorldRotation=characterVisual.getWorldQuaternion(new THREE.Quaternion());
+ const aimLocalDirection=aimWorldDirection.applyQuaternion(characterWorldRotation.invert()).normalize();
+ const desiredWeaponRotation=new THREE.Quaternion().setFromUnitVectors(
+  new THREE.Vector3(0,0,1),aimLocalDirection
+ );
+ // Suaviza o acompanhamento sem deixar o cano atrasar visivelmente a mira.
+ weaponModel.quaternion.slerp(desiredWeaponRotation,1-Math.exp(-dt*24));
+ const stockEnd=new THREE.Vector3(0,0,.305*weaponModel.scale.x).applyQuaternion(weaponModel.quaternion);
  weaponModel.position.copy(shoulderLocal).sub(stockEnd);
  weaponModel.position.y-=weaponRecoil;
  weaponModel.updateMatrixWorld(true);
@@ -316,7 +325,6 @@ function animateRig(dt,speed,sprinting,crouch,prone){
  }
  if(clip!==activeCharacterClip)playCharacterClip(clip);
  characterMixer.update(dt);
- applyCombatWeaponPose(crouch,prone,dt);
 }
 function bind(){
  const stick=$('stick'),knob=$('knob');let sid=null,rect=null;
@@ -513,7 +521,7 @@ function update(dt){
  animateRig(dt,horizontalSpeed,sprinting,crouch,prone);
  const target=new THREE.Vector3(hero.position.x,hero.position.y+(prone?.48:crouch?1.20:1.58),hero.position.z);
  const baseDist=(aim?3.15:sprinting?5.15:5.6)*.55; // câmera 45% mais próxima do personagem
- const shoulder=(aim?.90:1.55)*.55; // desloca o soldado um pouco mais para longe da mira central
+ const shoulder=(aim?1.45:1.80)*.55; // aumenta o espaço lateral entre o soldado e a mira branca
  const offset=new THREE.Vector3(Math.sin(yaw)*baseDist*Math.cos(pitch)+Math.cos(yaw)*shoulder,baseDist*(.30+Math.sin(-pitch)),Math.cos(yaw)*baseDist*Math.cos(pitch)-Math.sin(yaw)*shoulder);
  cameraDesired.copy(target).add(offset);
  cameraRay.set(target,offset.clone().normalize());cameraRay.far=baseDist;
@@ -528,6 +536,8 @@ function update(dt){
  cameraShake=THREE.MathUtils.damp(cameraShake,0,12,dt);
  camera.fov=THREE.MathUtils.damp(camera.fov,aim?53:sprinting?68:65,8,dt);camera.updateProjectionMatrix();
  camera.lookAt(target.clone().add(new THREE.Vector3(0,cameraRecoil+cameraShake*.12,0)));
+ // Atualiza a arma depois da câmera: o cano aponta para a mira já atualizada neste frame.
+ applyCombatWeaponPose(crouch,prone,dt);
  if(shoot&&weaponEquipped){firePoseUntil=performance.now()+180;fireShot()}
  const cross=$('hud').querySelector('.crosshair');
  if(cross){const spread=1+Math.min(1,horizontalSpeed/6)+(shoot?.55:0)+(aim?-.45:0);cross.style.transform='translate(-50%,-50%) scale('+Math.max(.65,spread)+')'}
