@@ -368,7 +368,7 @@ function updateRadar(){
 }
 function animate(){
  const dt=Math.min(clock.getDelta(),.04),p=playerRig.holder;
- worldYaw-=lookDeltaX*.0052;pitch=THREE.MathUtils.clamp(pitch+lookDeltaY*.0046,-.58,.72);lookDeltaX=lookDeltaY=0;
+ worldYaw-=lookDeltaX*.0052;pitch=THREE.MathUtils.clamp(pitch-lookDeltaY*.0058,-.95,.95);lookDeltaX=lookDeltaY=0;
  const forward=new THREE.Vector3(Math.sin(worldYaw),0,-Math.cos(worldYaw)),right=new THREE.Vector3(Math.cos(worldYaw),0,Math.sin(worldYaw));
  const move=forward.multiplyScalar(keys.forward).add(right.multiplyScalar(keys.side));if(move.lengthSq()>1)move.normalize();
  const targetVelocity=move.clone().multiplyScalar(aiming?2.85:5.4);playerVelocity.lerp(targetVelocity,1-Math.exp(-9*dt));p.position.addScaledVector(playerVelocity,dt);p.position.x=THREE.MathUtils.clamp(p.position.x,-124,124);p.position.z=THREE.MathUtils.clamp(p.position.z,-124,124);
