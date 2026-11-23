@@ -556,7 +556,7 @@ function makeHumanoidModel(){
  ellipsoid(head,'cap_crown',0,.19,-.012,.12,.075,.112,capMat);
  const capBrim=new THREE.Mesh(new THREE.BoxGeometry(.19,.025,.15),capMat);capBrim.position.set(0,.155,-.105);capBrim.rotation.x=.08;capBrim.castShadow=true;head.add(capBrim);
  // Costas livres, sem mochila.
- for(const side of [-1,1]){box(spine2,.045,.31,.035,packMat,side*.145,-.015,-.09);box(spine1,.09,.09,.035,pantsLight,side*.18,-.12,-.16)}
+ // Costas da camiseta sem mochila ou peças extras.
  for(const side of [-1,1]){
   ellipsoid(head,'ear',side*.112,.055,0,.022,.042,.025,skin);
   ellipsoid(head,'eye_socket',side*.043,.083,.087,.022,.018,.012,skinShadow);
