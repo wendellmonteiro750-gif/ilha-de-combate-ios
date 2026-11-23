@@ -567,18 +567,36 @@ async function createFighter(isEnemy=false,index=0){
     const delta=new THREE.Quaternion().setFromEuler(new THREE.Euler(curl,0,digit==='Thumb'?(side==='Right'?.12:-.12):0,'XYZ'));
     bone.quaternion.multiply(delta);this._stanceApplied.push({name,inverse:delta.clone().invert()});
    }
-   // CCD IK keeps the left hand on the rifle foregrip.
+   // IK de duas mãos: a direita ancora a arma junto ao ombro; a esquerda
+   // alcança o guarda-mão calculado na própria geometria da arma.
    if(this.weaponPivot&&this.weaponSpec){
-    const upper=this.bones.get('mixamorigLeftArm'),fore=this.bones.get('mixamorigLeftForeArm'),hand=this.bones.get('mixamorigLeftHand');
-    if(upper&&fore&&hand){model.updateMatrixWorld(true);const reload=THREE.MathUtils.clamp(this.reloadBlend||0,0,1);const target=this.weaponPivot.localToWorld(new THREE.Vector3(0,THREE.MathUtils.lerp(-.145,-.20,reload),THREE.MathUtils.lerp(-this.weaponSpec.length*.29,-.04,reload)));
-     for(let pass=0;pass<8;pass++)for(const joint of [fore,upper]){
-      model.updateMatrixWorld(true);const jp=joint.getWorldPosition(new THREE.Vector3()),eff=hand.getWorldPosition(new THREE.Vector3());
-      const a=eff.sub(jp),b=target.clone().sub(jp);if(a.lengthSq()<1e-7||b.lengthSq()<1e-7)continue;
-      a.normalize();b.normalize();const worldDelta=new THREE.Quaternion().setFromUnitVectors(a,b),pq=joint.parent.getWorldQuaternion(new THREE.Quaternion());
-      const localDelta=pq.clone().invert().multiply(worldDelta).multiply(pq);
+    const solveHand=(upper,fore,hand,target,passes=12)=>{
+     if(!upper||!fore||!hand)return;
+     for(let pass=0;pass<passes;pass++)for(const joint of [fore,upper]){
+      model.updateMatrixWorld(true);
+      const jointPos=joint.getWorldPosition(new THREE.Vector3()),effector=hand.getWorldPosition(new THREE.Vector3());
+      const from=effector.sub(jointPos),to=target.clone().sub(jointPos);
+      if(from.lengthSq()<1e-7||to.lengthSq()<1e-7)continue;
+      from.normalize();to.normalize();
+      const worldDelta=new THREE.Quaternion().setFromUnitVectors(from,to);
+      const parentWorld=joint.parent.getWorldQuaternion(new THREE.Quaternion());
+      const localDelta=parentWorld.clone().invert().multiply(worldDelta).multiply(parentWorld);
       if(!this._ikRestore.some(item=>item.bone===joint))this._ikRestore.push({bone:joint,quaternion:joint.quaternion.clone()});
       joint.quaternion.premultiply(localDelta);
      }
+    };
+    const rightUpper=this.bones.get('mixamorigRightArm'),rightFore=this.bones.get('mixamorigRightForeArm'),rightHand=this.bones.get('mixamorigRightHand');
+    if(rightUpper&&rightFore&&rightHand){
+     model.updateMatrixWorld(true);
+     const rightGripTarget=holder.localToWorld(new THREE.Vector3(.27,1.29,-.23));
+     solveHand(rightUpper,rightFore,rightHand,rightGripTarget,10);
+    }
+    const leftUpper=this.bones.get('mixamorigLeftArm'),leftFore=this.bones.get('mixamorigLeftForeArm'),leftHand=this.bones.get('mixamorigLeftHand');
+    if(leftUpper&&leftFore&&leftHand){
+     model.updateMatrixWorld(true);
+     const reload=THREE.MathUtils.clamp(this.reloadBlend||0,0,1);
+     const foregripTarget=this.weaponPivot.localToWorld(new THREE.Vector3(0,THREE.MathUtils.lerp(-.145,-.20,reload),THREE.MathUtils.lerp(-this.weaponSpec.length*.29,-.04,reload)));
+     solveHand(leftUpper,leftFore,leftHand,foregripTarget,12);
     }
    }
   },
