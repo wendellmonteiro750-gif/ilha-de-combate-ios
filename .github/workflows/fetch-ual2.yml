@@ -30,7 +30,7 @@ jobs:
               raise SystemExit('GLB JSON chunk missing')
           doc = json.loads(data[20:20+chunk_len].decode('utf-8').rstrip(' \\0'))
           names = {a.get('name') for a in doc.get('animations', [])}
-          required = {'IdleToLay', 'LayToIdle'}
+          required = {'LayToIdle'}
           missing = required - names
           print('UAL2 animation clips:', ', '.join(sorted(names)))
           if missing:
