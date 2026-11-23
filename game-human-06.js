@@ -40,7 +40,9 @@ let gameSettings={...defaultSettings};
 try{gameSettings={...defaultSettings,...JSON.parse(localStorage.getItem('ic-game-settings')||'{}')}}catch{}
 let hudEditing=false,hudDrag=null;
 function saveGameSettings(){try{localStorage.setItem('ic-game-settings',JSON.stringify(gameSettings));}catch{}}
-function applyGraphicsSettings(){if(!renderer)return;const mobile=innerWidth<700;const q={low:{ratio:mobile?.85:1,shadows:false},medium:{ratio:mobile?1.15:1.15,shadows:true},high:{ratio:mobile?1.4:1.5,shadows:true},ultra:{ratio:mobile?1.65:1.75,shadows:true}}[gameSettings.quality]||{ratio:mobile?.76:.9,shadows:false};renderer.setPixelRatio(Math.min(devicePixelRatio||1,q.ratio));renderer.shadowMap.enabled=!!gameSettings.shadows&&!!q.shadows;renderer.shadowMap.needsUpdate=true;renderer.setSize(innerWidth,innerHeight);}
+let adaptiveFrameTime=0,adaptiveFrameCount=0,adaptiveCheckTime=0,adaptivePixelRatio=0;
+function applyGraphicsSettings(){if(!renderer)return;const mobile=innerWidth<700;const q={low:{ratio:mobile?.68:1,shadows:false},medium:{ratio:mobile?.82:1.15,shadows:false},high:{ratio:mobile?.95:1.5,shadows:false},ultra:{ratio:mobile?1.05:1.75,shadows:true}}[gameSettings.quality]||{ratio:mobile?.68:.9,shadows:false};const cap=Math.min(devicePixelRatio||1,q.ratio);adaptivePixelRatio=mobile?Math.min(cap,adaptivePixelRatio||cap):cap;renderer.setPixelRatio(adaptivePixelRatio);renderer.shadowMap.enabled=!mobile&&!!gameSettings.shadows&&!!q.shadows;renderer.shadowMap.needsUpdate=true;renderer.setSize(innerWidth,innerHeight);}
+function adaptMobileFrameRate(frameDt){if(innerWidth>=700||!renderer)return;adaptiveFrameTime+=frameDt;adaptiveFrameCount++;adaptiveCheckTime+=frameDt;if(adaptiveCheckTime<2)return;const fps=adaptiveFrameCount/Math.max(.001,adaptiveFrameTime);const q={low:.68,medium:.82,high:.95,ultra:1.05}[gameSettings.quality]||.68;const cap=Math.min(devicePixelRatio||1,q);let next=adaptivePixelRatio;if(fps<48)next=Math.max(.62,adaptivePixelRatio-.10);else if(fps>57)next=Math.min(cap,adaptivePixelRatio+.05);if(Math.abs(next-adaptivePixelRatio)>.015){adaptivePixelRatio=next;renderer.setPixelRatio(next);renderer.setSize(innerWidth,innerHeight);}adaptiveFrameTime=0;adaptiveFrameCount=0;adaptiveCheckTime=0;}
 function applyHudSettings(){const hud=document.querySelector('#hud');if(!hud)return;hud.style.setProperty('--hud-scale',gameSettings.hudScale/100);hud.style.setProperty('--hud-opacity',gameSettings.hudOpacity/100);const map=document.querySelector('.minimap');if(map)map.style.display=gameSettings.minimap?'':'none';}
 function initSettings(){
  const panel=document.querySelector('#settingsPanel'),open=()=>{panel.classList.add('open');panel.setAttribute('aria-hidden','false')},close=()=>{panel.classList.remove('open');panel.setAttribute('aria-hidden','true');if(hudEditing)toggleHudEditor(false)};
@@ -777,10 +779,10 @@ function updateEffects(dt){
 }
 async function spawnEnemy(x,z,i){const rig=await createFighter(true,i);rig.holder.position.set(x,0,z);enemies.push({rig,hp:100,alive:true,attack:0,anim:'idle'});return rig}
 async function init(){
- renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance',stencil:false,depth:true,preserveDrawingBuffer:false});
+ renderer=new THREE.WebGLRenderer({antialias:innerWidth>=700,alpha:false,powerPreference:'high-performance',stencil:false,depth:true,preserveDrawingBuffer:false});
  // Perfil gráfico equilibrado: imagem mais nítida sem sobrecarregar o Safari no iPhone.
  const mobileQuality=innerWidth<700;
- renderer.setPixelRatio(Math.min(devicePixelRatio||1,mobileQuality?1.15:1.5));
+ renderer.setPixelRatio(Math.min(devicePixelRatio||1,mobileQuality?.82:1.5));
  renderer.setSize(innerWidth,innerHeight);
  renderer.shadowMap.enabled=!!gameSettings.shadows&&gameSettings.quality!=='low';
  renderer.shadowMap.type=THREE.PCFShadowMap;
@@ -899,7 +901,7 @@ function updateRadar(){
  }
 }
 function animate(){
- const dt=Math.min(clock.getDelta(),.04),p=playerRig.holder;
+ const frameDt=clock.getDelta(),dt=Math.min(frameDt,.04),p=playerRig.holder;adaptMobileFrameRate(frameDt);
  if(scene.fog&&scene.fog.isFogExp2){scene.fog.density=.00145+Math.sin(clock.elapsedTime*.035)*.00008;}
  worldYaw-=lookDeltaX*.0048*getCameraSensitivity();
  // Controle vertical progressivo, com faixa ampla para acompanhar alvos acima e abaixo.
