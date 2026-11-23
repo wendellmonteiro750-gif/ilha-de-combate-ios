@@ -82,7 +82,7 @@
 }
 
 /* Mira e feedback visual de combate */
-#crosshair{position:fixed;left:50%;top:50%;width:24px;height:24px;transform:translate(-50%,-50%);pointer-events:none;z-index:4;opacity:.9;transition:width .15s,height .15s,opacity .15s}
+#crosshair{position:fixed;left:50%;top:46%;width:24px;height:24px;transform:translate(-50%,-50%);pointer-events:none;z-index:4;opacity:.9;transition:width .15s,height .15s,opacity .15s}
 #crosshair i{position:absolute;display:block;background:#fff;border:1px solid #263238;border-radius:2px;box-shadow:0 0 3px #000;width:2px;height:7px}
 #crosshair i:nth-child(1){left:11px;top:0}
 #crosshair i:nth-child(2){left:11px;bottom:0}
