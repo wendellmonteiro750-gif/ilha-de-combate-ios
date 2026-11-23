@@ -229,7 +229,9 @@ function updateCombatBots(dt){
    bot.traverse(node=>{if(node.isMesh&&node.material&&node.material.emissive)node.material.emissive.setHex(0x000000)});
   }
   if(distance<16&&distance>3&&now>=data.nextShot&&playerHealth>0){
-   playerHealth=Math.max(0,playerHealth-4);
+   const armorReduction=Math.min(.48,(battleSystems?.inventory.vest||0)*.12+(battleSystems?.inventory.helmet||0)*.08);
+   const incomingDamage=4*(1-armorReduction);
+   playerHealth=Math.max(0,playerHealth-incomingDamage);
    data.nextShot=now+2100+Math.random()*650;
    $('health').textContent='VIDA '+playerHealth;
    $('playerCounter').textContent=playerHealth;
@@ -548,7 +550,7 @@ function playProneTransition(name,now){
  proneTransitionUntil=now+Math.max(.2,next.getClip().duration)*1000+120;
  return true;
 }
-function animateRig(dt,speed,sprinting,crouch,prone){
+function animateRig(dt,speed,sprinting,crouch,prone,inputDir=new THREE.Vector3()){
  if(!characterReady||!characterMixer)return;
  const now=performance.now(),moving=speed>.22;
  const idle=exactClip('Idle_Loop','Idle_Standing_Loop')||'Idle_Loop';
@@ -571,9 +573,28 @@ function animateRig(dt,speed,sprinting,crouch,prone){
   return;
  }
  let clip=idle;
- if(crouch)clip=moving?crouchMove:crouchIdle;
- else if(!grounded)clip=exactClip('Jump_Loop','Jump_Start')||idle;
- else if(moving)clip=sprinting?sprint:walk;
+ if(crouch){
+  if(!moving)clip=crouchIdle;
+  else{
+   const local=inputDir.clone().applyAxisAngle(new THREE.Vector3(0,1,0),-hero.rotation.y);
+   const forward=-local.z,side=local.x;
+   if(forward<-.45)clip=exactClip('Crouch_Bwd_Loop','Crouch_Bwd_R_Loop','Crouch_Bwd_L_Loop')||crouchMove;
+   else if(Math.abs(side)>.65)clip=side<0?(exactClip('Crouch_Left_Loop')||crouchMove):(exactClip('Crouch_Right_Loop')||crouchMove);
+   else if(Math.abs(side)>.25)clip=side<0?(exactClip('Crouch_Fwd_L_Loop')||crouchMove):(exactClip('Crouch_Fwd_R_Loop')||crouchMove);
+   else clip=exactClip('Crouch_Fwd_Loop')||crouchMove;
+  }
+ }else if(!grounded)clip=exactClip('Jump_Loop','Jump_Start')||idle;
+ else if(moving){
+  if(sprinting)clip=sprint;
+  else{
+   const local=inputDir.clone().applyAxisAngle(new THREE.Vector3(0,1,0),-hero.rotation.y);
+   const forward=-local.z,side=local.x;
+   if(forward<-.45)clip=exactClip('Jog_Bwd_Loop','Walk_Bwd_Loop')||walk;
+   else if(Math.abs(side)>.65)clip=side<0?(exactClip('Jog_Left_Loop','Walk_Left_Loop')||walk):(exactClip('Jog_Right_Loop','Walk_Right_Loop')||walk);
+   else if(Math.abs(side)>.25)clip=side<0?(exactClip('Jog_Fwd_L_Loop','Walk_Fwd_L_Loop')||walk):(exactClip('Jog_Fwd_R_Loop','Walk_Fwd_R_Loop')||walk);
+   else clip=walk;
+  }
+ }
  if(!crouch&&!moving){
   if(reloading)clip=exactClip('Rifle_Reload_Loop','Rifle_Reload','Reload_Rifle')||clip;
   else if(now<firePoseUntil)clip=exactClip('Rifle_Fire_Loop','Rifle_Fire','Fire_Rifle')||clip;
@@ -793,7 +814,7 @@ function update(dt){
   if(hero.position.y<=0){hero.position.y=0;velocityY=0;grounded=true}
  }
  const horizontalSpeed=Math.hypot(velocityX,velocityZ);
- animateRig(dt,horizontalSpeed,sprinting,crouch,prone);
+ animateRig(dt,horizontalSpeed,sprinting,crouch,prone,inputDir);
  // Rotação corporal procedural em torno da base dos pés: -90° coloca
  // frente/peito voltados ao chão. Suavização evita teleporte da malha.
  if(characterVisual){
