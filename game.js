@@ -42,7 +42,9 @@ function buildIsland(){
  // add larger interiors, cover, roads and recognizable combat landmarks.
  house(-10,-8,0xc99b63);house(12,-13,0xb7c2b0);house(-13,15,0xc9825d);
  addGrass();buildForest();buildExpandedDistricts();
+ const patrols=[[-43,-43],[-23,-47],[43,-39],[-48,40],[-24,57],[51,42],[-72,-1],[72,8],[3,76],[0,-82],[-84,72],[93,22],[-108,-18],[110,-24],[96,91],[-101,-101]];
  for(let i=0;i<5;i++)createCombatBot(-8+i*4,-24-(i%2)*3,i);
+ patrols.forEach(([x,z],i)=>createCombatBot(x,z,i+5));
  for(let i=0;i<28;i++){const a=i/28*Math.PI*2,x=Math.cos(a)*(58+(i%3)*5),z=Math.sin(a)*(58+(i%3)*5);const rock=mesh(scene,new THREE.DodecahedronGeometry(1.4+(i%3)*.35,0),mat(0x788078),[x,.48,z]);rock.scale.y=.7}
 }
 function makeNoiseTexture(base,grain){
@@ -134,9 +136,15 @@ function buildForest(){
  const crown=new THREE.InstancedMesh(new THREE.SphereGeometry(1.18,12,10),mat(0x245b35,1),count);
  const crownA=new THREE.InstancedMesh(new THREE.SphereGeometry(.86,12,10),mat(0x367b43,1),count);
  const crownB=new THREE.InstancedMesh(new THREE.SphereGeometry(.72,12,10),mat(0x2c693b,1),count);
+ const clearings=[[-47,-52,13],[-24,-55,13],[45,-48,14],[-52,47,14],[-25,62,13],[48,48,14],[-78,-5,17],[77,8,17],[0,83,18],[0,-88,14],[-88,76,14]];
  for(let i=0;i<count;i++){
   const a=i/count*Math.PI*2,r=55+Math.random()*67,scale=.72+Math.random()*.72,x=Math.cos(a)*r,z=Math.sin(a)*r;
-  if(r>17)worldBlockers.push({x,z,r:.55*scale});
+  if(clearings.some(([cx,cz,cr])=>Math.hypot(x-cx,z-cz)<cr)){
+   dummy.position.set(0,-100,0);dummy.scale.setScalar(0);dummy.updateMatrix();
+   for(const batch of [trunk,crown,crownA,crownB])batch.setMatrixAt(i,dummy.matrix);
+   continue;
+  }
+  worldBlockers.push({x,z,r:.55*scale});
   dummy.position.set(x,scale,z);dummy.scale.setScalar(scale);dummy.updateMatrix();trunk.setMatrixAt(i,dummy.matrix);
   dummy.position.set(x,2.35*scale,z);dummy.scale.setScalar(scale);dummy.updateMatrix();crown.setMatrixAt(i,dummy.matrix);
   dummy.position.set(x+.48*scale,2.72*scale,z+.08*scale);dummy.scale.setScalar(scale);dummy.updateMatrix();crownA.setMatrixAt(i,dummy.matrix);
