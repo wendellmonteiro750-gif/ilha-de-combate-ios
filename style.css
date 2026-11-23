@@ -465,3 +465,6 @@
 #fireMode:active,#weaponSwitch:active{filter:brightness(1.25);transform:scale(.97)}
 .ammo-panel i{font-style:normal;color:#ffe0a0;font-weight:900}
 #inventoryWeapons .inventory-slot small{display:block;color:#d4c6a3;font-size:9px;margin-top:3px}
+
+/* Mira padrão deslocada ligeiramente para a direita e alinhada aos disparos. */
+#crosshair{left:53%!important;}
