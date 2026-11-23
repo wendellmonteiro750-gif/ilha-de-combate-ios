@@ -212,17 +212,24 @@ for(let i=0;i<(isMobile?16:38);i++){const a=rand()*Math.PI*2,r=133+rand()*9;make
 
 // Operador de teste.
 const player=new THREE.Group();scene.add(player);const body=new THREE.Group();player.add(body);
-const skin=mat(0xb88768),uniform=mat(0x354b43),gear=mat(0x59665a),boots=mat(0x171d1d);
+const skin=mat(0xb88768),uniform=mat(0x354b43),pants=mat(0x293a34),gear=mat(0x59665a),boots=mat(0x171d1d),detail=mat(0x202a27);
 function limb(parent,material,r,len,x,y,z){const m=new THREE.Mesh(new THREE.CapsuleGeometry(r,len,4,8),material);m.position.set(x,y,z);m.castShadow=true;parent.add(m);return m}
 const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.48,.72,5,10),uniform);torso.position.y=1.65;torso.castShadow=true;body.add(torso);
+const neck=new THREE.Mesh(new THREE.CylinderGeometry(.13,.15,.22,10),skin);neck.position.y=2.16;body.add(neck);
+// Colete tático, bolsos, cinto e mochila dão volume humano ao operador.
+for(let side of [-1,1]){addBox(body,side*.25,1.55,.36,.22,.27,.13,gear);addBox(body,side*.23,1.25,.02,.2,.13,.12,detail)}
+addBox(body,0,1.63,-.34,.62,.72,.25,gear);addBox(body,0,1.27,0,.78,.13,.5,detail);
 const vest=new THREE.Mesh(new THREE.BoxGeometry(.83,.7,.42),gear);vest.position.set(0,1.67,.12);body.add(vest);
 const head=new THREE.Mesh(new THREE.SphereGeometry(.28,16,12),skin);head.position.y=2.48;body.add(head);
 const helmet=new THREE.Mesh(new THREE.SphereGeometry(.31,16,10,0,Math.PI*2,0,Math.PI*.56),M.dark);helmet.position.y=2.58;body.add(helmet);
+// Rosto legível em terceira pessoa: orelhas, nariz e olhos.
+for(const side of [-1,1]){const ear=new THREE.Mesh(new THREE.SphereGeometry(.065,8,8),skin);ear.position.set(side*.275,2.46,0);body.add(ear);const eye=new THREE.Mesh(new THREE.SphereGeometry(.025,8,6),detail);eye.position.set(side*.105,2.49,.255);body.add(eye)}
+const nose=new THREE.Mesh(new THREE.ConeGeometry(.055,.13,6),skin);nose.rotation.x=Math.PI/2;nose.position.set(0,2.43,.29);body.add(nose);
 const arms=[],legs=[];
 for(const side of [-1,1]){
  const arm=new THREE.Group();arm.position.set(side*.58,2.05,0);body.add(arm);limb(arm,uniform,.17,.62,0,-.38,0);
  const hand=new THREE.Mesh(new THREE.SphereGeometry(.14,10,8),skin);hand.position.set(0,-.79,.04);arm.add(hand);arms.push(arm);
- const leg=new THREE.Group();leg.position.set(side*.25,1.08,0);body.add(leg);limb(leg,uniform,.21,.68,0,-.38,0);
+ const leg=new THREE.Group();leg.position.set(side*.25,1.08,0);body.add(leg);limb(leg,pants,.21,.68,0,-.38,0);
  addBox(leg,0,-.83,.12,.38,.22,.62,boots);legs.push(leg);
 }
 const gun=new THREE.Group();gun.position.set(.32,1.82,.55);body.add(gun);addBox(gun,0,0,0,.18,.18,1.05,M.dark);addBox(gun,0,-.13,-.12,.14,.23,.3,gear);
@@ -236,7 +243,8 @@ for(const [x,z] of [[-35,-36],[37,-43],[47,38],[-43,70],[20,75]]){
 }
 
 const keys={};addEventListener('keydown',e=>keys[e.code]=true);addEventListener('keyup',e=>keys[e.code]=false);
-let joyX=0,joyY=0,yaw=0,pitch=.12,vertical=0,grounded=true,ammo=30,fireCooldown=0,walkClock=0;
+let joyX=0,joyY=0,yaw=0,pitch=.12,vertical=0,grounded=true,ammo=30,reserveAmmo=120,fireCooldown=0,walkClock=0;
+let sprinting=false,crouching=false,aiming=false,isFiring=false,reloading=false;
 const joy=document.querySelector('#joystick'),stick=document.querySelector('#stick');let joyPointer=null;
 function setJoy(e){const r=joy.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2),len=Math.max(1,Math.hypot(dx,dy)),k=Math.min(1,46/len);joyX=dx/46*k;joyY=dy/46*k;stick.style.transform=`translate(${joyX*36}px,${joyY*36}px)`}
 joy.addEventListener('pointerdown',e=>{joyPointer=e.pointerId;joy.setPointerCapture(joyPointer);setJoy(e)});
@@ -248,17 +256,23 @@ canvas.addEventListener('pointerdown',e=>{if(e.clientX>innerWidth*.35){lookPoint
 canvas.addEventListener('pointermove',e=>{if(e.pointerId===lookPointer){yaw-=(e.clientX-lastX)*.004;pitch=THREE.MathUtils.clamp(pitch+(e.clientY-lastY)*.003,-.18,.65);lastX=e.clientX;lastY=e.clientY}});
 function endLook(e){if(e.pointerId===lookPointer)lookPointer=null}
 canvas.addEventListener('pointerup',endLook);canvas.addEventListener('pointercancel',endLook);
-document.querySelector('#jump').addEventListener('pointerdown',()=>{if(grounded){vertical=6.5;grounded=false}});
+document.querySelector('#jump').addEventListener('pointerdown',()=>{if(grounded&&!crouching){vertical=6.5;grounded=false}});
+const sprintBtn=document.querySelector('#sprint'),crouchBtn=document.querySelector('#crouch'),aimBtn=document.querySelector('#aimBtn'),reloadBtn=document.querySelector('#reload');
+sprintBtn.addEventListener('pointerdown',()=>{sprinting=!sprinting;sprintBtn.classList.toggle('active',sprinting)});
+crouchBtn.addEventListener('pointerdown',()=>{crouching=!crouching;crouchBtn.classList.toggle('active',crouching);if(crouching){sprinting=false;sprintBtn.classList.remove('active')}});
+aimBtn.addEventListener('pointerdown',()=>{aiming=!aiming;aimBtn.classList.toggle('active',aiming)});
+reloadBtn.addEventListener('pointerdown',()=>{if(!reloading&&ammo<30&&reserveAmmo>0){reloading=true;reloadBtn.classList.add('active');toast('RECARREGANDO');setTimeout(()=>{const amount=Math.min(30-ammo,reserveAmmo);ammo+=amount;reserveAmmo-=amount;reloading=false;reloadBtn.classList.remove('active');document.querySelector('#ammo').innerHTML=ammo+' <small>/ '+reserveAmmo+'</small>';},1100)}});
 const raycaster=new THREE.Raycaster();
 function toast(s){const el=document.querySelector('#toast');el.textContent=s;el.style.opacity=1;clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.style.opacity=0,1400)}
 function shoot(){
- if(fireCooldown>0)return;if(ammo<=0){toast('SEM MUNIÇÃO');return}
- ammo--;document.querySelector('#ammo').innerHTML=ammo+' <small>/ 120</small>';fireCooldown=.16;
+ if(fireCooldown>0||reloading)return;if(ammo<=0){toast('SEM MUNIÇÃO');return}
+ ammo--;document.querySelector('#ammo').innerHTML=ammo+' <small>/ '+reserveAmmo+'</small>';fireCooldown=.16;
  const origin=new THREE.Vector3();camera.getWorldPosition(origin);const dir=new THREE.Vector3();camera.getWorldDirection(dir);
  raycaster.set(origin,dir);const hits=raycaster.intersectObjects(targets,true);
  if(hits.length){let obj=hits[0].object;while(obj.parent&&!targets.includes(obj))obj=obj.parent;if(targets.includes(obj)){obj.userData.hp-=34;if(obj.userData.hp<=0){world.remove(obj);targets.splice(targets.indexOf(obj),1);toast('ALVO ELIMINADO')}}}
 }
-document.querySelector('#fire').addEventListener('pointerdown',e=>{e.preventDefault();shoot()});
+const fireBtn=document.querySelector('#fire');fireBtn.addEventListener('pointerdown',e=>{e.preventDefault();isFiring=true;shoot()});
+for(const ev of ['pointerup','pointercancel','lostpointercapture'])fireBtn.addEventListener(ev,()=>isFiring=false);
 
 // Minimapa estilizado: costa, estradas e posição do operador.
 const mapCanvas=document.createElement('canvas');mapCanvas.width=180;mapCanvas.height=180;
@@ -288,7 +302,10 @@ function frame(){
  const mag=Math.hypot(f,s);let ff=f,ss=s;if(mag>1){ff/=mag;ss/=mag}
  const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
  const move=forward.multiplyScalar(ff).add(right.multiplyScalar(ss));
- if(move.lengthSq()>.001){player.position.addScaledVector(move,7.1*dt);player.rotation.y=Math.atan2(move.x,move.z);walkClock+=dt*10}else walkClock+=dt*2;
+ const moveSpeed=crouching?2.6:(sprinting?10.2:7.1);
+ if(move.lengthSq()>.001){player.position.addScaledVector(move,moveSpeed*dt);player.rotation.y=Math.atan2(move.x,move.z);walkClock+=dt*(sprinting?14:10)}else walkClock+=dt*2;
+ if(isFiring)shoot();
+ body.position.y+=(crouching?-.38:0-body.position.y)*Math.min(1,dt*10);
  const r=Math.hypot(player.position.x,player.position.z);if(r>148){player.position.x*=148/r;player.position.z*=148/r}
  const floor=heightAt(player.position.x,player.position.z);
  vertical-=18*dt;player.position.y+=vertical*dt;
@@ -296,8 +313,9 @@ function frame(){
  legs[0].rotation.x=Math.sin(walkClock)*Math.min(1,mag)*.65;legs[1].rotation.x=-legs[0].rotation.x;
  arms[0].rotation.x=-legs[0].rotation.x*.65;arms[1].rotation.x=-legs[1].rotation.x*.65;
  const target=player.position.clone().add(new THREE.Vector3(0,2,0));
- const offset=new THREE.Vector3(Math.sin(yaw)*8,3.3+pitch*3,Math.cos(yaw)*8);
- camPos.copy(target).add(offset);camera.position.lerp(camPos,1-Math.exp(-8*dt));camera.lookAt(target);
+ const cameraDistance=aiming?4.8:8;
+ const offset=new THREE.Vector3(Math.sin(yaw)*cameraDistance, (crouching?2.65:3.3)+pitch*3,Math.cos(yaw)*cameraDistance);
+ camPos.copy(target).add(offset);camera.position.lerp(camPos,1-Math.exp(-8*dt));camera.fov+=(aiming?48:62-camera.fov)*Math.min(1,dt*8);camera.updateProjectionMatrix();camera.lookAt(target);
  // água com pequena variação de cor, sem shader pesado.
  ocean.material.color.setHSL(.53,.48,.31+Math.sin(clock.elapsedTime*.35)*.012);
  if((mapTick+=dt)>.15){drawMap();mapTick=0}
