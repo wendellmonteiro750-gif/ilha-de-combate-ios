@@ -51,9 +51,9 @@ function buildHero(){
  rig.arms=[];
  for(const side of [-1,1]){
   const upper=new THREE.Group();rig.body.add(upper);
-  capsule(upper,.12,.39,shirt,0,-.25,0);
+  capsule(upper,.12,.29,shirt,0,-.265,0);
   const fore=new THREE.Group();rig.body.add(fore);
-  capsule(fore,.105,.36,shirt,0,-.23,0);
+  capsule(fore,.105,.27,shirt,0,-.24,0);
   const hand=new THREE.Group();fore.add(hand);
   mesh(hand,new THREE.SphereGeometry(.105,10,9),glove,[0,-.045,-.035]);
   rig.arms.push({upper,fore,hand,side});
