@@ -570,23 +570,23 @@ async function createFighter(isEnemy=false,index=0){
    const reloadReach=Math.sin((1-reload)*Math.PI)*reload;
    const pose=[
     ['mixamorigHips',THREE.MathUtils.lerp(THREE.MathUtils.lerp(-(this.jumpBlend||0)*.16,.42,crouch),.82,prone),0,0],
-    ['mixamorigSpine',THREE.MathUtils.lerp(THREE.MathUtils.lerp(-.30*combatPose-.12*aim+.10*run-(this.jumpBlend||0)*.08+moveBob*.35,-.10,crouch),.48,prone),0,-(this.lateralMotion||0)*(.10-.045*aim)],
-    ['mixamorigSpine1',THREE.MathUtils.lerp(THREE.MathUtils.lerp(-.22*combatPose-.07*aim+.06*run-(this.jumpBlend||0)*.04+moveBob*.25,-.08,crouch),.22,prone),0,(this.lateralMotion||0)*(.055-.025*aim)],
-    ['mixamorigSpine2',THREE.MathUtils.lerp(THREE.MathUtils.lerp(-.12*combatPose-.035*aim,-.04,crouch),.10,prone),0,0],
-    ['mixamorigNeck',0,0,0],
-    ['mixamorigHead',-(this.aimPitch||0)*.32,0,0],
+    ['mixamorigSpine',THREE.MathUtils.lerp(THREE.MathUtils.lerp(-.30*combatPose-.12*aim+.10*run-(this.jumpBlend||0)*.08+moveBob*.35,-.10,crouch),.48,prone),0,-(this.lateralMotion||0)*(.10-.045*aim)+(this.bodyTwist||0)*.48],
+    ['mixamorigSpine1',THREE.MathUtils.lerp(THREE.MathUtils.lerp(-.22*combatPose-.07*aim+.06*run-(this.jumpBlend||0)*.04+moveBob*.25,-.08,crouch),.22,prone),0,(this.lateralMotion||0)*(.055-.025*aim)+(this.bodyTwist||0)*.34],
+    ['mixamorigSpine2',THREE.MathUtils.lerp(THREE.MathUtils.lerp(-.12*combatPose-.035*aim,-.04,crouch),.10,prone),0,(this.bodyTwist||0)*.18],
+    ['mixamorigNeck',0,-(this.bodyTwist||0)*.12,0],
+    ['mixamorigHead',-(this.aimPitch||0)*.32,-(this.bodyTwist||0)*.10,0],
     ['mixamorigLeftUpLeg',prone ? -.62 : crouch ? -.58 : -(this.jumpBlend||0)*.34,0,0],
     ['mixamorigRightUpLeg',prone ? -.62 : crouch ? -.58 : -(this.jumpBlend||0)*.28,0,0],
     ['mixamorigLeftLeg',prone ? .42 : crouch ? 1.12 : (this.jumpBlend||0)*.62,0,0],
     ['mixamorigRightLeg',prone ? .42 : crouch ? 1.12 : (this.jumpBlend||0)*.54,0,0],
     // Postura de combate: ombros avançados e cotovelos flexionados para sustentar a arma.
     // Agachar/deitar não deve fazer o operador soltar o fuzil.
-    ['mixamorigLeftArm',(prone?-.92:crouch?-1.12:-1.18)*armReady-(this.jumpBlend||0)*.06, .035*aim, .20*armReady+.10*run],
-    ['mixamorigLeftForeArm',-.20*elbowReady-.08*reloadPhase*reload-.12*reloadReach,0,-.16*elbowReady],
+    ['mixamorigLeftArm',(prone?-.92:crouch?-1.12:-1.18)*armReady-(this.jumpBlend||0)*.06+firePulse*.035, .035*aim+(this.bodyTwist||0)*.10, .20*armReady+.10*run-(this.lateralMotion||0)*.035],
+    ['mixamorigLeftForeArm',-.20*elbowReady-.08*reloadPhase*reload-.12*reloadReach-firePulse*.045,0,-.16*elbowReady],
     ['mixamorigLeftHand',.10*armReady,0,.025*aim],
     // A mão direita continua presa à empunhadura; o cotovelo acompanha a posição de tiro.
-    ['mixamorigRightArm',(prone?-.88:crouch?-1.06:-1.10)*armReady-(this.jumpBlend||0)*.06, -.025*aim, -.20*armReady-.08*run],
-    ['mixamorigRightForeArm',-.22*elbowReady-.10*reloadPhase*reload-firePulse+.035*reloadReach,0,.08*elbowReady],
+    ['mixamorigRightArm',(prone?-.88:crouch?-1.06:-1.10)*armReady-(this.jumpBlend||0)*.06+firePulse*.10, -.025*aim+(this.bodyTwist||0)*.06, -.20*armReady-.08*run+(this.lateralMotion||0)*.025],
+    ['mixamorigRightForeArm',-.22*elbowReady-.10*reloadPhase*reload-firePulse*.72+.035*reloadReach,0,.08*elbowReady],
     ['mixamorigRightHand',-.07*armReady,0,-.025*fire]
    ];
    for(const [name,x,y,z] of pose){
@@ -788,9 +788,13 @@ function applyBodyMotion(rig,forwardSpeed,lateralSpeed,dt){
  const stance=rig.stanceMode==='prone' ? -.10 : rig.stanceMode==='crouch' ? -.035 : 0;
  const firing=rig.isPlayer?THREE.MathUtils.clamp(rig.weaponFireBlend||0,0,1):0;
  const aiming=rig.isPlayer?THREE.MathUtils.clamp(rig.weaponAimBlend||0,0,1):0;
- const targetPitch=-run*(rig.runBlend ? .14 : .065)+stance+firing*.20+aiming*.075;
- const targetRoll=THREE.MathUtils.clamp(-lateralSpeed*.024,-.095,.095);
- const blend=1-Math.exp(-8*dt);
+ const sprint=THREE.MathUtils.clamp(rig.runBlend||0,0,1);
+ const backward=THREE.MathUtils.clamp(-forwardSpeed/5.4,0,1);
+ const targetPitch=-run*(.055+sprint*.12)+backward*.035+stance+firing*.16+aiming*.045;
+ const targetRoll=THREE.MathUtils.clamp(-lateralSpeed*.028,-.11,.11);
+ const targetTwist=THREE.MathUtils.clamp(lateralSpeed/5.4,-1,1)*(.16+aiming*.10)*(1-sprint*.35);
+ const blend=1-Math.exp(-10*dt);
+ rig.bodyTwist=THREE.MathUtils.damp(rig.bodyTwist||0,targetTwist,9,dt);
  holder.rotation.x=THREE.MathUtils.lerp(holder.rotation.x,targetPitch,blend);
  holder.rotation.z=THREE.MathUtils.lerp(holder.rotation.z,targetRoll,blend);
 }
