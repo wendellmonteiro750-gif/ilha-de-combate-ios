@@ -259,11 +259,13 @@ function playCharacterClip(name,restart=false){
 function animateRig(dt,speed,sprinting,crouch,prone){
  if(!characterReady||!characterMixer)return;
  const now=performance.now(),moving=speed>.22;
- const idle=chooseClip([['rifle','idle'],['weapon','idle'],['idle','loop']], 'Idle_Loop');
- const walk=chooseClip([['rifle','walk'],['weapon','walk'],['walk','loop'],['jog','fwd']], 'Jog_Fwd_Loop');
- const sprint=chooseClip([['rifle','sprint'],['weapon','sprint'],['sprint','loop']], 'Sprint_Loop');
- const crouchIdle=chooseClip([['rifle','crouch','idle'],['crouch','idle']],idle);
- const crouchMove=chooseClip([['rifle','crouch','walk'],['crouch','fwd'],['crouch','walk']],walk);
+ // Usa primeiro as animações humanas neutras. Clips de rifle/arma foram
+ // removidos daqui porque colocavam os braços numa pose baixa/agachada.
+ const idle=chooseClip([['idle','loop']], 'Idle_Loop');
+ const walk=chooseClip([['walk','loop'],['jog','fwd']], 'Jog_Fwd_Loop');
+ const sprint=chooseClip([['sprint','loop']], 'Sprint_Loop');
+ const crouchIdle=chooseClip([['crouch','idle']],idle);
+ const crouchMove=chooseClip([['crouch','fwd'],['crouch','walk']],walk);
  const proneIdle=chooseClip([['prone','idle'],['lying','idle'],['lie','idle']],crouchIdle);
  const proneMove=chooseClip([['prone','crawl'],['prone','move'],['crawl','loop']],crouchMove);
  const aimClip=chooseClip([['rifle','aim'],['weapon','aim'],['pistol','aim']],idle);
