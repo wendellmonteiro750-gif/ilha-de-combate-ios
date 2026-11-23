@@ -1,4 +1,16 @@
-import * as THREE from 'three';
+// Inicialização resiliente: tenta dois CDNs e exibe erros de boot na própria tela.
+async function startGame(){
+ let THREE;
+ try{
+  THREE=await import('https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js');
+ }catch(primaryError){
+  try{
+   THREE=await import('https://unpkg.com/three@0.160.0/build/three.module.js');
+  }catch(backupError){
+   throw new Error('Não foi possível carregar o motor 3D. Verifique a conexão e tente novamente. ('+(backupError?.message||primaryError?.message||'falha de rede')+')');
+  }
+ }
+ try{
 
 // ILHA DE COMBATE — mapa tropical original inspirado na variedade de Bermuda.
 // Escala e densidade controladas para manter o protótipo utilizável em celulares.
@@ -287,3 +299,22 @@ addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updat
 document.querySelector('#loading').style.display='none';
 toast('MAPA TROPICAL · PRIMEIRA VERSÃO');
 frame();
+
+ }catch(error){
+  const loading=document.querySelector('#loading');
+  const panel=document.querySelector('#error');
+  if(loading)loading.style.display='none';
+  if(panel){
+   panel.hidden=false;
+   panel.textContent='NÃO FOI POSSÍVEL INICIAR O JOGO. '+(error&&error.message?error.message:'Erro inesperado')+' Atualize a página e tente novamente.';
+  }
+  console.error('Falha ao iniciar Ilha de Combate:',error);
+ }
+}
+startGame().catch(error=>{
+ const loading=document.querySelector('#loading');
+ const panel=document.querySelector('#error');
+ if(loading)loading.style.display='none';
+ if(panel){panel.hidden=false;panel.textContent='FALHA AO CARREGAR O JOGO. '+(error?.message||'Verifique a conexão e tente novamente.');}
+ console.error(error);
+});
