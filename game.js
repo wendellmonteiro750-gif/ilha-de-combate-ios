@@ -534,11 +534,7 @@ function makeHumanoidModel(){
  const capMat=new THREE.MeshStandardMaterial({color:0x354a3b,roughness:.96});
  ellipsoid(head,'cap_crown',0,.178,-.012,.113,.061,.105,capMat);
  const capBrim=new THREE.Mesh(new THREE.BoxGeometry(.18,.018,.105),capMat);capBrim.position.set(0,.151,.096);capBrim.rotation.x=-.08;capBrim.castShadow=true;head.add(capBrim);
- // Mochila compacta presa às costas, com alças visíveis sobre os ombros.
- const packMat=new THREE.MeshStandardMaterial({color:0x343f37,roughness:.98});
- ellipsoid(spine1,'combat_backpack',0,.025,-.185,.175,.235,.095,packMat);
- box(spine1,.19,.07,.035,shirtDark,0,-.16,-.205);
- for(const side of [-1,1]){box(spine2,.045,.31,.035,packMat,side*.145,-.015,-.09);box(spine1,.09,.09,.035,pantsLight,side*.18,-.12,-.16)}
+  // Mochila removida: evita referências antigas ao material packMat.
  for(const side of [-1,1]){
   ellipsoid(head,'ear',side*.112,.055,0,.022,.042,.025,skin);
   ellipsoid(head,'eye',side*.043,.083,.091,.012,.012,.008,eyes);
