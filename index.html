@@ -15,10 +15,10 @@
 <div id="loading">CARREGANDO ILHA DE COMBATE 3D…</div>
 <div id="lobby" class="lobby-screen">
  <div class="lobby-vignette"></div><div class="lobby-top"><span class="lobby-mark">IC</span><span>ILHA DE COMBATE <small>BATTLE ROYALE</small></span><span class="lobby-online"><i></i> CAMPO DE TREINO</span></div>
- <div class="lobby-content"><div class="lobby-kicker">OPERAÇÃO DE SOBREVIVÊNCIA</div><h1>ILHA DE<br><em>COMBATE</em></h1><p>Entre na zona de combate. Encontre equipamentos. Seja o último sobrevivente.</p>
+ <div class="lobby-content"><div class="lobby-kicker">OPERAÇÃO: NOVA FRONTEIRA</div><h1>ILHA DE<br><em>COMBATE</em></h1><p>Entre na zona de combate. Encontre equipamentos. Seja o último sobrevivente.</p>
  <button id="playGame" class="lobby-play"><span>ENTRAR NA PARTIDA</span><b>➜</b></button>
  <button id="lobbySettings" class="lobby-settings" type="button"><span>⚙</span> CONFIGURAÇÕES</button>
- <div class="lobby-features"><span>◈ BATTLE ROYALE</span><span>◈ 5 OPONENTES</span><span>◈ LOOT & COMBATE</span></div></div>
+ <div class="lobby-features"><span>◈ BATTLE ROYALE</span><span>◈ ILHA EXPANDIDA</span><span>◈ LOOT & COMBATE</span></div></div>
  <div class="lobby-footer"><span>PROJETO INDEPENDENTE</span><span>VERSÃO DE TESTE</span></div>
 </div>
 
@@ -87,7 +87,7 @@
 <script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
 </script>
-<script type="module" src="./game-human-06.js?v=27"></script>
+<script type="module" src="./game-human-06.js?v=28"></script>
 <script>
 window.addEventListener('error',e=>{if(e.message){document.querySelector('#loading').style.display='none';document.querySelector('#errorPanel').style.display='grid';document.querySelector('#errorMessage').textContent='Erro ao iniciar: '+e.message}});
 window.addEventListener('unhandledrejection',e=>{document.querySelector('#loading').style.display='none';document.querySelector('#errorPanel').style.display='grid';document.querySelector('#errorMessage').textContent='Falha JavaScript: '+(e.reason?.message||String(e.reason||'erro sem detalhes'))'});
