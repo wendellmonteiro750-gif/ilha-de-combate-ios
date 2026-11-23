@@ -453,7 +453,7 @@ function addRifle(rig,index=0){
  }
  const muzzle=new THREE.Object3D();muzzle.position.set(0,.012,spec.kind==='pistol'?-.17-barrelLen*.96:-L*.39-barrelLen*.96);g.add(muzzle);
  g.scale.setScalar(.68);g.position.set(.025,-.065,.075);g.rotation.set(-.12,0,0);hand.add(g);
- rig.weaponPivot=g;rig.weaponMuzzle=muzzle;rig.weaponSpec=spec;
+ rig.weaponPivot=g;rig.weaponMuzzle=muzzle;rig.weaponSpec=spec;rig.weaponBasePosition=g.position.clone();rig.weaponBaseRotation=g.rotation.clone();
 }
 async function createFighter(isEnemy=false,index=0){
  if(!humanModelPromise)humanModelPromise=new GLTFLoader().loadAsync(HUMAN_MODEL_URL);
@@ -527,6 +527,15 @@ async function createFighter(isEnemy=false,index=0){
     const delta=new THREE.Quaternion().setFromEuler(new THREE.Euler(x*this._stanceBlend,y*this._stanceBlend,z*this._stanceBlend,'XYZ'));
     bone.quaternion.multiply(delta);
     this._stanceApplied.push({name,inverse:delta.clone().invert()});
+   }
+   // Fecha os dedos ao redor da empunhadura e do guarda-mão.
+   for(const [name,bone] of this.bones){
+    const finger=name.match(/mixamorig(Right|Left)Hand(Index|Middle|Ring|Pinky|Thumb)([123])/);
+    if(!finger)continue;
+    const side=finger[1],digit=finger[2],segment=Number(finger[3]);
+    const curl=(side==='Right'?.34:.28)*(digit==='Thumb'?.72:1)*(segment===1?1:segment===2?.88:.72);
+    const delta=new THREE.Quaternion().setFromEuler(new THREE.Euler(curl,0,digit==='Thumb'?(side==='Right'?.12:-.12):0,'XYZ'));
+    bone.quaternion.multiply(delta);this._stanceApplied.push({name,inverse:delta.clone().invert()});
    }
    // CCD IK keeps the left hand on the rifle foregrip.
    if(this.weaponPivot&&this.weaponSpec){
@@ -778,9 +787,15 @@ function animate(){
   }
   playerRig.weaponAimBlend=aimBlend;
    playerRig.runBlend=canSprint?1:0;
+   playerRig.weaponRunBlend=THREE.MathUtils.damp(playerRig.weaponRunBlend||0,canSprint?1:0,9,dt);
+   if(playerRig.weaponPivot&&playerRig.weaponBasePosition&&playerRig.weaponBaseRotation){
+    playerRig.weaponPivot.position.copy(playerRig.weaponBasePosition).add(new THREE.Vector3(0,-.045*playerRig.weaponRunBlend,0));
+    playerRig.weaponPivot.rotation.copy(playerRig.weaponBaseRotation);
+    playerRig.weaponPivot.rotation.x-=.32*playerRig.weaponRunBlend+(playerRig.weaponKick||0);
+   }
   playerRig.jumpV=(playerRig.jumpV||0)-15*dt;p.position.y=Math.max(0,p.position.y+(playerRig.jumpV||0)*dt);if(p.position.y===0&&playerRig.jumpV<0)playerRig.jumpV=0;
    playerRig.jumpBlend=THREE.MathUtils.clamp(p.position.y/.82,0,1);
-  applyBodyMotion(playerRig,playerVelocity.dot(forward),playerVelocity.dot(right),dt);playerRig.update(dt);if(playerRig.weaponPivot){playerRig.weaponKick=Math.max(0,(playerRig.weaponKick||0)-dt*1.35);playerRig.weaponPivot.rotation.x=-.08-(playerRig.weaponKick||0);}
+  applyBodyMotion(playerRig,playerVelocity.dot(forward),playerVelocity.dot(right),dt);playerRig.update(dt);if(playerRig.weaponPivot)playerRig.weaponKick=Math.max(0,(playerRig.weaponKick||0)-dt*1.35);
  for(const e of enemies){if(!e.alive)continue;const ep=e.rig.holder,delta=p.position.clone().sub(ep.position);const dist=delta.length();if(dist>2.3){delta.normalize();ep.position.addScaledVector(delta,1.35*dt);ep.rotation.y=Math.atan2(delta.x,delta.z);if(e.anim!=='run'){e.anim='run';play(e.rig,'run')}}else{if(e.anim!=='idle'){e.anim='idle';play(e.rig,'idle')}e.attack+=dt;if(e.attack>1.5){e.attack=0;const raw=4,blocked=Math.min(armor,raw*.5);armor-=blocked;health=Math.max(0,health-(raw-blocked));refreshVitals();statusEl.textContent='SOB ATAQUE';setTimeout(()=>{if(health>0)statusEl.textContent='PRONTO'},450)}}applyBodyMotion(e.rig,dist>2.3?1.35:0,0,dt);e.rig.update(dt);if(e.rig.weaponPivot){e.rig.weaponKick=Math.max(0,(e.rig.weaponKick||0)-dt*.9);e.rig.weaponPivot.rotation.x=-.08-(e.rig.weaponKick||0)}}
  for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];b.mesh.position.addScaledVector(b.dir,72*dt);b.life-=dt;let hit=false;for(const e of enemies){if(e.alive){const base=e.rig.holder.position,head=base.clone().add(new THREE.Vector3(0,1.72,0)),torso=base.clone().add(new THREE.Vector3(0,.96,0));const headHit=b.mesh.position.distanceTo(head)<.42,bodyHit=b.mesh.position.distanceTo(torso)<.72;if(headHit||bodyHit){const falloff=Math.max(.52,1-(b.travelled/Math.max(1,b.range))*.42),dealt=b.damage*falloff*(headHit?2.15:1);e.hp-=dealt;hitMarkerTimer=.18;document.querySelector('#crosshair')?.classList.add('hit');burst(b.mesh.position,headHit?16:10,headHit?0xffe16b:0xffa34d,4.8);statusEl.textContent=headHit?'TIRO NA CABEÇA!':'ACERTO';hit=true;if(e.hp<=0){e.alive=false;burst(e.rig.holder.position.clone().add(new THREE.Vector3(0,1,0)),22,0xffd06b,5);scene.remove(e.rig.holder);e.rig.dispose();kills++;scoreEl.textContent=String(kills);document.querySelector('#remainingEnemies').textContent=String(enemies.filter(x=>x.alive).length)}break}}}b.travelled+=72*dt;if(hit||b.life<=0||b.travelled>=b.range){scene.remove(b.mesh);bullets.splice(i,1)}}
  fireCooldown=Math.max(0,fireCooldown-dt);
