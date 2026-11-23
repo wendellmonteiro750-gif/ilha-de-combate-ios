@@ -85,103 +85,81 @@ function house(x,z,color){
  for(const side of [-1,1])cube(g,.12,3.05,.12,trim,side*2.92,1.55,2.52);
  worldBlockers.push({x,z,r:3.8});
 }
-// Rig humanoide procedural com hierarquia de ossos e membros articulados.
-let rig=null,weaponEquipped=true,weaponModel=null,reloadPoseUntil=0,firePoseUntil=0;
-const skinMat=mat(0xb98262,.82),uniformMat=mat(0x35483d,.92),pantsMat=mat(0x303a34,.95),bootMat=mat(0x202722,.9),gearMat=mat(0x596451,.95);
-function bone(parent,name,x,y,z){const b=new THREE.Bone();b.name=name;b.position.set(x,y,z);parent.add(b);return b}
-function boneCapsule(parent,r,length,material,y=-length/2){const m=mesh(parent,new THREE.CapsuleGeometry(r,length,5,9),material,[0,y,0]);return m}
-function joint(parent,r,material){return mesh(parent,new THREE.SphereGeometry(r,10,8),material,[0,0,0])}
-function createHumanoidRig(){
+// Personagem humano real Quaternius: malha skinned, esqueleto completo e clips humanoides.
+const CHARACTER_URL='https://cdn.jsdelivr.net/gh/Seyamalam/blood-league-kickoff@main/public/assets/vendor/quaternius/night-striker.glb';
+const ANIMATION_URL='https://cdn.jsdelivr.net/gh/Seyamalam/blood-league-kickoff@main/public/assets/vendor/quaternius/universal-animation-library.glb';
+let characterVisual=null,characterMixer=null,characterActions=new Map(),activeCharacterClip='',characterReady=false;
+let weaponEquipped=true,weaponModel=null,reloadPoseUntil=0,firePoseUntil=0;
+function createPlayerAnchor(){
  hero=new THREE.Group();hero.position.set(0,0,0);scene.add(hero);
- const pelvis=bone(hero,'Hips',0,1.20,0);joint(pelvis,.19,uniformMat);
- const spine=bone(pelvis,'Spine',0,.08,0);boneCapsule(pelvis,.19,.30,uniformMat,.20);
- const chest=bone(spine,'Chest',0,.31,0);boneCapsule(spine,.235,.40,uniformMat,.18);
- const neck=bone(chest,'Neck',0,.34,0);boneCapsule(chest,.075,.16,skinMat,.09);
- const head=bone(neck,'Head',0,.17,0);joint(head,.145,skinMat);
- const helmet=mesh(head,new THREE.SphereGeometry(.151,12,9,0,Math.PI*2,0,Math.PI*.58),gearMat,[0,.035,0]);helmet.scale.set(1.03,.82,1.04);
- const arms={},legs={};
- for(const side of [-1,1]){
-  const key=side<0?'L':'R';
-  const shoulder=bone(chest,key+'_Shoulder',side*.27,.23,0);joint(shoulder,.105,uniformMat);
-  const upper=bone(shoulder,key+'_UpperArm',0,-.08,0);boneCapsule(shoulder,.09,.32,uniformMat,-.23);
-  const elbow=bone(upper,key+'_Elbow',0,-.39,0);joint(elbow,.075,uniformMat);
-  const fore=bone(elbow,key+'_Forearm',0,-.04,0);boneCapsule(elbow,.073,.31,uniformMat,-.20);
-  const hand=bone(fore,key+'_Hand',0,-.37,0);joint(hand,.065,skinMat);
-  const palm=mesh(hand,new THREE.BoxGeometry(.105,.13,.065),skinMat,[0,-.045,-.015]);
-  arms[key]={shoulder,upper,elbow,fore,hand};
-  const thigh=bone(pelvis,key+'_Thigh',side*.13,-.08,0);joint(thigh,.105,pantsMat);boneCapsule(thigh,.115,.43,pantsMat,-.22);
-  const knee=bone(thigh,key+'_Knee',0,-.51,0);joint(knee,.085,pantsMat);
-  const calf=bone(knee,key+'_Calf',0,-.04,0);boneCapsule(knee,.085,.39,pantsMat,-.27);
-  const ankle=bone(calf,key+'_Ankle',0,-.46,0);joint(ankle,.065,bootMat);
-  const foot=bone(ankle,key+'_Foot',0,-.04,-.07);mesh(foot,new THREE.BoxGeometry(.14,.10,.27),bootMat,[0,-.025,-.10]);
-  legs[key]={thigh,knee,calf,ankle,foot};
- }
- // Colete, cinto e bolsos presos ao tronco.
- cube(chest,.43,.30,.20,gearMat,0,.04,.105);
- cube(pelvis,.43,.09,.25,bootMat,0,.01,0);
- for(const side of [-1,1])cube(pelvis,.12,.18,.12,gearMat,side*.20,-.10,.02);
- // Rifle simples, preso à mão direita; pode ser ocultado sem perder o rig.
- weaponModel=new THREE.Group();arms.R.hand.add(weaponModel);weaponModel.position.set(0,-.07,-.20);weaponModel.rotation.set(-.12,0,0);
- const gun=mat(0x202722,.55),metal=mat(0x59615b,.42);
- cube(weaponModel,.095,.10,.62,gun,0,0,-.20);
- cube(weaponModel,.075,.16,.20,gun,0,-.12,-.02);
- cube(weaponModel,.055,.055,.40,metal,0,.045,-.47);
- cube(weaponModel,.12,.09,.18,gun,0,-.015,.18);
- cube(weaponModel,.065,.22,.07,gun,0,-.14,-.18);
- rig={pelvis,spine,chest,neck,head,arms,legs};
- setWeaponMode(true);
+ const loader=new GLTFLoader();
+ $('message').textContent='CARREGANDO SOLDADO 3D';
+ Promise.all([loader.loadAsync(CHARACTER_URL),loader.loadAsync(ANIMATION_URL)]).then(([character,library])=>{
+  characterVisual=character.scene;
+  characterVisual.name='BattleIsland_Quaternius_Human';
+  characterVisual.rotation.y=Math.PI;
+  characterVisual.scale.setScalar(1);
+  characterVisual.traverse(node=>{
+   if(node.isMesh){node.castShadow=true;node.receiveShadow=true;
+    if(node.material){const materials=Array.isArray(node.material)?node.material:[node.material];for(const material of materials){material.roughness=Math.max(.48,material.roughness??.7);material.needsUpdate=true}}
+   }
+  });
+  hero.add(characterVisual);
+  characterMixer=new THREE.AnimationMixer(characterVisual);
+  for(const clip of library.animations)characterActions.set(clip.name,characterMixer.clipAction(clip));
+  const hand=characterVisual.getObjectByName('hand_r');
+  if(hand)createCombatWeapon(hand);
+  characterReady=true;
+  playCharacterClip('Idle_Loop',false);
+  $('message').textContent='SOLDADO 3D PRONTO';
+  // A biblioteca contém apenas os clips; descarta-se a cena auxiliar para poupar GPU.
+  library.scene.traverse(node=>{if(node.isMesh){node.geometry.dispose();const ms=Array.isArray(node.material)?node.material:[node.material];ms.forEach(m=>m.dispose())}});
+ }).catch(error=>{
+  console.error('Falha ao carregar personagem humano 3D:',error);
+  $('message').textContent='ERRO AO CARREGAR SOLDADO 3D';
+  const box=$('error');box.hidden=false;box.textContent='Não foi possível carregar o modelo 3D. Verifique a conexão e recarregue a página.';
+ });
 }
-function createPlayerAnchor(){createHumanoidRig()}
+function createCombatWeapon(hand){
+ weaponModel=new THREE.Group();weaponModel.name='Rifle_3D_Attachment';hand.add(weaponModel);
+ weaponModel.position.set(.015,-.035,.045);weaponModel.rotation.set(0,Math.PI,0);weaponModel.scale.setScalar(.72);
+ const gun=mat(0x202722,.48),metal=mat(0x59615b,.36),polymer=mat(0x343b35,.72);
+ cube(weaponModel,.105,.105,.66,gun,0,0,-.20);
+ cube(weaponModel,.078,.18,.23,polymer,0,-.12,-.04);
+ cube(weaponModel,.052,.052,.48,metal,0,.052,-.48);
+ cube(weaponModel,.13,.09,.19,gun,0,-.015,.19);
+ cube(weaponModel,.07,.23,.075,polymer,0,-.16,-.18);
+ cube(weaponModel,.07,.07,.13,metal,0,.09,-.06);
+}
 function setWeaponMode(equipped){
  weaponEquipped=equipped;
  if(weaponModel)weaponModel.visible=equipped;
  const b=$('weapon');if(b){b.textContent=equipped?'⚔':'✋';b.classList.toggle('active',equipped);b.setAttribute('aria-label',equipped?'Guardar arma':'Equipar arma')}
  $('message').textContent=equipped?'ARMA EQUIPADA':'SEM ARMA';
 }
+function playCharacterClip(name,restart=false){
+ if(!characterMixer)return;
+ const next=characterActions.get(name)||characterActions.get('Idle_Loop');
+ if(!next)return;
+ const previous=characterActions.get(activeCharacterClip);
+ if(previous!==next){if(previous)previous.fadeOut(.16);next.reset().fadeIn(.16).play()}
+ else if(restart)next.reset().play();
+ activeCharacterClip=name;
+}
 function animateRig(dt,speed,sprinting,crouch,prone){
- if(!rig)return;
- const now=performance.now(),moving=speed>.16;
- const phase=now*.008*(sprinting?1.65:1);
- const stride=moving?Math.sin(phase)*Math.min(1,speed/3.4):0;
- const bob=moving?Math.abs(Math.cos(phase))*.025:0;
- const reloadPose=weaponEquipped&&now<reloadPoseUntil;
- const firingPose=weaponEquipped&&now<firePoseUntil;
- // O quadril e a coluna comandam a postura; o corpo inteiro acompanha ao deitar.
- rig.pelvis.position.y=1.20+(prone?-.02:crouch?-.13:0)+bob;
- rig.pelvis.rotation.x=prone?-1.28:0;
- rig.spine.rotation.x=prone?-.10:crouch?.18:sprinting?.08:0;
- rig.chest.rotation.x=prone?-.08:(aim&&weaponEquipped?-.07:0);
- rig.head.rotation.x=aim?-.05:0;
- for(const side of [-1,1]){
-  const k=side<0?'L':'R',arm=rig.arms[k],leg=rig.legs[k];
-  // Pernas com flexão de joelho e amortecimento de passada.
-  leg.thigh.rotation.x=prone?-.04:stride*side*(crouch?.42:1);
-  leg.knee.rotation.x=prone?-.06:Math.max(0,-stride*side)*.82+(crouch?.48:0);
-  leg.calf.rotation.x=prone?-.02:Math.max(0,stride*side)*.20;
-  if(weaponEquipped){
-   // Postura de combate: as duas mãos sustentam o rifle, cotovelos flexionados.
-   arm.shoulder.rotation.x=prone?-.98:(reloadPose&&k==='R'?.12:-.92+(aim?-.12:0));
-   arm.shoulder.rotation.z=side<0?-.34:.20;
-   arm.upper.rotation.x=prone?-.16:(reloadPose&&k==='R'?.48:-.34);
-   arm.fore.rotation.x=prone?-.12:(reloadPose&&k==='R'?-.12:-.56);
-   arm.hand.rotation.x=firingPose&&k==='R'?-.12:.04;
-   if(k==='L'){
-    arm.shoulder.rotation.x=prone?-.78:-1.02;
-    arm.shoulder.rotation.z=-.48;
-    arm.upper.rotation.x=-.18;
-    arm.fore.rotation.x=-.62;
-   }
-  }else{
-   // Sem arma: balanço natural dos braços acompanha a passada.
-   arm.shoulder.rotation.x=prone?-.10:stride*side*.78;
-   arm.shoulder.rotation.z=side*.06;
-   arm.upper.rotation.x=prone?-.12:0;
-   arm.fore.rotation.x=prone?-.08:Math.max(0,-stride*side)*.12;
-   arm.hand.rotation.x=0;
-  }
- }
- if(prone){rig.chest.rotation.x=-.08;rig.neck.rotation.x=.08}
- else rig.neck.rotation.x=0;
+ if(!characterReady||!characterMixer)return;
+ const now=performance.now(),moving=speed>.22;
+ let clip='Idle_Loop';
+ if(prone)clip=moving?'Crouch_Fwd_Loop':'Crouch_Idle_Loop';
+ else if(crouch)clip=moving?'Crouch_Fwd_Loop':'Crouch_Idle_Loop';
+ else if(!grounded)clip='Jump_Loop';
+ else if(now<reloadPoseUntil&&weaponEquipped)clip='Pistol_Reload';
+ else if(now<firePoseUntil&&weaponEquipped)clip='Pistol_Shoot';
+ else if(aim&&weaponEquipped)clip='Pistol_Aim_Neutral';
+ else if(moving)clip=sprinting?'Sprint_Loop':speed<2?'Walk_Loop':'Jog_Fwd_Loop';
+ else if(weaponEquipped)clip='Pistol_Idle_Loop';
+ if(clip!==activeCharacterClip)playCharacterClip(clip);
+ characterMixer.update(dt);
 }
 function bind(){
  const stick=$('stick'),knob=$('knob');let sid=null,rect=null;
@@ -240,7 +218,7 @@ function update(dt){
  }
  const horizontalSpeed=Math.hypot(velocityX,velocityZ);
  animateRig(dt,horizontalSpeed,sprinting,crouch,prone);
- const target=new THREE.Vector3(hero.position.x,hero.position.y+(prone?.55:crouch?1.35:1.82),hero.position.z);
+ const target=new THREE.Vector3(hero.position.x,hero.position.y+(prone?.48:crouch?1.20:1.58),hero.position.z);
  const baseDist=aim?3.15:sprinting?5.15:5.6;
  const shoulder=aim?.72:1.18;
  const offset=new THREE.Vector3(Math.sin(yaw)*baseDist*Math.cos(pitch)+Math.cos(yaw)*shoulder,baseDist*(.30+Math.sin(-pitch)),Math.cos(yaw)*baseDist*Math.cos(pitch)-Math.sin(yaw)*shoulder);
@@ -257,7 +235,7 @@ function update(dt){
  cameraShake=THREE.MathUtils.damp(cameraShake,0,12,dt);
  camera.fov=THREE.MathUtils.damp(camera.fov,aim?53:sprinting?68:65,8,dt);camera.updateProjectionMatrix();
  camera.lookAt(target.clone().add(new THREE.Vector3(0,cameraRecoil+cameraShake*.12,0)));
- if(shoot&&weaponEquipped)fireShot();
+ if(shoot&&weaponEquipped){firePoseUntil=performance.now()+180;fireShot()}
  const cross=$('hud').querySelector('.crosshair');
  if(cross){const spread=1+Math.min(1,horizontalSpeed/6)+(shoot?.55:0)+(aim?-.45:0);cross.style.transform='translate(-50%,-50%) scale('+Math.max(.65,spread)+')'}
 }
