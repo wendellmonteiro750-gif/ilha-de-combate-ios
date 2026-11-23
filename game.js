@@ -16,10 +16,10 @@ const mats={grass:mat(0x496e3d),road:mat(0x454b4c),line:mat(0xd5c99b),concrete:m
 const ground=new THREE.Mesh(new THREE.CircleGeometry(145,128),mats.grass);ground.rotation.x=-Math.PI/2;ground.position.y=-.25;ground.receiveShadow=true;scene.add(ground);
 const water=new THREE.Mesh(new THREE.CircleGeometry(210,128),mat(0x2e7184,.28,.12));water.rotation.x=-Math.PI/2;water.position.y=-1.1;scene.add(water);
 const world=new THREE.Group();scene.add(world);
-const blockers=[],loot=[],bots=[],effects=[],buildings=[];
+const blockers=[],loot=[],bots=[],effects=[],buildings=[],cameraOccluders=[];
 function box(parent,w,h,d,material,x,y,z){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o}
 function building(x,z,w,d,h,color,type='house'){
- const g=new THREE.Group();g.position.set(x,0,z);world.add(g);
+ const g=new THREE.Group();g.position.set(x,0,z);world.add(g);cameraOccluders.push(g);
  const wall=mat(color),trim=mat(0xd0c4a5),roof=type==='warehouse'?mat(0x3c4848,.7,.25):mats.roof;
  // Camera collision must detect wall faces from inside buildings too.
  wall.side=THREE.DoubleSide;
@@ -234,7 +234,7 @@ function cameraUpdate(dt){
  const offset=cameraDesired.clone().sub(cameraLookTarget),length=offset.length(),direction=offset.normalize();
  cameraRay.set(cameraLookTarget,direction);cameraRay.near=.08;cameraRay.far=length;
  // Clamp the camera before the first wall/obstacle hit, leaving a small safety gap.
- const obstacle=cameraRay.intersectObjects(world.children,true).find(hit=>hit.distance>.12);
+ const obstacle=cameraRay.intersectObjects(cameraOccluders,true).find(hit=>hit.distance>.12);
  if(obstacle){
   const safeDistance=Math.max(.18,obstacle.distance-.42);
   cameraDesired.copy(cameraLookTarget).addScaledVector(direction,Math.min(length,safeDistance));
