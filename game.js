@@ -326,33 +326,30 @@ function playCharacterClip(name,restart=false){
  activeCharacterClip=name;
 }
 function playProneTransition(name,now){
- // O pacote gratuito UAL2 Standard não traz IdleToLay, mas inclui
- // LayToIdle completo. Para deitar, reproduzimos LayToIdle ao contrário;
- // para levantar, reproduzimos o mesmo movimento no sentido normal.
- const reverse= name==='IdleToLay';
- const clipName=exactClip(reverse?'LayToIdle':name);
+ // Transições próprias de rastejo da Quaternius UAL1:
+ // Crawl_Enter leva o soldado ao chão de peito; Crawl_Exit o levanta.
+ const clipName=exactClip(name);
  if(!clipName){
   proneActionMissing=true;
-  console.error('Animação de postura não encontrada:',name,'Clipes disponíveis:',[...characterActions.keys()]);
-  $('message').textContent='ANIMAÇÃO DEITAR NÃO CARREGADA';
+  console.error('Animação de rastejo não encontrada:',name,'Clipes disponíveis:',[...characterActions.keys()]);
+  $('message').textContent='ANIMAÇÃO DE RASTEJO NÃO CARREGADA';
   return false;
  }
  proneActionMissing=false;
  const next=characterActions.get(clipName);
  const previous=characterActions.get(activeCharacterClip);
- if(!next)return false;
- if(previous&&previous!==next)previous.fadeOut(.12);
+ if(previous&&previous!==next)previous.fadeOut(.10);
  next.enabled=true;
  next.reset();
- next.time=reverse?next.getClip().duration:0;
- next.timeScale=reverse?-1:1;
+ next.time=0;
+ next.timeScale=1;
  next.paused=false;
  next.setEffectiveWeight(1);
  next.setLoop(THREE.LoopOnce,1);
  next.clampWhenFinished=true;
- next.fadeIn(.12).play();
- activeCharacterClip=reverse?'IdleToLay':clipName;
- proneTransition=reverse?'IdleToLay':clipName;
+ next.fadeIn(.10).play();
+ activeCharacterClip=clipName;
+ proneTransition=clipName;
  proneTransitionUntil=now+Math.max(.15,next.getClip().duration)*1000;
  return true;
 }
@@ -365,38 +362,31 @@ function animateRig(dt,speed,sprinting,crouch,prone){
  const crouchIdle=exactClip('Crouch_Idle_Loop')||idle;
  const crouchMove=exactClip('Crouch_Fwd_Loop','Crouch_Fwd_L_Loop')||walk;
 
- // A UAL2 Standard fornece transições completas de humanoide:
- // IdleToLay = em pé para deitado; LayToIdle = deitado para em pé.
+ // Entrada e saída em posição de tiro de barriga para baixo.
  if(prone!==proneState){
   proneState=prone;
-  playProneTransition(prone?'IdleToLay':'LayToIdle',now);
+  playProneTransition(prone?'Crawl_Enter':'Crawl_Exit',now);
  }
  const transitionActive=!!proneTransition&&now<proneTransitionUntil;
- if(proneTransition==='IdleToLay'&&proneState){
-  // Ao terminar, a ação one-shot fica congelada no último frame deitado.
-  // Não trocar para Idle_Loop: isso levantaria o personagem imediatamente.
-  if(transitionActive){
-   characterMixer.update(dt);
-   return;
-  }
-  characterMixer.update(dt);
-  return;
- }
- if(proneTransition==='LayToIdle'&&!proneState){
-  if(transitionActive){
-   characterMixer.update(dt);
-   return;
-  }
+ if(proneTransition==='Crawl_Enter'&&proneState){
+  if(transitionActive){characterMixer.update(dt);return;}
   proneTransition=null;
-  playCharacterClip(idle);
+  const proneIdle=exactClip('Crawl_Idle_Loop');
+  if(proneIdle)playCharacterClip(proneIdle,true);
+ }
+ if(proneTransition==='Crawl_Exit'&&!proneState){
+  if(transitionActive){characterMixer.update(dt);return;}
+  proneTransition=null;
+  playCharacterClip(idle,true);
  }
  if(proneState){
-  // Até integrar um ciclo de rastejo compatível, o personagem permanece
-  // realmente deitado; não desliza pelo chão com animação de pé.
+  // Mantém o soldado apoiado de peito no solo, com o ciclo de repouso
+  // de rastejo; nunca retorna à animação em pé enquanto estiver deitado.
+  const proneIdle=exactClip('Crawl_Idle_Loop');
+  if(proneIdle&&activeCharacterClip!==proneIdle)playCharacterClip(proneIdle);
   characterMixer.update(dt);
   return;
  }
- if(proneTransition==='LayToIdle'&&!proneState&&now>=proneTransitionUntil)proneTransition=null;
  let clip=idle;
  if(crouch)clip=moving?crouchMove:crouchIdle;
  else if(!grounded)clip=exactClip('Jump_Loop','Jump_Start')||idle;
