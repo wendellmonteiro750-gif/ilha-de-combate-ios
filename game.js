@@ -100,7 +100,8 @@ function chooseClip(groups,fallback){
 }
 function solveArmIK(upper,lower,hand,targetWorld){
  if(!upper||!lower||!hand)return;
- for(let iteration=0;iteration<9;iteration++){
+ // CCD moves the wrist to the grip without stretching the arm.
+ for(let iteration=0;iteration<12;iteration++){
   for(const joint of [lower,upper]){
    characterVisual.updateMatrixWorld(true);
    const jointPos=joint.getWorldPosition(new THREE.Vector3());
@@ -111,10 +112,33 @@ function solveArmIK(upper,lower,hand,targetWorld){
    combatV1.normalize();combatV2.normalize();
    const delta=combatQ1.setFromUnitVectors(combatV1,combatV2);
    const worldQ=joint.getWorldQuaternion(combatQ2);
-   const desiredWorld=delta.clone().multiply(worldQ);
+   const desiredWorld=delta.multiply(worldQ);
    const parentQ=joint.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
    joint.quaternion.copy(parentQ.multiply(desiredWorld));
   }
+ }
+ // Pole-vector correction keeps the elbow bent outward instead of twisting
+ // around the arm axis. This is the missing part of a natural two-hand hold.
+ characterVisual.updateMatrixWorld(true);
+ const shoulder=upper.getWorldPosition(new THREE.Vector3());
+ const elbow=lower.getWorldPosition(new THREE.Vector3());
+ const wrist=hand.getWorldPosition(new THREE.Vector3());
+ const axis=wrist.sub(shoulder).normalize();
+ const currentElbow=elbow.sub(shoulder);
+ currentElbow.addScaledVector(axis,-currentElbow.dot(axis));
+ const shoulderLocal=characterVisual.worldToLocal(upper.getWorldPosition(new THREE.Vector3()));
+ const side=shoulderLocal.x>=0?1:-1;
+ const poleLocal=new THREE.Vector3(side*.9,-.35,0);
+ const poleWorld=characterVisual.localToWorld(poleLocal.add(characterVisual.worldToLocal(upper.getWorldPosition(new THREE.Vector3())))).sub(shoulder);
+ poleWorld.addScaledVector(axis,-poleWorld.dot(axis));
+ if(currentElbow.lengthSq()>1e-7&&poleWorld.lengthSq()>1e-7){
+  const twist=new THREE.Quaternion().setFromUnitVectors(currentElbow.normalize(),poleWorld.normalize());
+  const twistWorld=new THREE.Quaternion().setFromAxisAngle(axis,Math.atan2(
+   new THREE.Vector3().crossVectors(currentElbow,poleWorld).dot(axis),
+   THREE.MathUtils.clamp(currentElbow.dot(poleWorld),-1,1)
+  ));
+  const parentQ=upper.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
+  upper.quaternion.copy(parentQ.multiply(twistWorld).multiply(upper.parent.getWorldQuaternion(new THREE.Quaternion())).multiply(upper.quaternion));
  }
  characterVisual.updateMatrixWorld(true);
 }
@@ -132,18 +156,18 @@ function applyCombatWeaponPose(crouch,prone,dt){
  weaponModel.position.set(.10,height,forward);
  // O cano aponta no eixo local -Z. Como o corpo está virado em Y=PI,
  // a arma também gira PI: as rotações se compensam e o cano fica no -Z mundial.
- weaponModel.rotation.set(prone?-.10:-.035,Math.PI,0);
+ weaponModel.rotation.set(prone?-.10:-.035,0,0);
  if(performance.now()<firePoseUntil)weaponModel.rotation.x=THREE.MathUtils.damp(weaponModel.rotation.x,.015,22,dt);
  characterVisual.updateMatrixWorld(true);
  weaponModel.updateMatrixWorld(true);
  // Wrist targets sit inside the grip volumes, not at the center of the rifle.
  // Centro do punho da empunhadura, dentro do grip traseiro.
- const rightGrip=weaponModel.localToWorld(new THREE.Vector3(0,-.145,.075));
+ const rightGrip=weaponModel.localToWorld(new THREE.Vector3(.015,-.145,.075));
  solveArmIK(combatBones.upperarm_r,combatBones.lowerarm_r,combatBones.hand_r,rightGrip);
  characterVisual.updateMatrixWorld(true);
  weaponModel.updateMatrixWorld(true);
  // A mão esquerda apoia o handguard, à frente do carregador.
- const leftGrip=weaponModel.localToWorld(new THREE.Vector3(0,-.005,-.53));
+ const leftGrip=weaponModel.localToWorld(new THREE.Vector3(-.015,-.005,-.53));
  solveArmIK(combatBones.upperarm_l,combatBones.lowerarm_l,combatBones.hand_l,leftGrip);
  characterVisual.updateMatrixWorld(true);
  const rifleRotation=weaponModel.getWorldQuaternion(new THREE.Quaternion());
