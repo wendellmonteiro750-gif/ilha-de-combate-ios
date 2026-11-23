@@ -518,11 +518,12 @@ async function createFighter(isEnemy=false,index=0){
    const prone=this.stanceMode==='prone',crouch=this.stanceMode==='crouch';
    const ready=this.isPlayer?1:.72,aim=THREE.MathUtils.clamp(this.weaponAimBlend||0,0,1),combatPose=Math.max(aim,THREE.MathUtils.clamp(this.weaponFireBlend||0,0,1));
    const fire=THREE.MathUtils.clamp(this.weaponFireBlend||0,0,1),run=THREE.MathUtils.clamp(this.weaponRunBlend||0,0,1),reload=THREE.MathUtils.clamp(this.reloadBlend||0,0,1);
+   const firePhase=this.firePosePhase||0;
    const readyTarget=this.isPlayer?(run?.12:Math.max(.72,aim*.98,fire*.96,reload*.78)):.62;
    this.weaponReadyBlend=THREE.MathUtils.damp(this.weaponReadyBlend??.72,readyTarget,12,dt);
    const armReady=this.weaponReadyBlend,elbowReady=THREE.MathUtils.clamp(armReady+aim*.12,0,1);
    const reloadPhase=Math.sin((1-reload)*Math.PI);
-   const firePulse=fire*(.12+.10*Math.sin((this.firePosePhase||0)*18));
+   const firePulse=fire*(.12+.10*Math.sin(firePhase*18));
    const pose=[
     ['mixamorigHips',prone ? .82 : crouch ? .42 : -(this.jumpBlend||0)*.16,0,0],
     ['mixamorigSpine',prone ? .48 : crouch ? -.10 : -.30*combatPose-.12*aim+ .10*run-(this.jumpBlend||0)*.08,0,0],
@@ -828,6 +829,7 @@ function animate(){
    const faceYaw=worldYaw+Math.PI,turn=THREE.MathUtils.euclideanModulo(faceYaw-p.rotation.y+Math.PI,Math.PI*2)-Math.PI;
    p.rotation.y+=turn*Math.min(1,(aiming||fireHeld||firePoseTimer>0?12:5)*dt);play(playerRig,p.position.y>.04?'jump':'idle');
   }
+  playerRig.firePosePhase=clock.elapsedTime;
   playerRig.weaponAimBlend=THREE.MathUtils.damp(playerRig.weaponAimBlend||0,Math.max(aimBlend,firePoseTimer>0?.82:0),14,dt);
     playerRig.aimPitch=pitch*playerRig.weaponAimBlend;
     playerRig.reloadBlend=reloadTimer>0?THREE.MathUtils.clamp(reloadTimer/currentWeapon().reload,0,1):0;
