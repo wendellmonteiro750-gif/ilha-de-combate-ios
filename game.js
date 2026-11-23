@@ -161,7 +161,7 @@ function applyCombatWeaponPose(crouch=false,prone=false,dt=0){
  const characterWorldRotation=characterVisual.getWorldQuaternion(new THREE.Quaternion());
  const aimLocalDirection=aimWorldDirection.applyQuaternion(characterWorldRotation.invert()).normalize();
  const desiredWeaponRotation=new THREE.Quaternion().setFromUnitVectors(
-  new THREE.Vector3(0,0,1),aimLocalDirection
+  new THREE.Vector3(0,0,-1),aimLocalDirection
  );
  // Suaviza o acompanhamento sem deixar o cano atrasar visivelmente a mira.
  weaponModel.quaternion.slerp(desiredWeaponRotation,1-Math.exp(-dt*24));
