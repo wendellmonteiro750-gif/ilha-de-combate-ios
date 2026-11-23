@@ -34,3 +34,6 @@ h1{font:900 clamp(48px,13vw,62px)/.82 'Barlow Condensed',Impact,sans-serif;lette
 @media(max-width:390px){#stick{width:120px;height:120px}#knob{left:34px;top:34px}.control{width:53px;height:53px}.run,.jump{right:91px}.aim,.reload{right:155px}.fire{width:70px;height:70px}}
 @media(min-width:800px){#stick{left:32px}.control{width:66px;height:66px}}
 @media(prefers-reduced-motion:reduce){.control{transition:none}}
+
+#stamina{color:#f0d18b}.stats span{white-space:nowrap}.hit{color:#ffd36a!important;text-shadow:0 0 10px #f90,0 2px 5px #000}
+@media(max-width:390px){.stats{gap:4px}.stats span{padding:7px 6px;font-size:8px}.brand{padding:7px 8px}}
