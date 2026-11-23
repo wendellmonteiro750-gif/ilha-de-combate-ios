@@ -4,4 +4,9 @@
 <div id="hud"><div class="topbar"><div class="brand"><b>09</b><span>OPERAÇÃO NOVE<small>BATTLE ROYALE</small></span></div><div class="stats"><span id="health">VIDA 100</span><span id="ammo">30 / 120</span><span id="kills">ELIMINAÇÕES 0</span></div></div><div class="crosshair"><i></i><b></b></div><div class="bottom-info"><span id="poseLabel">POSTURA: EM PÉ</span><span id="message">ESCOLHA SEU MODO</span></div></div>
 <div id="controls"><div id="stick"><div id="knob"></div></div><button class="control run" id="run">↗</button><button class="control jump" id="jump">↑</button><button class="control crouch" id="crouch">▾</button><button class="control prone" id="prone">▰</button><button class="control aim" id="aim">◎</button><button class="control reload" id="reload">↻</button><button class="control swap" id="swap">⇄</button><button class="control fire" id="fire">✦</button></div>
 <div id="lobby"><div class="lobby-card"><div class="eyebrow">NOVE REGIÕES • UMA ÚLTIMA EQUIPE</div><h1>OPERAÇÃO<br><em>NOVE</em></h1><p>Explore nove cidades, encontre equipamentos, enfrente adversários e sobreviva até o fim.</p><div class="lobby-modes"><span>SOLO</span><span>LOOT</span><span>COMBATE</span></div><button id="play">ENTRAR NA PARTIDA →</button><small>PROTÓTIPO JOGÁVEL • TERCEIRA PESSOA</small></div></div>
-<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script><script type="module" src="./game.js?v=nove-04"></script></body></html>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script><script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(() => {}));
+}
+</script>
+<script type="module" src="./game.js?v=nove-04"></script></body></html>
