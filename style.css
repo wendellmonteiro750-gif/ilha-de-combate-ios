@@ -470,3 +470,70 @@ canvas{display:block;width:100%;height:100%;touch-action:none}#hud{position:fixe
 #fireMode:active,#weaponSwitch:active{filter:brightness(1.25);transform:scale(.97)}
 .ammo-panel i{font-style:normal;color:#ffe0a0;font-weight:900}
 #inventoryWeapons .inventory-slot small{display:block;color:#d4c6a3;font-size:9px;margin-top:3px}
+
+
+/* VISUAL REFRESH 2026: lobby cinematográfico e HUD por ícones */
+.lobby-screen{
+ background:
+  radial-gradient(ellipse at 72% 48%,rgba(196,151,76,.16),transparent 38%),
+  linear-gradient(90deg,rgba(4,12,18,.96) 0%,rgba(5,17,23,.82) 43%,rgba(5,16,21,.32) 100%);
+}
+.lobby-screen::before{
+ background:
+  linear-gradient(90deg,rgba(3,10,15,.55),transparent 75%),
+  linear-gradient(0deg,#07131cf5 0%,transparent 52%,#07131c88 100%),
+  radial-gradient(ellipse at 78% 44%,#e5c47a24,transparent 46%);
+}
+.lobby-mark{border-radius:50%;box-shadow:0 0 0 4px #f2d08b18,0 5px 18px #0009}
+.lobby-content{max-width:480px;margin:auto 0 11vh;padding:clamp(14px,3vw,25px);border-left:2px solid #e4bb68;background:linear-gradient(90deg,#07151bd9,transparent);backdrop-filter:blur(2px)}
+.lobby-kicker{color:#f4cf82}
+.lobby-content h1{font-size:clamp(48px,14vw,78px);letter-spacing:-2.8px;text-shadow:0 5px 24px #000}
+.lobby-content p{max-width:330px;line-height:1.55;color:#d5e0df}
+.lobby-play{border-radius:999px;height:58px;padding:0 23px;box-shadow:0 4px 0 #67421f,0 10px 26px #000b,inset 0 1px 0 #fff9}
+.lobby-settings{border-radius:999px}
+.lobby-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.lobby-quick{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}
+.lobby-quick span{border:1px solid #ffffff35;border-radius:999px;padding:7px 10px;background:#0b1b22aa;color:#e7e0ce;font-size:8px;font-weight:900;letter-spacing:.7px}
+.lobby-features{gap:9px}
+.lobby-features span{padding:7px 10px;border:1px solid #ffffff22;border-radius:999px;background:#091820a8}
+.lobby-online{backdrop-filter:blur(8px)}
+/* Faixas compactas e botões de ação totalmente circulares */
+.stats{align-items:center;flex-wrap:wrap;max-width:min(78vw,560px)}
+.stats button{width:38px;height:38px;min-width:38px;padding:0!important;border-radius:50%!important;display:grid;place-items:center;border:1px solid #f4e2b6aa!important;background:radial-gradient(circle at 32% 24%,#617b83,#1b3039 75%)!important;color:#fff!important;font-size:18px!important;font-weight:1000;box-shadow:0 3px 0 #07131a,0 4px 10px #0009!important;text-shadow:0 1px 3px #000;touch-action:manipulation}
+.stats #medkit{width:38px;height:38px;padding:0!important;border-radius:50%!important;font-size:20px!important;background:radial-gradient(circle at 32% 24%,#70a98a,#245a45 75%)!important}
+.stats #fireMode{font-size:17px!important}
+.stats #weaponSwitch{font-size:18px!important}
+.stats #inventoryToggle{font-size:19px!important}
+.actions button small,.sprint-btn small{display:none!important}
+.actions button span{font-size:27px!important;line-height:1!important}
+.actions .fire-btn span{font-size:34px!important}
+.actions button{border-radius:50%!important}
+.sprint-btn{border-radius:50%!important}
+#joystick{border-radius:50%!important}
+#stick{border-radius:50%!important}
+@media (orientation:portrait) and (max-width:699px){
+ .lobby-screen{padding:calc(env(safe-area-inset-top) + 14px) 15px calc(env(safe-area-inset-bottom) + 14px)}
+ .lobby-top{font-size:10px}
+ .lobby-online{font-size:7px;padding:7px}
+ .lobby-content{margin-bottom:8vh;padding:15px 12px}
+ .lobby-content h1{font-size:clamp(46px,14vw,64px)}
+ .lobby-content p{font-size:12px;margin:13px 0 18px}
+ .lobby-actions{gap:8px}
+ .lobby-play{width:min(100%,300px)}
+ .lobby-settings{height:44px;font-size:9px}
+ .lobby-quick span{font-size:7px;padding:6px 8px}
+ .stats{top:112px;left:8px;gap:4px;max-width:calc(100vw - 100px)}
+ .stats span{font-size:8px;padding:4px 6px}
+ .stats button{width:34px;height:34px;min-width:34px;font-size:17px!important}
+ .stats #medkit{width:34px;height:34px;font-size:18px!important}
+ .actions{right:10px;bottom:20px}
+ .actions button small,.sprint-btn small{display:none!important}
+ .actions .aim-btn span,.actions .jump-btn span,.actions .crouch-btn span,.actions .prone-btn span,.actions .reload-btn span{font-size:25px!important}
+ .actions .fire-btn span{font-size:32px!important}
+ .sprint-btn{width:48px!important;height:48px!important;left:130px!important;bottom:48px!important}
+ .sprint-btn span{font-size:22px!important}
+}
+@media(min-width:700px){
+ .stats button{width:44px;height:44px;min-width:44px;font-size:20px!important}
+ .lobby-content{margin-bottom:10vh}
+}
