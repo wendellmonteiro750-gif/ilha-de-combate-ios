@@ -129,9 +129,9 @@ export class BattleSystems {
   }
   start(){
     if(this.phase!=='lobby')return;this.phase='plane';this.elapsed=0;
-    this.hero.position.copy(this.planeStart);
+    this.hero.position.copy(this.planeStart);this.hero.position.y+=1.4;
     this.plane=this.createPlane();this.scene.add(this.plane);
-    this.plane.position.copy(this.hero.position);this.plane.rotation.y=-Math.atan2(this.planeEnd.z-this.planeStart.z,this.planeEnd.x-this.planeStart.x);
+    this.plane.position.copy(this.hero.position);this.plane.position.y-=1.4;this.plane.rotation.y=-Math.atan2(this.planeEnd.z-this.planeStart.z,this.planeEnd.x-this.planeStart.x);
     document.getElementById('br-panel').style.display='block';document.getElementById('br-hint').style.display='block';
     document.getElementById('br-hint').textContent='AVIÃO EM ROTA — ESCOLHA O MOMENTO DO SALTO';
     this.onStatus('AVIÃO DE TRANSPORTE EM ROTA — PREPARE-SE PARA SALTAR');
