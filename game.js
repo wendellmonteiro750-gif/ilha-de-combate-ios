@@ -591,8 +591,8 @@ let humanModelPromise=null,humanSkeletonUtils=null;
 async function loadHumanModel(){
  if(!humanModelPromise)humanModelPromise=(async()=>{
   const [{GLTFLoader},utils]=await Promise.all([
-   import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js'),
-   import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/utils/SkeletonUtils.js')
+   import('three/addons/loaders/GLTFLoader.js'),
+   import('three/addons/utils/SkeletonUtils.js')
   ]);
   humanSkeletonUtils=utils;
   return new GLTFLoader().loadAsync(HUMAN_MODEL_URL);
@@ -609,7 +609,7 @@ async function createFighter(isEnemy=false,index=0){
  }catch(loadError){
   humanModelPromise=null;
   console.error('Não foi possível carregar o novo operador 3D.',loadError);
-  throw new Error('O novo operador 3D não carregou. Verifique a conexão e tente novamente.');
+  throw new Error('Modelo 3D: '+(loadError?.message||'falha de rede ou CORS')+'. Confira a conexão e tente novamente.');
  }
  const boneByKey=new Map();
  model.traverse(o=>{
