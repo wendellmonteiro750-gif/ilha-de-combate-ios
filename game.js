@@ -280,7 +280,9 @@ function addLootDrops(){
   [-10,-8,'weapon',0],[17,-15,'scope'],[25,12,'medkit'],[-28,18,'weapon',1],
   [65,38,'ammo'],[-73,-45,'scope'],[41,-85,'weapon',2],[-89,70,'medkit'],
   [99,8,'armor'],[44,57,'weapon',1],[-46,71,'ammo'],[82,-61,'scope'],
-  [-56,-79,'weapon',0],[8,85,'medkit'],[-101,21,'ammo'],[106,80,'weapon',2],[-6,-99,'scope'],[31,-48,'weapon',3],[-92,-55,'weapon',4],[88,42,'weapon',5],[5,48,'attachment'],[-48,-18,'attachment'],[102,-24,'attachment']
+  [-56,-79,'weapon',0],[8,85,'medkit'],[-101,21,'ammo'],[106,80,'weapon',2],[-6,-99,'scope'],[31,-48,'weapon',3],[-92,-55,'weapon',4],[88,42,'weapon',5],[5,48,'attachment'],[-48,-18,'attachment'],[102,-24,'attachment'],
+  // Suprimentos dentro das casas: recompensam a exploração dos interiores.
+  [-12,-12,'ammo'],[14,-18,'medkit'],[22,9,'armor'],[-25,15,'weapon',1],[68,35,'scope'],[-76,-42,'ammo'],[38,-88,'attachment'],[42,54,'medkit']
  ];
  drops.forEach(([x,z,type,weaponSlot],i)=>{
   const group=new THREE.Group();
