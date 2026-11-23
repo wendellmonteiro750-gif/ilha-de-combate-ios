@@ -10,12 +10,12 @@ const HUMAN_MODEL_URL='https://raw.githubusercontent.com/memoriesrohit/avatar-st
 let humanModelPromise=null;
 const HUMAN_ROLE_CLIPS={idle:'Idle',walk:'Walk',run:'Walk',cast:'Boxing',hit:'Argue'};
 const weapons=[
- {name:'FUZIL AR',category:'FUZIL',mag:30,damage:34,rate:.105,spread:.012,reload:1.45,modes:['SINGLE','BURST','AUTO'],range:105},
- {name:'SMG',category:'SUBMETRALHADORA',mag:40,damage:19,rate:.075,spread:.021,reload:1.35,modes:['SINGLE','AUTO'],range:62},
- {name:'SNIPER',category:'PRECISÃO',mag:8,damage:92,rate:.78,spread:.0015,reload:2.05,modes:['SINGLE'],range:180},
- {name:'ESCOPETA',category:'ESCOPETA',mag:6,damage:12,rate:.72,spread:.055,reload:1.85,modes:['SINGLE'],pellets:8,range:28},
- {name:'PISTOLA',category:'PISTOLA',mag:15,damage:25,rate:.22,spread:.018,reload:1.15,modes:['SINGLE'],range:48},
- {name:'METRALHADORA',category:'LEVE',mag:60,damage:22,rate:.095,spread:.025,reload:2.25,modes:['AUTO'],range:92}
+ {name:'FUZIL AR',category:'FUZIL',lengthCm:82,mag:30,damage:34,rate:.105,spread:.012,reload:1.45,modes:['SINGLE','BURST','AUTO'],range:105},
+ {name:'SMG',category:'SUBMETRALHADORA',lengthCm:52,mag:40,damage:19,rate:.075,spread:.021,reload:1.35,modes:['SINGLE','AUTO'],range:62},
+ {name:'SNIPER',category:'PRECISÃO',lengthCm:108,mag:8,damage:92,rate:.78,spread:.0015,reload:2.05,modes:['SINGLE'],range:180},
+ {name:'ESCOPETA',category:'ESCOPETA',lengthCm:88,mag:6,damage:12,rate:.72,spread:.055,reload:1.85,modes:['SINGLE'],pellets:8,range:28},
+ {name:'PISTOLA',category:'PISTOLA',lengthCm:29,mag:15,damage:25,rate:.22,spread:.018,reload:1.15,modes:['SINGLE'],range:48},
+ {name:'METRALHADORA',category:'LEVE',lengthCm:98,mag:60,damage:22,rate:.095,spread:.025,reload:2.25,modes:['AUTO'],range:92}
 ];
 let weaponIndex=0,weaponAmmo=[30,40,8,6,15,60],reserveAmmo=[120,160,32,36,75,180],scopeLevel=0,sprintHeld=false,fireMode='AUTO',burstRemaining=0,attachmentLevel=0;
 function currentWeapon(){return weapons[weaponIndex]}
