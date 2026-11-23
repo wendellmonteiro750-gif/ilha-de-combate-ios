@@ -315,7 +315,7 @@ function frame(){
  const target=player.position.clone().add(new THREE.Vector3(0,2,0));
  const cameraDistance=aiming?4.8:8;
  const offset=new THREE.Vector3(Math.sin(yaw)*cameraDistance, (crouching?2.65:3.3)+pitch*3,Math.cos(yaw)*cameraDistance);
- camPos.copy(target).add(offset);camera.position.lerp(camPos,1-Math.exp(-8*dt));camera.fov+=(aiming?48:62-camera.fov)*Math.min(1,dt*8);camera.updateProjectionMatrix();camera.lookAt(target);
+ camPos.copy(target).add(offset);camera.position.lerp(camPos,1-Math.exp(-8*dt));camera.fov+=((aiming?48:62)-camera.fov)*Math.min(1,dt*8);camera.updateProjectionMatrix();camera.lookAt(target);
  // água com pequena variação de cor, sem shader pesado.
  ocean.material.color.setHSL(.53,.48,.31+Math.sin(clock.elapsedTime*.35)*.012);
  if((mapTick+=dt)>.15){drawMap();mapTick=0}
