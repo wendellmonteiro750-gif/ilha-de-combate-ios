@@ -30,9 +30,10 @@ function mat(color,roughness=.86,metalness=0){return new THREE.MeshStandardMater
 function box(parent,w,h,d,material,x,y,z){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m}
 function addTextureGround(){
  const c=document.createElement('canvas');c.width=c.height=1024;const ctx=c.getContext('2d');
- ctx.fillStyle='#667d43';ctx.fillRect(0,0,512,512);
- for(let i=0;i<52000;i++){const x=Math.random()*512,y=Math.random()*512,v=65+Math.random()*80;ctx.fillStyle='rgba('+Math.floor(v*.72)+','+Math.floor(v)+','+Math.floor(v*.48)+','+(Math.random()*.22)+')';ctx.fillRect(x,y,1+Math.random()*3,1+Math.random()*3)}
- const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(28,28);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=renderer.capabilities.getMaxAnisotropy();return t;
+ const grad=ctx.createLinearGradient(0,0,1024,1024);grad.addColorStop(0,'#71894c');grad.addColorStop(.52,'#637c42');grad.addColorStop(1,'#536f3e');ctx.fillStyle=grad;ctx.fillRect(0,0,1024,1024);
+ for(let i=0;i<92000;i++){const x=Math.random()*1024,y=Math.random()*1024,v=55+Math.random()*105,a=.035+Math.random()*.16;ctx.fillStyle='rgba('+Math.floor(v*.72)+','+Math.floor(v)+','+Math.floor(v*.46)+','+a+')';ctx.beginPath();ctx.ellipse(x,y,1+Math.random()*4,.7+Math.random()*2,Math.random()*3,0,Math.PI*2);ctx.fill()}
+ for(let i=0;i<180;i++){const x=Math.random()*1024,y=Math.random()*1024,r=8+Math.random()*35;const g=ctx.createRadialGradient(x,y,1,x,y,r);g.addColorStop(0,'rgba(42,65,35,.16)');g.addColorStop(1,'rgba(42,65,35,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()}
+ const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(24,24);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());return t;
 }
 function addPalm(x,z,s=1){
  const g=new THREE.Group();const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.12*s,.24*s,4.2*s,12),mat(0x79543a));trunk.position.y=2.1*s;trunk.rotation.z=-.08;trunk.castShadow=true;g.add(trunk);
@@ -67,14 +68,14 @@ function addWorldDetail(){
  for(let i=0;i<54;i++){const a=i/9*Math.PI*2,r=205+(i%4)*18;dummy.position.set(Math.cos(a)*r,38+(i%5)*5,Math.sin(a)*r);dummy.scale.set(9+(i%3)*5,2.5+(i%2),5+(i%4)*2);dummy.rotation.y=a;dummy.updateMatrix();clouds.setMatrixAt(i,dummy.matrix)}clouds.instanceMatrix.needsUpdate=true;scene.add(clouds);
 }
 function buildWorld(){
- scene.background=new THREE.Color(0x9bcbe4);scene.fog=new THREE.Fog(0xa9cbd0,245,650);
- scene.add(new THREE.HemisphereLight(0xe8f5ff,0x46583a,2.15));
- const sun=new THREE.DirectionalLight(0xffedcf,3.5);sun.position.set(-42,78,34);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-165;sun.shadow.camera.right=165;sun.shadow.camera.top=165;sun.shadow.camera.bottom=-165;sun.shadow.bias=-.00018;sun.shadow.normalBias=.025;sun.shadow.radius=3;scene.add(sun);
+ scene.background=new THREE.Color(0x9bcbe4);scene.fog=new THREE.FogExp2(0xa9cbd0,.00155);
+ scene.add(new THREE.HemisphereLight(0xe8f5ff,0x46583a,1.75));\n const ambient=new THREE.AmbientLight(0xffffff,.28);scene.add(ambient);
+ const sun=new THREE.DirectionalLight(0xffedcf,3.5);sun.position.set(-42,78,34);sun.castShadow=true;sun.shadow.mapSize.set(innerWidth<700?1536:2048,innerWidth<700?1536:2048);sun.shadow.camera.left=-165;sun.shadow.camera.right=165;sun.shadow.camera.top=165;sun.shadow.camera.bottom=-165;sun.shadow.bias=-.00018;sun.shadow.normalBias=.025;sun.shadow.radius=innerWidth<700?2:3;sun.shadow.camera.near=1;sun.shadow.camera.far=260;scene.add(sun);
  const fill=new THREE.DirectionalLight(0x9bc8e8,.72);fill.position.set(55,28,-48);scene.add(fill);
  const ground=new THREE.Mesh(new THREE.PlaneGeometry(800,800),new THREE.MeshStandardMaterial({map:addTextureGround(),roughness:.96}));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
  const beach=new THREE.Mesh(new THREE.RingGeometry(119,141,192),new THREE.MeshStandardMaterial({color:0xd9c18c,roughness:.95}));beach.rotation.x=-Math.PI/2;beach.position.y=.035;scene.add(beach);
- const waterMat=new THREE.MeshStandardMaterial({color:0x168aa6,roughness:.16,metalness:.16});
- const water=new THREE.Mesh(new THREE.PlaneGeometry(1100,1100,1,1),waterMat);water.rotation.x=-Math.PI/2;water.position.y=-.28;scene.add(water);
+ const waterMat=new THREE.MeshStandardMaterial({color:0x168aa6,roughness:.24,metalness:.12,transparent:false});
+ const water=new THREE.Mesh(new THREE.PlaneGeometry(1100,1100,1,1),waterMat);water.rotation.x=-Math.PI/2;water.position.y=-.28;scene.add(water);\n waterMat.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\\nvarying vec3 vWaterWorld;').replace('#include <begin_vertex>','#include <begin_vertex>\\n vWaterWorld=(modelMatrix*vec4(transformed,1.0)).xyz; transformed.y += sin(vWaterWorld.x*.035+vWaterWorld.z*.022)*.018 + cos(vWaterWorld.z*.04-vWaterWorld.x*.018)*.012;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\\nvarying vec3 vWaterWorld;').replace('#include <color_fragment>','#include <color_fragment>\\n float ripple=0.5+0.5*sin(vWaterWorld.x*.22+vWaterWorld.z*.16); diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.32,.72,.78),ripple*.10);');};
  for(let i=0;i<46;i++){const a=i*2.399,r=22+(i%8)*3.3;addPalm(Math.cos(a)*r,Math.sin(a)*r,.75+(i%4)*.1)}
  for(let i=0;i<95;i++){const a=i*2.399,r=52+(i%13)*5.1;addPalm(Math.cos(a)*r,Math.sin(a)*r,.85+(i%5)*.12)}
  addHouse(-12,-12,.2);addHouse(14,-18,-.3);addHouse(22,9,.8);addHouse(-25,15,-.5);
@@ -269,12 +270,12 @@ async function init(){
  renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
  // Perfil gráfico equilibrado: imagem mais nítida sem sobrecarregar o Safari no iPhone.
  const mobileQuality=innerWidth<700;
- renderer.setPixelRatio(Math.min(devicePixelRatio||1,mobileQuality?1.5:1.85));
+ renderer.setPixelRatio(Math.min(devicePixelRatio||1,mobileQuality?1.65:2));
  renderer.setSize(innerWidth,innerHeight);
  renderer.shadowMap.enabled=true;
- renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+ renderer.shadowMap.type=THREE.PCFSoftShadowMap;\n renderer.setScissorTest(false);
  renderer.toneMapping=THREE.ACESFilmicToneMapping;
- renderer.toneMappingExposure=1.12;
+ renderer.toneMappingExposure=1.18;\n renderer.info.autoReset=true;
  renderer.outputColorSpace=THREE.SRGBColorSpace;
  renderer.setClearColor(0x9bcbe4,1);
  root.appendChild(renderer.domElement);
@@ -367,7 +368,7 @@ function updateRadar(){
  }
 }
 function animate(){
- const dt=Math.min(clock.getDelta(),.04),p=playerRig.holder;
+ const dt=Math.min(clock.getDelta(),.04),p=playerRig.holder;\n if(scene.fog&&scene.fog.isFogExp2){scene.fog.density=.00145+Math.sin(clock.elapsedTime*.035)*.00008;}
  worldYaw-=lookDeltaX*.0052;
  // Ajuste vertical mais controlado: evita inclinação excessiva e mantém o horizonte estável no toque.
  pitch=THREE.MathUtils.clamp(pitch-lookDeltaY*.0041,-.62,.62);
