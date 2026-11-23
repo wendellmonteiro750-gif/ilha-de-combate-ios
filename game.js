@@ -212,9 +212,18 @@ function updateCombatBots(dt){
   const dx=hero.position.x-bot.position.x,dz=hero.position.z-bot.position.z;
   const distance=Math.hypot(dx,dz);
   if(distance>5.8&&distance<23){
-   const pace=distance>10?1.05:.55;
-   bot.position.x+=dx/distance*pace*dt;
-   bot.position.z+=dz/distance*pace*dt;
+   const pace=distance>10?1.05:.55,step=pace*dt;
+   const nx=bot.position.x+dx/distance*step,nz=bot.position.z+dz/distance*step;
+   const blocked=worldBlockers.some(b=>{const bx=nx-b.x,bz=nz-b.z,limit=b.r+.48;return bx*bx+bz*bz<limit*limit});
+   if(!blocked){bot.position.x=nx;bot.position.z=nz}
+   else{
+    const sideX=-dz/distance,sideZ=dx/distance;
+    for(const sign of [1,-1]){
+     const sx=bot.position.x+sideX*step*sign,sz=bot.position.z+sideZ*step*sign;
+     const sideBlocked=worldBlockers.some(b=>{const bx=sx-b.x,bz=sz-b.z,limit=b.r+.48;return bx*bx+bz*bz<limit*limit});
+     if(!sideBlocked){bot.position.x=sx;bot.position.z=sz;break}
+    }
+   }
   }else if(distance<=5.8){
    const sideX=-dz/Math.max(distance,.01),sideZ=dx/Math.max(distance,.01);
    bot.position.x+=sideX*Math.sin(now*.001+data.phase)*.38*dt;
@@ -229,6 +238,12 @@ function updateCombatBots(dt){
    bot.traverse(node=>{if(node.isMesh&&node.material&&node.material.emissive)node.material.emissive.setHex(0x000000)});
   }
   if(distance<16&&distance>3&&now>=data.nextShot&&playerHealth>0){
+   const sightOrigin=new THREE.Vector3(bot.position.x,1.55,bot.position.z);
+   const sightTarget=new THREE.Vector3(hero.position.x,1.25,hero.position.z);
+   const sightDirection=sightTarget.clone().sub(sightOrigin).normalize();
+   cameraRay.set(sightOrigin,sightDirection);cameraRay.far=distance;
+   const blockedSight=cameraRay.intersectObjects(cameraBlockerMeshes,true).length>0;
+   if(blockedSight){data.nextShot=now+350;continue}
    const armorReduction=Math.min(.48,(battleSystems?.inventory.vest||0)*.12+(battleSystems?.inventory.helmet||0)*.08);
    const incomingDamage=4*(1-armorReduction);
    playerHealth=Math.max(0,playerHealth-incomingDamage);
