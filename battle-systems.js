@@ -80,26 +80,59 @@ export class BattleSystems {
       this.scene.add(g);this.items.push({name,type,color,group:g,weapon:i%4});
     }
   }
+  createPlane(){
+    const T=this.T,plane=new T.Group();
+    const metal=new T.MeshStandardMaterial({color:0x53636a,metalness:.62,roughness:.34});
+    const edge=new T.MeshStandardMaterial({color:0x9ba9aa,metalness:.7,roughness:.28});
+    const dark=new T.MeshStandardMaterial({color:0x17262d,metalness:.35,roughness:.25});
+    const glass=new T.MeshPhysicalMaterial({color:0x173746,metalness:.35,roughness:.12,transparent:true,opacity:.88,clearcoat:1});
+    const body=new T.Mesh(new T.CylinderGeometry(.72,.95,12,16,1),metal);body.rotation.z=Math.PI/2;plane.add(body);
+    const nose=new T.Mesh(new T.ConeGeometry(.72,3.1,16),edge);nose.rotation.z=-Math.PI/2;nose.position.x=7.45;plane.add(nose);
+    const tailCone=new T.Mesh(new T.ConeGeometry(.88,2.4,14),metal);tailCone.rotation.z=Math.PI/2;tailCone.position.x=-7.1;plane.add(tailCone);
+    const cockpit=new T.Mesh(new T.SphereGeometry(.82,16,10),glass);cockpit.scale.set(1.7,.62,1.15);cockpit.position.set(5.25,.58,0);plane.add(cockpit);
+    const wing=new T.Mesh(new T.BoxGeometry(2.2,.18,19),edge);wing.position.set(.15,-.05,0);plane.add(wing);
+    const rearWing=new T.Mesh(new T.BoxGeometry(1.15,.13,8),metal);rearWing.position.set(-7,.5,0);plane.add(rearWing);
+    const fin=new T.Mesh(new T.BoxGeometry(2.1,2.7,.18),metal);fin.position.set(-7,1.55,0);plane.add(fin);
+    this.propellers=[];
+    for(const side of [-1,1]){
+      const z=side*4.0;
+      const engine=new T.Mesh(new T.CylinderGeometry(.48,.58,2.7,16),dark);engine.rotation.x=Math.PI/2;engine.position.set(.3,-.52,z);plane.add(engine);
+      const hub=new T.Mesh(new T.SphereGeometry(.24,12,8),edge);hub.position.set(1.75,-.52,z);plane.add(hub);
+      const prop=new T.Group();prop.position.set(1.85,-.52,z);plane.add(prop);
+      for(let k=0;k<4;k++){const blade=new T.Mesh(new T.BoxGeometry(.16,2.25,.34),dark);blade.position.y=1.12;blade.rotation.z=k*Math.PI/2+.22;prop.add(blade)}
+      this.propellers.push(prop);
+      const gear=new T.Mesh(new T.CylinderGeometry(.09,.09,.9,8),dark);gear.position.set(-.2,-1.05,z*.72);plane.add(gear);
+      const wheel=new T.Mesh(new T.CylinderGeometry(.34,.34,.18,12),dark);wheel.rotation.x=Math.PI/2;wheel.position.set(-.2,-1.48,z*.72);plane.add(wheel);
+    }
+    const stripe=new T.Mesh(new T.BoxGeometry(7,.035,2.23),new T.MeshStandardMaterial({color:0x9d9d83,metalness:.2,roughness:.7}));stripe.position.y=.49;plane.add(stripe);
+    const beacon=new T.PointLight(0xff3930,1.2,8);beacon.position.set(0,1.2,0);plane.add(beacon);
+    const navL=new T.Mesh(new T.SphereGeometry(.16,8,6),new T.MeshBasicMaterial({color:0x22ff77}));navL.position.set(0,.1,9.5);plane.add(navL);
+    const navR=new T.Mesh(new T.SphereGeometry(.16,8,6),new T.MeshBasicMaterial({color:0xff3333}));navR.position.set(0,.1,-9.5);plane.add(navR);
+    plane.scale.setScalar(.78);return plane;
+  }
   start(){
     if(this.phase!=='lobby')return;this.phase='plane';this.elapsed=0;
-    const T=this.T;this.hero.position.set(-55,31,-8);
-    this.plane=new T.Group();this.scene.add(this.plane);
-    const body=new T.Mesh(new T.BoxGeometry(7,.65,2.2),new T.MeshStandardMaterial({color:0x35434b,metalness:.45,roughness:.5}));this.plane.add(body);
-    const wing=new T.Mesh(new T.BoxGeometry(1.2,.12,14),new T.MeshStandardMaterial({color:0x9aa7a7,metalness:.3}));this.plane.add(wing);
-    const tail=new T.Mesh(new T.BoxGeometry(1,.12,4),new T.MeshStandardMaterial({color:0x879697}));tail.position.set(-3,.5,0);this.plane.add(tail);
+    this.hero.position.set(-55,31,-8);
+    this.plane=this.createPlane();this.scene.add(this.plane);
     this.plane.position.copy(this.hero.position);this.plane.rotation.y=Math.PI/2;
     document.getElementById('br-panel').style.display='block';document.getElementById('br-hint').style.display='block';
     document.getElementById('br-hint').textContent='AVIÃO EM ROTA — ESCOLHA O MOMENTO DO SALTO';
-    this.onStatus('AVIÃO EM ROTA — ESCOLHA ONDE POUSAR');
+    this.onStatus('AVIÃO DE TRANSPORTE EM ROTA — PREPARE-SE PARA SALTAR');
+  }
+  openParachute(){
+    if(this.phase!=='freefall')return;this.phase='parachute';
+    const T=this.T;this.parachute=new T.Group();this.scene.add(this.parachute);
+    const canopy=new T.Mesh(new T.SphereGeometry(3.5,24,12,0,Math.PI*2,0,Math.PI/2),new T.MeshStandardMaterial({color:0xd9a83c,side:T.DoubleSide,roughness:.66,metalness:.08}));canopy.position.y=4;canopy.scale.y=.62;this.parachute.add(canopy);
+    const seams=new T.Mesh(new T.SphereGeometry(3.53,12,8,0,Math.PI*2,0,Math.PI/2),new T.MeshBasicMaterial({color:0x6c5121,wireframe:true,transparent:true,opacity:.28}));seams.position.y=4;seams.scale.y=.62;this.parachute.add(seams);
+    for(let i=0;i<12;i++){const a=i/12*Math.PI*2;const line=new T.Mesh(new T.CylinderGeometry(.014,.014,4.1,5),new T.MeshBasicMaterial({color:0xf1ead4}));line.position.set(Math.cos(a)*1.55,2.05,Math.sin(a)*1.55);line.rotation.z=-Math.cos(a)*.35;line.rotation.x=Math.sin(a)*.35;this.parachute.add(line)}
+    this.onStatus('PARAQUEDAS ABERTO — CONTROLE A DIREÇÃO DA QUEDA');
+    document.getElementById('br-hint').textContent='PARAQUEDAS ABERTO · USE O JOYSTICK PARA GUIAR';
   }
   jump(){
-    if(this.phase!=='plane')return;this.phase='parachute';document.getElementById('br-panel').style.display='none';
-    this.hero.position.y=26;this.dropTarget.set(this.hero.position.x+16,0,this.hero.position.z);
-    const T=this.T;this.parachute=new T.Group();this.scene.add(this.parachute);
-    const canopy=new T.Mesh(new T.SphereGeometry(3.2,16,8,0,Math.PI*2,0,Math.PI/2),new T.MeshStandardMaterial({color:0xd9a83c,side:T.DoubleSide,roughness:.8}));canopy.position.y=4;canopy.scale.y=.55;this.parachute.add(canopy);
-    for(let i=0;i<8;i++){const a=i/8*Math.PI*2;const line=new T.Mesh(new T.CylinderGeometry(.018,.018,3.8,5),new T.MeshBasicMaterial({color:0xeeeecc}));line.position.set(Math.cos(a)*1.5,2.1,Math.sin(a)*1.5);line.rotation.z=-Math.cos(a)*.35;line.rotation.x=Math.sin(a)*.35;this.parachute.add(line)}
-    this.onStatus('PARAQUEDAS ABERTO — DIRECIONE A QUEDA');
-    document.getElementById('br-hint').textContent='PARAQUEDAS ABERTO · USE O JOYSTICK PARA GUIAR';
+    if(this.phase!=='plane')return;this.phase='freefall';this.freefallTime=0;document.getElementById('br-panel').style.display='none';
+    this.hero.position.y=29;this.dropTarget.set(this.hero.position.x+16,0,this.hero.position.z);
+    this.onStatus('SALTO! QUEDA LIVRE — PARAQUEDAS ABRIRÁ AUTOMATICAMENTE');
+    document.getElementById('br-hint').textContent='QUEDA LIVRE · PREPARE-SE PARA ABRIR O PARAQUEDAS';
   }
   toggleInventory(){
     const el=document.getElementById('br-inventory');el.style.display=el.style.display==='block'?'none':'block';this.renderInventory();
@@ -125,10 +158,16 @@ export class BattleSystems {
     this.elapsed+=dt;
     if(this.phase==='plane'){
       this.hero.position.x=Math.min(58,this.hero.position.x+dt*8);this.hero.position.y=31;this.plane.position.copy(this.hero.position);
-      if(this.hero.position.x>=58){this.jump()}
+      this.plane.rotation.z=Math.sin(this.elapsed*1.1)*.018;
+      for(const prop of this.propellers||[])prop.rotation.x+=dt*34;
+      if(this.hero.position.x>=58)this.jump();
+    }else if(this.phase==='freefall'){
+      this.freefallTime+=dt;this.hero.position.y=Math.max(0,this.hero.position.y-dt*9.2);
+      this.hero.position.x+=moveX*dt*5.5;this.hero.position.z+=(-moveY)*dt*5.5;
+      if(this.freefallTime>1.25)this.openParachute();
     }else if(this.phase==='parachute'){
-      this.hero.position.y=Math.max(0,this.hero.position.y-dt*3.4);
-      this.hero.position.x+=moveX*dt*4;this.hero.position.z+=(-moveY)*dt*4;
+      this.hero.position.y=Math.max(0,this.hero.position.y-dt*3.1);
+      this.hero.position.x+=moveX*dt*4.6;this.hero.position.z+=(-moveY)*dt*4.6;
       if(this.parachute){this.parachute.position.set(this.hero.position.x,this.hero.position.y,this.hero.position.z)}
       if(this.hero.position.y<=0){this.phase='match';this.hero.position.y=0;this.onStatus('POUSOU — ENCONTRE ARMAS E EQUIPAMENTOS');document.getElementById('br-hint').style.display='none';if(this.parachute){this.scene.remove(this.parachute);this.parachute=null}if(this.plane){this.scene.remove(this.plane);this.plane=null}}
     }else if(this.phase==='match'){
