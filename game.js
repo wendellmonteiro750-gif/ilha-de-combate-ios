@@ -405,30 +405,65 @@ function showBulletTrail(start,end){
 function fireShot(){
  if(reloading||ammo<=0||performance.now()-lastShot<155)return;
  lastShot=performance.now();ammo--;stats();cameraRecoil=Math.min(.12,cameraRecoil+.035);cameraShake=Math.min(.08,cameraShake+.018);
- // Primeiro encontra o ponto exato sob a mira, usando o centro da câmera.
- camera.updateMatrixWorld(true);
+ // 1) A câmera escolhe o ponto do mundo que está exatamente no centro da mira.
+ // Atualiza a matriz antes do raycast para usar a posição/rotação deste frame.
+ camera.updateWorldMatrix(true,false);
  const aimRay=new THREE.Raycaster();
  aimRay.setFromCamera(new THREE.Vector2(0,0),camera);
+ aimRay.near=0;
  aimRay.far=85;
  const aimHits=aimRay.intersectObjects(targets,true);
  const aimPoint=aimHits.length
   ?aimHits[0].point.clone()
-  :aimRay.ray.origin.clone().addScaledVector(aimRay.ray.direction,85);
- // O rastro termina exatamente no ponto escolhido pelo raio central da câmera.
- // A colisão também usa esse mesmo raio para não desviar do centro da mira.
+  :aimRay.ray.at(85,new THREE.Vector3());
+ // 2) O projétil nasce na boca real do cano. Atualiza também todos os pais
+ // do rifle: o personagem e os ossos podem ter mudado com a animação neste frame.
  let muzzlePoint=camera.position.clone();
  if(weaponModel&&weaponModel.visible){
-  weaponModel.updateMatrixWorld(true);
-  muzzlePoint=weaponModel.localToWorld(new THREE.Vector3(0,.012,-1.14));
+  weaponModel.updateWorldMatrix(true,false);
+  muzzlePoint=weaponModel.localToWorld(new THREE.Vector3(0,.012,-1.145));
  }
- showBulletTrail(muzzlePoint,aimPoint);
+ // 3) A direção visual é calculada do cano até o ponto escolhido pela mira.
+ // A colisão continua sendo decidida pelo raio da câmera, evitando parallax.
+ const shotDirection=aimPoint.clone().sub(muzzlePoint).normalize();
+ const shotEnd=muzzlePoint.clone().addScaledVector(shotDirection,muzzlePoint.distanceTo(aimPoint));
+ showBulletTrail(muzzlePoint,shotEnd);
+ showMuzzleFlash(muzzlePoint,shotDirection);
  if(aimHits.length){
-  const target=aimHits[0].object;
-  target.material=mat(0xe5a43a);
+  const hitRoot=aimHits[0].object;
+  const originalMaterials=[];
+  hitRoot.traverse(node=>{
+   if(node.isMesh){
+    originalMaterials.push([node,node.material]);
+    node.material=mat(0xe5a43a);
+   }
+  });
   $('message').textContent='ALVO ATINGIDO!';
   $('message').classList.add('hit');
-  setTimeout(()=>{$('message').textContent='ÁREA DE TREINO';$('message').classList.remove('hit');target.material=mat(0xd6d1bd)},500);
+  setTimeout(()=>{
+   $('message').textContent='ÁREA DE TREINO';$('message').classList.remove('hit');
+   for(const [node,material] of originalMaterials)node.material=material;
+  },180);
  }
+}
+function showMuzzleFlash(position,direction){
+ const flash=new THREE.Mesh(
+  new THREE.SphereGeometry(.055,8,8),
+  new THREE.MeshBasicMaterial({color:0xffc45c,transparent:true,opacity:.9,depthWrite:false})
+ );
+ flash.position.copy(position).addScaledVector(direction,.045);
+ flash.scale.set(.8,.8,1.8);
+ flash.renderOrder=33;
+ scene.add(flash);
+ const born=performance.now();
+ const animateFlash=now=>{
+  const t=THREE.MathUtils.clamp((now-born)/55,0,1);
+  flash.material.opacity=.9*(1-t);
+  flash.scale.multiplyScalar(1+.025);
+  if(t<1)requestAnimationFrame(animateFlash);
+  else{scene.remove(flash);flash.geometry.dispose();flash.material.dispose()}
+ };
+ requestAnimationFrame(animateFlash);
 }
 function update(dt){
  const inputMagnitude=Math.min(1,Math.hypot(moveX,moveY));
