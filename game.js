@@ -10,51 +10,132 @@ function mesh(parent,geo,material,pos){const o=new THREE.Mesh(geo,material);o.po
 function cube(parent,w,h,d,m,x,y,z){return mesh(parent,new THREE.BoxGeometry(w,h,d),m,[x,y,z])}
 function capsule(parent,r,len,m,x,y,z){return mesh(parent,new THREE.CapsuleGeometry(r,len,4,8),m,[x,y,z])}
 function init(){
- scene=new THREE.Scene();scene.background=new THREE.Color(0x8fc8e2);scene.fog=new THREE.Fog(0x8fc8e2,58,145);
- camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,180);
+ scene=new THREE.Scene();scene.background=new THREE.Color(0x8fc8e2);scene.fog=new THREE.Fog(0x8fc8e2,105,245);
+ camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,320);
  const mobileProfile=matchMedia('(max-width: 800px)').matches||navigator.maxTouchPoints>0;renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,mobileProfile?1.6:2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.18;renderer.physicallyCorrectLights=true;root.appendChild(renderer.domElement);
  scene.add(new THREE.HemisphereLight(0xeaf5ff,0x46513a,1.85));
  const fill=new THREE.DirectionalLight(0xb9d9ff,.72);fill.position.set(18,14,-24);scene.add(fill);
- const sun=new THREE.DirectionalLight(0xffe5c2,3.0);sun.position.set(-20,32,16);sun.castShadow=true;sun.shadow.mapSize.set(mobileProfile?1536:3072,mobileProfile?1024:3072);sun.shadow.camera.near=1;sun.shadow.camera.far=90;sun.shadow.radius=mobileProfile?2:3;sun.shadow.camera.left=-45;sun.shadow.camera.right=45;sun.shadow.camera.top=45;sun.shadow.camera.bottom=-45;sun.shadow.bias=-0.00018;scene.add(sun);
+ const sun=new THREE.DirectionalLight(0xffe5c2,3.0);sun.position.set(-20,32,16);sun.castShadow=true;sun.shadow.mapSize.set(mobileProfile?1536:3072,mobileProfile?1024:3072);sun.shadow.camera.near=1;sun.shadow.camera.far=180;sun.shadow.radius=mobileProfile?2:3;sun.shadow.camera.left=-105;sun.shadow.camera.right=105;sun.shadow.camera.top=105;sun.shadow.camera.bottom=-105;sun.shadow.bias=-0.00018;scene.add(sun);
  buildIsland();createPlayerAnchor();battleSystems=new BattleSystems(THREE,scene,hero,(message)=>{$('message').textContent=message},worldBlockers);battleSystems.onHeal=amount=>{playerHealth=Math.min(100,playerHealth+amount);$('health').textContent='VIDA '+playerHealth;$('playerCounter').textContent=playerHealth};battleSystems.onZoneDamage=amount=>{playerHealth=Math.max(0,playerHealth-amount);$('health').textContent='VIDA '+Math.round(playerHealth);$('playerCounter').textContent=Math.round(playerHealth);if(playerHealth<=0)battleSystems.end(false)};battleSystems.getKills=()=>eliminations;battleSystems.onAmmo=amount=>{ammoReserve+=amount;stats()};battleSystems.onWeaponChange=w=>{ammo=w.mag;ammoReserve=Math.max(ammoReserve,w.reserve);stats()};bind();addEventListener('resize',resize);addEventListener('orientationchange',()=>setTimeout(resize,180));if(window.visualViewport)window.visualViewport.addEventListener('resize',resize);clock=new THREE.Clock();animate();
 }
 function buildIsland(){
- const waterMat=new THREE.MeshStandardMaterial({color:0x237e9a,roughness:.24,metalness:.12});
- const water=mesh(scene,new THREE.CircleGeometry(210,112),waterMat,[0,-.62,0]);water.rotation.x=-Math.PI/2;
- const landGeo=new THREE.CircleGeometry(108,144);
- const pos=landGeo.attributes.position,colors=[];
+ const waterMat=new THREE.MeshStandardMaterial({color:0x176d88,roughness:.2,metalness:.18});
+ const water=mesh(scene,new THREE.CircleGeometry(285,144),waterMat,[0,-.68,0]);water.rotation.x=-Math.PI/2;
+ const landGeo=new THREE.CircleGeometry(152,192),pos=landGeo.attributes.position,colors=[];
  for(let i=0;i<pos.count;i++){
   const x=pos.getX(i),z=pos.getY(i),r=Math.hypot(x,z);
-  const wave=(Math.sin(x*.34)*Math.cos(z*.29)+Math.sin((x+z)*.19))*.11;
-  pos.setZ(i,wave+Math.max(0,1-r/43)*.08);
-  const patch=(Math.sin(x*1.7+z*.8)*Math.cos(z*1.35-x*.55)+1)*.5;
-  const edge=THREE.MathUtils.smoothstep(r,100,107.8);
-  const color=new THREE.Color().setRGB(.16+.07*patch,.34+.13*patch,.12+.045*patch).lerp(new THREE.Color(0x9a9560),edge*.32);
+  const wave=(Math.sin(x*.19)*Math.cos(z*.17)+Math.sin((x+z)*.11))*.13;
+  pos.setZ(i,wave+Math.max(0,1-r/60)*.12);
+  const patch=(Math.sin(x*.72+z*.46)*Math.cos(z*.63-x*.38)+1)*.5;
+  const edge=THREE.MathUtils.smoothstep(r,139,151.8);
+  const color=new THREE.Color().setRGB(.12+.075*patch,.27+.14*patch,.095+.045*patch).lerp(new THREE.Color(0xb5a071),edge*.48);
   colors.push(color.r,color.g,color.b);
  }
  landGeo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));landGeo.computeVertexNormals();
- const landMat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:1});
- const land=new THREE.Mesh(landGeo,landMat);land.rotation.x=-Math.PI/2;land.position.y=-.13;land.receiveShadow=true;scene.add(land);
- const beach=mesh(scene,new THREE.RingGeometry(104,108,144),mat(0xd4bd83,1),[0,-.085,0]);beach.rotation.x=-Math.PI/2;
- const roadMat=new THREE.MeshStandardMaterial({color:0x666b62,roughness:1});
- const road=cube(scene,8,.07,150,roadMat,0,.015,-1);
- const roadEdge=mat(0xb5a77f,1);
- for(const side of [-1,1])cube(scene,.13,.035,48,roadEdge,side*4.12,.06,-1);
+ const land=new THREE.Mesh(landGeo,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1}));land.rotation.x=-Math.PI/2;land.position.y=-.15;land.receiveShadow=true;scene.add(land);
+ const beach=mesh(scene,new THREE.RingGeometry(146,152,192),mat(0xd4bd83,1),[0,-.09,0]);beach.rotation.x=-Math.PI/2;
+ const roadMat=mat(0x555d59,1),lineMat=mat(0xd9c99c,1),sidewalk=mat(0x8d8d7a,1);
+ const roads=[[0,0,9,270],[0,0,270,9],[0,-65,9,130],[0,65,9,130],[-65,0,130,9],[65,0,130,9]];
+ for(const [x,z,w,d] of roads){cube(scene,w,.075,d,roadMat,x,.012,z);if(w<d){cube(scene,.12,.025,d,lineMat,x-w/2+.3,.065,z);cube(scene,.12,.025,d,lineMat,x+w/2-.3,.065,z)}else{cube(scene,w,.025,.12,lineMat,x,.065,z-d/2+.3);cube(scene,w,.025,.12,lineMat,x,.065,z+d/2-.3)}}
+ for(const [x,z,w,d] of [[-13,0,5,260],[13,0,5,260],[0,-13,260,5],[0,13,260,5]])cube(scene,w,.08,d,sidewalk,x,.02,z);
+ // Three older starter houses remain around the spawn area; the expanded districts
+ // add larger interiors, cover, roads and recognizable combat landmarks.
  house(-10,-8,0xc99b63);house(12,-13,0xb7c2b0);house(-13,15,0xc9825d);
- addGrass();
- buildForest();
+ addGrass();buildForest();buildExpandedDistricts();
  for(let i=0;i<5;i++)createCombatBot(-8+i*4,-24-(i%2)*3,i);
- for(let i=0;i<16;i++){const a=i/16*Math.PI*2,x=Math.cos(a)*38,z=Math.sin(a)*38;const rock=mesh(scene,new THREE.DodecahedronGeometry(1.5,0),mat(0x788078),[x,.45,z]);rock.scale.y=.7}
+ for(let i=0;i<28;i++){const a=i/28*Math.PI*2,x=Math.cos(a)*(58+(i%3)*5),z=Math.sin(a)*(58+(i%3)*5);const rock=mesh(scene,new THREE.DodecahedronGeometry(1.4+(i%3)*.35,0),mat(0x788078),[x,.48,z]);rock.scale.y=.7}
+}
+function makeNoiseTexture(base,grain){
+ const canvas=document.createElement('canvas');canvas.width=128;canvas.height=128;const ctx=canvas.getContext('2d');
+ ctx.fillStyle=base;ctx.fillRect(0,0,128,128);const img=ctx.getImageData(0,0,128,128);
+ for(let i=0;i<img.data.length;i+=4){const n=(Math.random()-.5)*grain;img.data[i]=THREE.MathUtils.clamp(img.data[i]+n,0,255);img.data[i+1]=THREE.MathUtils.clamp(img.data[i+1]+n,0,255);img.data[i+2]=THREE.MathUtils.clamp(img.data[i+2]+n,0,255)}
+ ctx.putImageData(img,0,0);
+ for(let i=0;i<90;i++){ctx.fillStyle='rgba(30,25,18,'+(Math.random()*.12)+')';ctx.fillRect(Math.random()*128,Math.random()*128,1+Math.random()*3,1+Math.random()*3)}
+ const tex=new THREE.CanvasTexture(canvas);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(2,2);tex.colorSpace=THREE.SRGBColorSpace;return tex;
+}
+function addExpandedBuilding(x,z,w,d,color,kind='house'){
+ const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);
+ const h=kind==='warehouse'?6:4.1,t=.28,door=kind==='warehouse'?4.2:2.3;
+ const wallTex=makeNoiseTexture('#'+new THREE.Color(color).getHexString(),26);
+ const wallMat=new THREE.MeshStandardMaterial({map:wallTex,color:0xffffff,roughness:.94});
+ const trim=mat(kind==='warehouse'?0x777e7b:0xd4c5a7,.8),dark=mat(0x292e2c,.82);
+ const glass=new THREE.MeshPhysicalMaterial({color:0x82b6c0,roughness:.16,metalness:.18,transparent:true,opacity:.82,clearcoat:1});
+ const floorMat=new THREE.MeshStandardMaterial({map:makeNoiseTexture('#756b57',32),roughness:1});
+ cube(g,w-.3,.18,d-.3,floorMat,0,.08,0);
+ const blockWall=(length,px,pz,axis,openCenter=false)=>{
+  const segments=openCenter?[[(length-door)/2, -length/2+(length-door)/4],[(length-door)/2,length/2-(length-door)/4]]:[[length,0]];
+  for(const [len,offset] of segments){
+   const part=axis==='x'?cube(g,len,h,t,wallMat,px+offset,h/2,pz):cube(g,t,h,len,wallMat,px,h/2,pz+offset);
+   part.castShadow=true;
+   const steps=Math.ceil(len/.72);
+   for(let n=0;n<=steps;n++){const along=-len/2+len*n/steps;worldBlockers.push(axis==='x'?{x:x+px+offset+along,z:z+pz,r:.39}:{x:x+px,z:z+pz+offset+along,r:.39})}
+  }
+ };
+ blockWall(w,0,-d/2,'x');blockWall(w,0,d/2,'x',true);blockWall(d,-w/2,0,'z');blockWall(d,w/2,0,'z');
+ // Door frame, windows and a low roof perimeter leave the interior visible and navigable.
+ cube(g,door+.35,.2,.42,trim,0,.12,d/2+.08);
+ for(const side of [-1,1]){
+  cube(g,.16,2.3,.22,trim,side*(door/2+.08),1.2,d/2+.08);
+  const wx=side*(w*.31);
+  cube(g,1.65,1.05,.12,trim,wx,2.35,d/2+.035);
+  cube(g,1.38,.78,.06,glass,wx,2.35,d/2+.11);
+  cube(g,.06,.82,.07,dark,wx,2.35,d/2+.15);
+  cube(g,1.4,.06,.07,dark,wx,2.35,d/2+.15);
+ }
+ // Roof is built as four raised perimeter panels, leaving a central opening
+ // so a third-person camera can still show the player inside the building.
+ const roofMat=mat(kind==='warehouse'?0x39454a:0x51453a,.8),roofY=h+.12,band=.85;
+ cube(g,w, .32,band,roofMat,0,roofY,-d/2+band/2);
+ cube(g,w, .32,band,roofMat,0,roofY,d/2-band/2);
+ cube(g,band,.32,d-2*band,roofMat,-w/2+band/2,roofY,0);
+ cube(g,band,.32,d-2*band,roofMat,w/2-band/2,roofY,0);
+ // Interior partitions and usable cover props.
+ if(kind==='house'){
+  cube(g,.18,2.7,d*.42,wallMat,-w*.12,1.42,-d*.22);
+  cube(g,w*.3,2.7,.18,wallMat,w*.28,1.42,-d*.18);
+  cube(g,2.4,.8,1.15,mat(0x72543b,.9),-w*.28,.62,-d*.2);
+  cube(g,1.9,.75,.8,mat(0x4b5149,.85),w*.28,.58,-d*.27);
+  cube(g,2.1,.16,1.1,trim,w*.22,1.18,d*.12);
+  for(const sx of [-1,1]){cube(g,.18,1.1,.18,dark,sx*(w*.22),.55,-d*.25);cube(g,.18,1.1,.18,dark,sx*(w*.22)+1.7,.55,-d*.25)}
+ }else{
+  for(let n=-1;n<=1;n++)cube(g,2.6,1.1,1.3,mat(0x6c706a,.85),n*5,.65,-1.5);
+  cube(g,w*.55,.16,.5,trim,0,1.45,-d*.25);
+ }
+ // Exterior steps, lamps and signs.
+ cube(g,door+.6,.18,.95,mat(0x8b8776,1),0,.09,d/2+.58);
+ const lamp=new THREE.PointLight(0xffd69a,.55,10);lamp.position.set(0,h-.5,d/2+.4);g.add(lamp);
+ if(kind==='warehouse'){const sign=cube(g,5,.8,.18,mat(0x263d43,.8),0,h-.9,d/2+.22);sign.castShadow=true}
+ return g;
+}
+function buildExpandedDistricts(){
+ // Residential blocks, a large warehouse, a service station and a coastal compound.
+ const lots=[
+  [-47,-52,16,13,0xb58c68,'house'],[-24,-55,17,14,0x9da99a,'house'],[45,-48,18,14,0xb18a65,'house'],
+  [-52,47,18,15,0x9eaa9e,'house'],[-25,62,16,13,0xb98b6c,'house'],[48,48,18,15,0x9c9b7d,'house'],
+  [-78,-5,22,17,0x68767a,'warehouse'],[77,8,23,18,0x727d76,'warehouse'],[0,83,24,18,0x727c78,'warehouse'],
+  [0,-88,18,15,0xb1a17a,'house'],[86,-70,18,15,0x9eaa9a,'house'],[-88,76,18,15,0x9d876d,'house']
+ ];
+ for(const lot of lots)addExpandedBuilding(...lot);
+ // Fuel station canopy and pump islands as a landmark and hard cover.
+ const station=new THREE.Group();station.position.set(78,-73,0);scene.add(station);
+ cube(station,20,.55,13,mat(0xd5d1bd,.55),0,4,0);
+ for(const [x,z] of [[-8,-5],[8,-5],[-8,5],[8,5]])cube(station,.5,4,.5,mat(0x59605b,.55),x,2,z);
+ for(const x of [-5,0,5]){cube(station,1.15,2.2,1.2,mat(0xc4c9c3,.5),x,1.1,0);cube(station,.72,.12,.08,mat(0x9d3430,.4),x,1.7,.62)}
+ // Watch tower with ladder-like rungs and a lookout platform.
+ const tower=new THREE.Group();tower.position.set(-102,0,-82);scene.add(tower);
+ for(const x of [-2.2,2.2])for(const z of [-2.2,2.2])cube(tower,.22,12,.22,mat(0x5b5143,.8),x,6,z);
+ cube(tower,6,.35,6,mat(0x786b55,.8),0,8,0);cube(tower,6,.3,6,mat(0x786b55,.8),0,12,0);
+ for(let y=1;y<8;y++)cube(tower,4.4,.12,.12,mat(0x8b7a61,.8),0,y,2.1);
 }
 function tree(x,z,s){const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);mesh(g,new THREE.CylinderGeometry(.18*s,.27*s,2*s,9),mat(0x65452d,1),[0,s,0]);const green=mat(0x245b35,1),light=mat(0x367b43,1);mesh(g,new THREE.SphereGeometry(1.18*s,12,10),green,[0,2.35*s,0]);mesh(g,new THREE.SphereGeometry(.86*s,12,10),light,[.48*s,2.72*s,.08]);mesh(g,new THREE.SphereGeometry(.72*s,12,10),green,[-.48*s,2.68*s,-.08]);}
 function buildForest(){
- const count=62,dummy=new THREE.Object3D();
+ const count=118,dummy=new THREE.Object3D();
  const trunk=new THREE.InstancedMesh(new THREE.CylinderGeometry(.18,.27,2,9),mat(0x65452d,1),count);
  const crown=new THREE.InstancedMesh(new THREE.SphereGeometry(1.18,12,10),mat(0x245b35,1),count);
  const crownA=new THREE.InstancedMesh(new THREE.SphereGeometry(.86,12,10),mat(0x367b43,1),count);
  const crownB=new THREE.InstancedMesh(new THREE.SphereGeometry(.72,12,10),mat(0x2c693b,1),count);
  for(let i=0;i<count;i++){
-  const a=i/count*Math.PI*2,r=24+Math.random()*39,scale=.72+Math.random()*.72,x=Math.cos(a)*r,z=Math.sin(a)*r;
+  const a=i/count*Math.PI*2,r=55+Math.random()*67,scale=.72+Math.random()*.72,x=Math.cos(a)*r,z=Math.sin(a)*r;
   if(r>17)worldBlockers.push({x,z,r:.55*scale});
   dummy.position.set(x,scale,z);dummy.scale.setScalar(scale);dummy.updateMatrix();trunk.setMatrixAt(i,dummy.matrix);
   dummy.position.set(x,2.35*scale,z);dummy.scale.setScalar(scale);dummy.updateMatrix();crown.setMatrixAt(i,dummy.matrix);
@@ -64,10 +145,10 @@ function buildForest(){
  for(const batch of [trunk,crown,crownA,crownB]){batch.castShadow=true;batch.receiveShadow=true;batch.instanceMatrix.needsUpdate=true;scene.add(batch)}
 }
 function addGrass(){
- const count=260,dummy=new THREE.Object3D();
+ const count=780,dummy=new THREE.Object3D();
  const grass=new THREE.InstancedMesh(new THREE.ConeGeometry(.075,.42,4),mat(0x6f8e42,1),count);
  for(let i=0;i<count;i++){
-  const a=Math.random()*Math.PI*2,r=Math.sqrt(Math.random())*68,x=Math.cos(a)*r,z=Math.sin(a)*r;
+  const a=Math.random()*Math.PI*2,r=Math.sqrt(Math.random())*126,x=Math.cos(a)*r,z=Math.sin(a)*r;
   dummy.position.set(x,.08,z);dummy.rotation.set((Math.random()-.5)*.18,Math.random()*Math.PI,(Math.random()-.5)*.18);
   const scale=.55+Math.random()*.8;dummy.scale.set(scale,scale,scale);dummy.updateMatrix();grass.setMatrixAt(i,dummy.matrix);
  }
@@ -76,16 +157,23 @@ function addGrass(){
 function house(x,z,color){
  const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);
  const wall=mat(color,1),trim=mat(0xe0d2b1,1),roofMat=mat(0x67463a,1),dark=mat(0x3c332b,1),glass=new THREE.MeshStandardMaterial({color:0x83b9c2,roughness:.22,metalness:.08});
- cube(g,6,3.1,5,wall,0,1.55,0);
- const roof=mesh(g,new THREE.ConeGeometry(4.5,2,4),roofMat,[0,4,0]);roof.rotation.y=Math.PI/4;
- cube(g,1.12,2.08,.16,dark,0,1,2.56);
- cube(g,1.25,.13,.2,trim,0,2.12,2.67);
- for(const sx of [-1.7,1.7]){
-  cube(g,1.02,.92,.13,trim,sx,1.92,2.57);cube(g,.82,.72,.05,glass,sx,1.92,2.64);
-  cube(g,.06,.82,.06,dark,sx,1.92,2.69);cube(g,.82,.06,.06,dark,sx,1.92,2.69);
- }
- for(const side of [-1,1])cube(g,.12,3.05,.12,trim,side*2.92,1.55,2.52);
- worldBlockers.push({x,z,r:3.8});
+ // A real open-front interior replaces the old solid box house.
+ const w=9,d=8,h=3.6,t=.25;
+ cube(g,w,.16,d,mat(0x756b57,1),0,.08,0);
+ const wallPart=(len,px,pz,axis)=>{const part=axis==='x'?cube(g,len,h,t,wall,px,h/2,pz):cube(g,t,h,len,wall,px,h/2,pz);part.castShadow=true;const n=Math.ceil(len/.8);for(let i=0;i<=n;i++){const p=-len/2+len*i/n;worldBlockers.push(axis==='x'?{x:x+px+p,z:z+pz,r:.36}:{x:x+px,z:z+pz+p,r:.36})}};
+ wallPart(w,0,-d/2,'x');wallPart(w,0,d/2,'x');wallPart(d,-w/2,0,'z');wallPart(d,w/2,0,'z');
+ // Split front facade to leave a proper entrance.
+ cube(g,2.2,2.2,.22,wall,-3.4,1.1,d/2);
+ cube(g,2.2,2.2,.22,wall,3.4,1.1,d/2);
+ cube(g,.15,2.25,.2,trim,-2.25,1.12,d/2);
+ cube(g,.15,2.25,.2,trim,2.25,1.12,d/2);
+ for(const sx of [-1,1]){cube(g,1.15,.9,.12,trim,sx*2.25,2.25,d/2+.02);cube(g,.92,.68,.06,glass,sx*2.25,2.25,d/2+.1)}
+ // Roof strips around an open central skylight keep the inside readable.
+ cube(g,w,.25,1.1,roofMat,0,h,-d/2+.55);cube(g,w,.25,1.1,roofMat,0,h,d/2-.55);
+ cube(g,1.1,.25,d-2.2,roofMat,-w/2+.55,h,0);cube(g,1.1,.25,d-2.2,roofMat,w/2-.55,h,0);
+ cube(g,2.4,.72,1.2,mat(0x71563e,1),-2,.36,-1);
+ cube(g,1.8,.7,1.1,mat(0x4d5550,1),2,.35,-1.4);
+ cube(g,2.5,.15,1.2,trim,1.8,1.1,1.2);
 }
 function createCombatBot(x,z,index){
  const bot=new THREE.Group();
@@ -679,8 +767,8 @@ function update(dt){
  let blocked=false;
  for(const b of worldBlockers){const dx=nextX-b.x,dz=nextZ-b.z;if(b.w!==undefined&&b.d!==undefined){if(Math.abs(dx)<b.w/2+.42&&Math.abs(dz)<b.d/2+.42){blocked=true;break}}else{const min=b.r+.42;if(dx*dx+dz*dz<min*min){blocked=true;break}}}
  if(!blocked){hero.position.x=nextX;hero.position.z=nextZ}else{velocityX*=.18;velocityZ*=.18}
- hero.position.x=THREE.MathUtils.clamp(hero.position.x,-100,100);
- hero.position.z=THREE.MathUtils.clamp(hero.position.z,-100,100);
+ hero.position.x=THREE.MathUtils.clamp(hero.position.x,-142,142);
+ hero.position.z=THREE.MathUtils.clamp(hero.position.z,-142,142);
  if(!grounded){
   velocityY-=17*dt;
   hero.position.y+=velocityY*dt;
