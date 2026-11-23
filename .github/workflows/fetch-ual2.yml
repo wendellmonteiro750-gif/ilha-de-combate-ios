@@ -26,9 +26,15 @@ jobs:
           test -n "$url"
           curl -fL "$url" -o /tmp/ual2.zip
           echo '4008ea208a604773a2b2177d965f0f5d3195498b5bf838c3f5785d68e95f2a68  /tmp/ual2.zip' | sha256sum -c -
-          entry="$(unzip -Z1 /tmp/ual2.zip | grep -E '(^|/)Unreal-Godot/UAL2_Standard\.glb$' | head -n 1)"
-          test -n "$entry"
-          unzip -p /tmp/ual2.zip "$entry" > assets/UAL2_Standard.glb
+          python - <<'PY'
+          import zipfile, shutil
+          archive = zipfile.ZipFile('/tmp/ual2.zip')
+          entry = next((name for name in archive.namelist() if name.endswith('/Unreal-Godot/UAL2_Standard.glb')), None)
+          if entry is None:
+              raise SystemExit('UAL2_Standard.glb not found in official archive')
+          with archive.open(entry) as source, open('assets/UAL2_Standard.glb', 'wb') as target:
+              shutil.copyfileobj(source, target)
+          PY
           test -s assets/UAL2_Standard.glb
           test "$(head -c 4 assets/UAL2_Standard.glb)" = 'glTF'
           git config user.name 'github-actions[bot]'
