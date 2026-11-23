@@ -3,94 +3,32 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#101b22">
+<meta name="theme-color" content="#14251f">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Ilha de Combate — Battle Royale</title>
-<link rel="stylesheet" href="./style.css?v=cs-tactical1">
+<title>Battle Island — Treinamento</title>
+<link rel="stylesheet" href="./style.css?v=battle-island-1">
 </head>
 <body>
 <div id="game"></div>
-<div id="loading">CARREGANDO ILHA DE COMBATE 3D…</div>
-<div id="lobby" class="lobby-screen">
- <div class="lobby-vignette"></div><div class="lobby-top"><span class="lobby-mark">IC</span><span>ILHA DE COMBATE <small>BATTLE ROYALE</small></span><span class="lobby-online"><i></i> CAMPO DE TREINO</span></div>
- <div class="lobby-content"><div class="lobby-kicker">OPERAÇÃO DE SOBREVIVÊNCIA</div><h1>ILHA DE<br><em>COMBATE</em></h1><p>Entre na zona de combate. Encontre equipamentos. Seja o último sobrevivente.</p>
- <button id="playGame" class="lobby-play"><span>ENTRAR NA PARTIDA</span><b>➜</b></button>
- <div class="lobby-actions"><button id="lobbySettings" class="lobby-settings" type="button"><span>⚙</span> CONFIGURAÇÕES</button><div class="lobby-quick"><span>🎯 PRECISÃO</span><span>⚡ MOVIMENTO</span><span>🛡 SOBREVIVÊNCIA</span></div></div>
- <div class="lobby-features"><span>◈ BATTLE ROYALE</span><span>◈ 5 OPONENTES</span><span>◈ LOOT & COMBATE</span></div></div>
- <div class="lobby-footer"><span>PROJETO INDEPENDENTE</span><span>VERSÃO DE TESTE</span></div>
+<div id="hud">
+ <div class="topbar"><div class="brand"><b>BI</b><span>BATTLE ISLAND<small>CAMPO DE TREINAMENTO</small></span></div><div class="stats"><span id="health">VIDA 100</span><span id="ammo">30 / 90</span></div></div>
+ <div class="tip" id="tip">JOYSTICK: MOVER · ARRASTE A TELA: CÂMERA</div>
+ <div class="crosshair"><i></i><b></b></div>
+ <div class="bottom-info"><span id="poseLabel">POSTURA: EM PÉ</span><span id="message">ÁREA DE TREINO</span></div>
 </div>
-
-<div id="errorPanel"><div><h1>Não foi possível iniciar o jogo</h1><p id="errorMessage">Verifique sua conexão com a internet e tente novamente.</p><button onclick="location.reload()">TENTAR NOVAMENTE</button></div></div>
-<div id="hud" style="display:none">
- <div id="crosshair" aria-hidden="true"><i></i><i></i><i></i><i></i><b></b></div>
- <div class="hud-top" data-hud-id="top">
-  <div class="player-card"><div class="avatar">IC</div><div class="player-info"><b>SOBREVIVENTE</b><small id="status">● CAMPO DE BATALHA</small></div></div>
-  <div class="match-info"><span><b id="score">0</b><small>ABATES</small></span><span><b id="remainingEnemies">5</b><small>INIMIGOS</small></span></div>
-  <div class="minimap"><div class="map-grid"></div><div class="map-cross"></div><div id="radarDots"></div><i class="player-arrow"></i><small>MAPA</small></div>
- </div>
- <div class="stats" data-hud-id="stats"><span id="health">VIDA 100</span><span id="ammo">MUNIÇÃO 30</span><span id="armorText">COLETE 0</span><span id="zoneText">ZONA 120m</span><button id="weaponSwitch" type="button" aria-label="Trocar arma">▣</button><button id="fireMode" type="button" aria-label="Modo de disparo">☷</button><button id="inventoryToggle" type="button" aria-label="Abrir mochila">▤</button><button id="medkit" type="button" aria-label="Kit médico">✚</button></div>
- <div class="health-panel" data-hud-id="health"><div class="health-label"><b>HP</b><strong id="healthValue">100</strong></div><div class="health-track"><i id="healthFill"></i></div></div>
- <div id="joystick" data-hud-id="joystick"><div id="stick"></div></div><button id="sprint" class="sprint-btn" type="button"><span aria-hidden="true">⚡</span><small>CORRER</small></button>
- <div class="actions" data-hud-id="actions"><button id="aim" class="aim-btn" type="button" aria-label="Mirar"><span>⊕</span><small>MIRA</small></button><button id="jump" class="jump-btn" type="button" aria-label="Pular"><span>⬆</span><small>PULAR</small></button><button id="crouch" class="crouch-btn" type="button" aria-pressed="false" aria-label="Agachar"><span>♟</span><small>AGACHAR</small></button><button id="prone" class="prone-btn" type="button" aria-pressed="false" aria-label="Deitar"><span>▰</span><small>DEITAR</small></button><button id="reload" class="reload-btn" type="button" aria-label="Recarregar"><span>⟳</span><small>RECARGA</small></button><button id="fire" class="fire-btn" type="button" aria-label="Atirar"><span>✹</span><small>ATIRAR</small></button></div>
- <div class="ammo-panel" data-hud-id="ammo"><b id="ammoLarge">30</b><span>/ <i id="ammoMag">30</i><br>RESERVA <i id="ammoReserve">120</i></span></div>
- <section id="inventoryPanel" aria-label="Inventário">
-  <header><b>MOCHILA DE COMBATE</b><span>INVENTÁRIO</span></header>
-  <div id="inventoryWeapons"></div>
-  <div class="inventory-supplies" id="inventorySupplies">Kits: 1 • Colete: 0% • Munição atual: 30</div>
-  <small>Alterne armas, colete munição e acessórios. O botão MODO muda entre tiro único, rajada e automático quando a arma permite.</small>
- </section><button id="loot" class="loot-btn" type="button" style="display:none">PEGAR SUPRIMENTO</button>
- <div id="hint">MOVA • DESLIZE PARA OLHAR • ATIRE</div>
+<div id="controls">
+ <div id="stick"><div id="knob"></div></div>
+ <button class="control run" id="run">CORRER</button>
+ <button class="control jump" id="jump">PULAR</button>
+ <button class="control crouch" id="crouch">AGACHAR</button>
+ <button class="control prone" id="prone">DEITAR</button>
+ <button class="control aim" id="aim">MIRAR</button>
+ <button class="control reload" id="reload">RECARREGAR</button>
+ <button class="control fire" id="fire">ATIRAR</button>
 </div>
-
-<button id="openSettings" class="settings-open" type="button" aria-label="Configurações">⚙</button>
-<section id="settingsPanel" class="settings-panel" aria-hidden="true">
- <div class="settings-card">
-  <header class="settings-header"><div><small>ILHA DE COMBATE</small><h2>CONFIGURAÇÕES</h2></div><button id="closeSettings" type="button" aria-label="Fechar">✕</button></header>
-  <nav class="settings-tabs">
-   <button class="selected" data-tab="sensitivity">SENSIBILIDADE</button><button data-tab="controls">CONTROLES</button><button data-tab="hud">HUD</button><button data-tab="graphics">GRÁFICOS</button><button data-tab="audio">ÁUDIO</button><button data-tab="other">OUTROS</button>
-  </nav>
-  <div class="settings-content">
-   <section class="settings-page active" data-page="sensitivity"><p class="settings-note">Ajuste a velocidade da câmera ao deslizar o dedo.</p>
-    <label>Geral <output id="v-general">100</output><input id="set-general" type="range" min="30" max="200" value="100"></label>
-    <label>Ponto vermelho <output id="v-red">100</output><input id="set-red" type="range" min="30" max="200" value="100"></label>
-    <label>Mira 2x <output id="v-2x">100</output><input id="set-2x" type="range" min="30" max="200" value="100"></label>
-    <label>Mira 4x <output id="v-4x">100</output><input id="set-4x" type="range" min="30" max="200" value="100"></label>
-    <label>AWM / precisão <output id="v-awm">100</output><input id="set-awm" type="range" min="30" max="200" value="100"></label>
-    <label>Olhadinha <output id="v-look">100</output><input id="set-look" type="range" min="30" max="200" value="100"></label>
-   </section>
-   <section class="settings-page" data-page="controls"><p class="settings-note">Comportamento dos comandos durante a partida.</p>
-    <label class="setting-switch">Disparo automático enquanto segura <input id="set-autofire" type="checkbox" checked><i></i></label>
-    <label class="setting-switch">Inverter eixo vertical da câmera <input id="set-invert" type="checkbox"><i></i></label>
-    <label class="setting-switch">Mostrar minimapa <input id="set-minimap" type="checkbox" checked><i></i></label>
-    <p class="settings-note">A assistência de mira e a troca rápida já dependem das mecânicas de combate disponíveis no jogo.</p>
-   </section>
-   <section class="settings-page" data-page="hud"><p class="settings-note">Personalize o tamanho e a transparência. Use “Mover HUD” para arrastar os grupos na tela.</p>
-    <label>Tamanho dos controles <output id="v-hudscale">100%</output><input id="set-hudscale" type="range" min="75" max="130" value="100"></label>
-    <label>Transparência do HUD <output id="v-hudopacity">100%</output><input id="set-hudopacity" type="range" min="35" max="100" value="100"></label>
-    <button id="editHud" class="settings-action" type="button">MOVER HUD</button><button id="resetHud" class="settings-action secondary" type="button">RESTAURAR POSIÇÕES</button>
-   </section>
-   <section class="settings-page" data-page="graphics"><p class="settings-note">Os perfis alteram resolução e sombras para equilibrar qualidade e desempenho.</p>
-    <label>Qualidade gráfica<select id="set-quality"><option value="low">Suave</option><option value="medium">Padrão</option><option value="high">Alto</option><option value="ultra">Ultra</option></select></label>
-    <label class="setting-switch">Sombras dinâmicas <input id="set-shadows" type="checkbox" checked><i></i></label>
-   </section>
-   <section class="settings-page" data-page="audio"><p class="settings-note">O jogo ainda não possui sistema de áudio de combate integrado. Os controles de volume serão ativados quando tiros, passos e música tiverem fontes sonoras.</p></section>
-   <section class="settings-page" data-page="other"><p class="settings-note">Idioma atual: Português (Brasil). As opções abaixo são mantidas para futuras funções.</p>
-    <label class="setting-switch">Vibração (se suportada pelo aparelho) <input id="set-vibration" type="checkbox"><i></i></label>
-   </section>
-  </div>
-  <footer class="settings-footer"><span id="settingsSaved">CONFIGURAÇÕES SALVAS AUTOMATICAMENTE</span><button id="settingsDone" type="button">VOLTAR AO JOGO</button></footer>
- </div>
-</section>
-
-<!-- Import-map polyfill: permite carregar os módulos também em versões anteriores do Safari iOS. -->
-<script async src="https://cdn.jsdelivr.net/npm/es-module-shims@1.10.0/dist/es-module-shims.js"></script>
-<script type="importmap-shim">
-{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}
-</script>
-<script type="module-shim" src="./game.js?v=cs-tactical1"></script>
-<script>
-window.addEventListener('error',e=>{if(e.message){document.querySelector('#loading').style.display='none';document.querySelector('#errorPanel').style.display='grid';document.querySelector('#errorMessage').textContent='Erro ao iniciar: '+e.message+(e.filename?' ('+e.filename.split('/').pop()+':'+e.lineno+')':'')}});
-window.addEventListener('unhandledrejection',e=>{document.querySelector('#loading').style.display='none';document.querySelector('#errorPanel').style.display='grid';document.querySelector('#errorMessage').textContent='Falha ao carregar os gráficos 3D. Confira a internet e tente novamente.'});
-</script>
-</body></html>
+<div id="lobby"><div class="lobby-card"><div class="eyebrow">PROJETO INDEPENDENTE</div><h1>BATTLE<br><em>ISLAND</em></h1><p>Entre no campo de treinamento. Teste os movimentos, as posturas e o combate em uma pequena ilha tropical.</p><button id="play">ENTRAR NO TREINAMENTO</button><small>PROTÓTIPO 3D · TERCEIRA PESSOA · MOBILE</small></div></div>
+<div id="error" hidden></div>
+<script type="module" src="./game.js?v=battle-island-1"></script>
+</body>
+</html>
