@@ -122,7 +122,7 @@ function createPlayerAnchor(){
 }
 function createCombatWeapon(hand){
  weaponModel=new THREE.Group();weaponModel.name='Rifle_3D_Attachment';hand.add(weaponModel);
- weaponModel.position.set(.015,-.035,.045);weaponModel.rotation.set(0,Math.PI,0);weaponModel.scale.setScalar(.72);
+ weaponModel.position.set(.015,-.035,.045);weaponModel.rotation.set(0,Math.PI,0);weaponModel.scale.setScalar(.72);weaponModel.visible=weaponEquipped;
  const gun=mat(0x202722,.48),metal=mat(0x59615b,.36),polymer=mat(0x343b35,.72);
  cube(weaponModel,.105,.105,.66,gun,0,0,-.20);
  cube(weaponModel,.078,.18,.23,polymer,0,-.12,-.04);
