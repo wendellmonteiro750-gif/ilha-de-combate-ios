@@ -777,14 +777,15 @@ function update(dt){
  battleSystems?.update(dt,moveX,moveY,bots.filter(b=>b.userData.alive).length);
  const dropPhase=['plane','freefall','parachute'].includes(battleSystems?.phase);
  // O sistema de voo já controla o personagem durante a entrada na partida.
- // Evita que o controlador terrestre aplique uma segunda velocidade no mesmo frame.
- if(dropPhase){moveX=0;moveY=0;velocityX=0;velocityZ=0;}
- const inputMagnitude=Math.min(1,Math.hypot(moveX,moveY));
+ // Mantém o joystick intacto para o paraquedas, mas desativa o movimento terrestre duplicado.
+ const controlX=dropPhase?0:moveX,controlY=dropPhase?0:moveY;
+ if(dropPhase){velocityX=0;velocityZ=0;}
+ const inputMagnitude=Math.min(1,Math.hypot(controlX,controlY));
  const moving=inputMagnitude>.08;
  const crouch=pose==='crouch',prone=pose==='prone';
  // Corrida automática ao empurrar o joystick totalmente para frente,
  // com botão de corrida como alternativa. Mirando, o sprint é bloqueado.
- const fullForward=moveY<-.88&&Math.abs(moveX)<.48&&inputMagnitude>.9;
+ const fullForward=controlY<-.88&&Math.abs(controlX)<.48&&inputMagnitude>.9;
  const sprinting=(run||fullForward)&&!aim&&!crouch&&!prone&&moving&&stamina>1;
  if(sprinting)stamina=Math.max(0,stamina-22*dt);else stamina=Math.min(100,stamina+14*dt);
  $('stamina').textContent='FÔLEGO '+Math.round(stamina);
@@ -795,7 +796,7 @@ function update(dt){
  const controlYaw=stickActive?moveYaw:yaw;
  const forward=new THREE.Vector3(-Math.sin(controlYaw),0,-Math.cos(controlYaw));
  const right=new THREE.Vector3(Math.cos(controlYaw),0,-Math.sin(controlYaw));
- const inputDir=forward.clone().multiplyScalar(-moveY).add(right.multiplyScalar(moveX));
+ const inputDir=forward.clone().multiplyScalar(-controlY).add(right.multiplyScalar(controlX));
  if(inputDir.length()>1)inputDir.normalize();
  // Controle 360° relativo à câmera. O modelo Quaternius tem uma
  // correção local de 180°; compensamos isso ao orientar o grupo do herói.
