@@ -1,7 +1,8 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
 const $=id=>document.getElementById(id);
 const root=$('game');
-let scene,camera,renderer,clock,hero,rig={},weapon,targets=[],yaw=0,pitch=-.12,moveX=0,moveY=0,run=false,aim=false,shoot=false,pose='stand',proneBlend=0,velocityY=0,grounded=true,walkT=0,ammo=30,reloading=false,lastShot=0,started=false;
+let scene,camera,renderer,clock,hero,rig={},weapon,targets=[],realHero=null,realMixer=null,realActions={},activeRealAction='',yaw=0,pitch=-.12,moveX=0,moveY=0,run=false,aim=false,shoot=false,pose='stand',proneBlend=0,velocityY=0,grounded=true,walkT=0,ammo=30,reloading=false,lastShot=0,started=false;
 const mat=(color,roughness=.9)=>new THREE.MeshStandardMaterial({color,roughness});
 function mesh(parent,geo,material,pos){const o=new THREE.Mesh(geo,material);o.position.set(...pos);parent.add(o);o.castShadow=true;o.receiveShadow=true;return o}
 function cube(parent,w,h,d,m,x,y,z){return mesh(parent,new THREE.BoxGeometry(w,h,d),m,[x,y,z])}
@@ -12,7 +13,7 @@ function init(){
  renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;root.appendChild(renderer.domElement);
  scene.add(new THREE.HemisphereLight(0xe8f6ff,0x526b3e,2));
  const sun=new THREE.DirectionalLight(0xffe8bc,2.1);sun.position.set(-20,32,16);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);scene.add(sun);
- buildIsland();buildHero();bind();addEventListener('resize',resize);clock=new THREE.Clock();animate();
+ buildIsland();buildHero();loadRealHero();bind();addEventListener('resize',resize);clock=new THREE.Clock();animate();
 }
 function buildIsland(){
  const water=mesh(scene,new THREE.CircleGeometry(100,64),mat(0x268ca5,.45),[0,-.5,0]);water.rotation.x=-Math.PI/2;
@@ -126,6 +127,42 @@ function buildHero(){
  cube(weapon,.055,.07,.12,mat(0x111719),0,.12,-.60);
  cube(weapon,.12,.25,.13,gun,0,-.22,-.48);
 }
+function loadRealHero(){
+ const loader=new GLTFLoader();
+ const url='https://grab3d.com/dl/soldier-rigged/soldier-rigged.glb';
+ loader.load(url,gltf=>{
+  const model=gltf.scene;
+  model.updateMatrixWorld(true);
+  const bounds=new THREE.Box3().setFromObject(model);
+  const height=bounds.max.y-bounds.min.y;
+  if(height>0)model.scale.setScalar(1.78/height);
+  model.position.set(0,-bounds.min.y*model.scale.y,0);
+  model.rotation.y=Math.PI;
+  model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.side=THREE.FrontSide}}});
+  hero.add(model);
+  realHero=model;
+  rig.body.visible=false;
+  if(gltf.animations&&gltf.animations.length){
+   realMixer=new THREE.AnimationMixer(model);
+   for(const clip of gltf.animations){realActions[clip.name.toLowerCase()]=realMixer.clipAction(clip)}
+   const first=Object.keys(realActions)[0];
+   if(first){realActions[first].play();activeRealAction=first}
+  }
+  $('message').textContent='PERSONAGEM 3D CARREGADO';
+ },undefined,error=>{
+  console.error('Falha ao carregar personagem GLB:',error);
+  $('message').textContent='Não foi possível carregar o personagem 3D';
+ });
+}
+function playRealAnimation(name){
+ if(!realMixer)return;
+ const key=Object.keys(realActions).find(k=>k.includes(name));
+ if(!key||key===activeRealAction)return;
+ const next=realActions[key];if(!next)return;
+ next.reset().fadeIn(.2).play();
+ if(realActions[activeRealAction])realActions[activeRealAction].fadeOut(.2);
+ activeRealAction=key;
+}
 function bind(){
  const stick=$('stick'),knob=$('knob');let sid=null,rect=null;
  stick.addEventListener('pointerdown',e=>{e.preventDefault();sid=e.pointerId;stick.setPointerCapture(sid);rect=stick.getBoundingClientRect();stickMove(e)});
@@ -148,6 +185,7 @@ function stats(){$('ammo').textContent=ammo+' / 90'}
 function fireShot(){if(reloading||ammo<=0||performance.now()-lastShot<160)return;lastShot=performance.now();ammo--;stats();weapon.rotation.x=.16;setTimeout(()=>{if(weapon)weapon.rotation.x=aim?-.04:0},65);const origin=camera.position.clone(),direction=new THREE.Vector3();camera.getWorldDirection(direction);const ray=new THREE.Raycaster(origin,direction,0,85);const hits=ray.intersectObjects(targets,true);if(hits.length){const target=hits[0].object;target.material=mat(0xe5a43a);$('message').textContent='ALVO ATINGIDO!';setTimeout(()=>{$('message').textContent='ÁREA DE TREINO';target.material=mat(0xd6d1bd)},500)}}
 function update(dt){
  const moving=Math.abs(moveX)+Math.abs(moveY)>.08;
+ if(realMixer){realMixer.update(dt);playRealAnimation(moving?(run?'run':'walk'):'idle')}
  const crouch=pose==='crouch',prone=pose==='prone';
  proneBlend=THREE.MathUtils.damp(proneBlend,prone?1:0,7.5,dt);
  const speed=prone?.52:crouch?1.55:run?6.8:3.35;
