@@ -546,14 +546,11 @@ function update(dt){
  // REAL para onde a câmera olha; depois gira o root do personagem inteiro.
  // Assim tronco, quadril e pernas acompanham a mira, não apenas os braços.
  if(aim||weaponEquipped){
-  const aimDirection=camera.getWorldDirection(new THREE.Vector3());
-  aimDirection.y=0;
-  if(aimDirection.lengthSq()>.0001){
-   aimDirection.normalize();
-   const bodyFacing=Math.atan2(-aimDirection.x,-aimDirection.z);
-   const bodyTurn=THREE.MathUtils.euclideanModulo(bodyFacing-hero.rotation.y+Math.PI,Math.PI*2)-Math.PI;
-   hero.rotation.y+=bodyTurn*(1-Math.exp(-dt*11));
-  }
+  // yaw é o ângulo de controle horizontal da câmera, mantido contínuo
+  // durante voltas completas. Não derivar do lookAt da câmera: o offset
+  // lateral da câmera distorce esse vetor e causa erro na orientação.
+  const bodyTurn=THREE.MathUtils.euclideanModulo(yaw-hero.rotation.y+Math.PI,Math.PI*2)-Math.PI;
+  hero.rotation.y+=bodyTurn*(1-Math.exp(-dt*16));
  }
  // Recalcula a arma e os IK das mãos após a rotação do corpo neste frame.
  applyCombatWeaponPose(crouch,prone,dt);
