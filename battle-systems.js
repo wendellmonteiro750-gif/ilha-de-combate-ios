@@ -105,14 +105,14 @@ export class BattleSystems {
     let best=null,dist=3.4;for(const item of this.items){if(!item.group.visible)continue;const d=item.group.position.distanceTo(this.hero.position);if(d<dist){best=item;dist=d}}
     if(!best){this.onStatus('NENHUM ITEM PRÓXIMO');return}
     best.group.visible=false;
-    if(best.type==='weapon'){this.weaponIndex=best.weapon;this.onStatus('EQUIPADO: '+best.name)}
-    else if(best.type==='ammo'){this.inventory.ammo+=30;this.onStatus('+30 MUNIÇÕES')}
+    if(best.type==='weapon'){this.weaponIndex=best.weapon;this.onWeaponChange?.(this.weapons[this.weaponIndex]);this.onStatus('EQUIPADO: '+best.name)}
+    else if(best.type==='ammo'){this.inventory.ammo+=30;this.onAmmo?.(30);this.onStatus('+30 MUNIÇÕES')}
     else if(best.type==='medkit'){this.inventory.medkit++;this.onStatus('KIT MÉDICO COLETADO')}
     else {this.inventory[best.type]=Math.min(3,this.inventory[best.type]+1);this.onStatus(best.name+' EQUIPADO')}
     this.renderInventory();
   }
   heal(){if(this.inventory.medkit<1){this.onStatus('SEM KIT MÉDICO');return}this.inventory.medkit--;this.onStatus('KIT MÉDICO USADO — +45 VIDA');this.onHeal?.(45);this.renderInventory()}
-  nextWeapon(){this.weaponIndex=(this.weaponIndex+1)%this.weapons.length;this.onStatus('ARMA: '+this.weapons[this.weaponIndex].name);this.renderInventory()}
+  nextWeapon(){this.weaponIndex=(this.weaponIndex+1)%this.weapons.length;this.onWeaponChange?.(this.weapons[this.weaponIndex]);this.onStatus('ARMA: '+this.weapons[this.weaponIndex].name);this.renderInventory()}
   update(dt,moveX=0,moveY=0,aliveBots=0){
     if(this.phase==='lobby'||this.phase==='ended')return;
     this.elapsed+=dt;
