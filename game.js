@@ -6,7 +6,7 @@ const root=document.querySelector('#game'),loading=document.querySelector('#load
 const scoreEl=document.querySelector('#score'),ammoEl=document.querySelector('#ammo'),healthEl=document.querySelector('#health');
 const errorPanel=document.querySelector('#errorPanel');
 let renderer,scene,camera,clock,playerRig,worldYaw=0,pitch=-.12,ammo=30,kills=0,health=100,armor=0,medkits=1;
-const HUMAN_MODEL_URL='https://raw.githubusercontent.com/memoriesrohit/avatar-studio/main/models/andre_casual.glb';
+const HUMAN_MODEL_URL='https://raw.githubusercontent.com/memoriesrohit/avatar-studio/2fd9ec82fbe1613d40ae38aadcca3f410725f740/models/andre_casual.glb';
 let humanModelPromise=null;
 const HUMAN_ROLE_CLIPS={idle:'Idle',walk:'Walk',run:'Walk',cast:'Boxing',hit:'Argue'};
 const weapons=[{name:'FUZIL',mag:30,damage:35,rate:.13,spread:.014,reload:1.35},{name:'SMG',mag:40,damage:19,rate:.075,spread:.022,reload:1.5},{name:'PRECISÃO',mag:8,damage:90,rate:.72,spread:.002,reload:1.8}];
