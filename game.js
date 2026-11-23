@@ -360,12 +360,32 @@ function bind(){
 function setPose(p){pose=p;$('poseLabel').textContent='POSTURA: '+(p==='stand'?'EM PÉ':p==='crouch'?'AGACHADO':'DEITADO');$('crouch').classList.toggle('active',p==='crouch');$('prone').classList.toggle('active',p==='prone')}
 function stats(){$('ammo').textContent=ammo+' / 90'}
 function showBulletTrail(start,end){
- const geometry=new THREE.BufferGeometry().setFromPoints([start,end]);
- const material=new THREE.LineBasicMaterial({color:0xffd27a,transparent:true,opacity:.95,depthWrite:false});
- const trail=new THREE.Line(geometry,material);
- trail.renderOrder=20;
- scene.add(trail);
- setTimeout(()=>{scene.remove(trail);geometry.dispose();material.dispose()},95);
+ // Rastreador luminoso com espessura real: LineBasicMaterial pode ficar
+ // praticamente invisível em algumas telas mobile por ignorar linewidth.
+ const delta=end.clone().sub(start);
+ const length=delta.length();
+ if(length<.02)return;
+ const center=start.clone().add(end).multiplyScalar(.5);
+ const direction=delta.normalize();
+ const makeTracer=(radius,color,opacity)=>{
+  const geometry=new THREE.CylinderGeometry(radius,radius,length,8,1,false);
+  const material=new THREE.MeshBasicMaterial({color,transparent:true,opacity,depthWrite:false});
+  const tracer=new THREE.Mesh(geometry,material);
+  tracer.position.copy(center);
+  tracer.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),direction);
+  tracer.renderOrder=30;
+  scene.add(tracer);
+  return {tracer,geometry,material};
+ };
+ const glow=makeTracer(.027,0xffa52b,.28);
+ const core=makeTracer(.009,0xfff1b0,.98);
+ setTimeout(()=>{
+  for(const item of [glow,core]){
+   scene.remove(item.tracer);
+   item.geometry.dispose();
+   item.material.dispose();
+  }
+ },180);
 }
 function fireShot(){
  if(reloading||ammo<=0||performance.now()-lastShot<155)return;
