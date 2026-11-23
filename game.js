@@ -490,8 +490,8 @@ function makeHumanoidModel(){
  const belt=new THREE.MeshStandardMaterial({color:0x292b27,roughness:.78}),metal=new THREE.MeshStandardMaterial({color:0x9c895d,metalness:.55,roughness:.42});
  const hair=new THREE.MeshStandardMaterial({color:0x30251f,roughness:.95}),eyes=new THREE.MeshStandardMaterial({color:0x211b18,roughness:.45});
  const bone=(name,parent,x,y,z)=>{const b=new THREE.Bone();b.name=name;b.position.set(x,y,z);parent.add(b);bones.set(name,b);return b};
- const ellipsoid=(parent,name,x,y,z,sx,sy,sz,material)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(1,32,24),material);m.name=name;m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m};
- const capsule=(parent,name,length,radius,material,x=0,y=0,z=0)=>{const m=new THREE.Mesh(new THREE.CapsuleGeometry(radius,Math.max(.01,length-2*radius),10,16),material);m.name=name;m.position.set(x,y-length*.5,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m};
+ const ellipsoid=(parent,name,x,y,z,sx,sy,sz,material)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(1,48,32),material);m.name=name;m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m};
+ const capsule=(parent,name,length,radius,material,x=0,y=0,z=0)=>{const h=Math.max(.02,length),r=Math.min(radius,h*.46),profile=[new THREE.Vector2(0,-h/2),new THREE.Vector2(r*.62,-h/2),new THREE.Vector2(r*.9,-h/2+r*.35),new THREE.Vector2(r,-h/2+r),new THREE.Vector2(r*.99,h/2-r),new THREE.Vector2(r*.88,h/2-r*.3),new THREE.Vector2(r*.58,h/2),new THREE.Vector2(0,h/2)];const geo=new THREE.LatheGeometry(profile,32);geo.computeVertexNormals();const m=new THREE.Mesh(geo,material);m.name=name;m.position.set(x,y-length*.5,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m};
  const hips=bone('mixamorigHips',root,0,.99,0);
  ellipsoid(hips,'pelvis',0,0,0,.205,.145,.13,skin);
  ellipsoid(hips,'combat_belt',0,-.018,.006,.218,.055,.145,belt);
@@ -512,9 +512,7 @@ function makeHumanoidModel(){
  torsoMesh.castShadow=true;torsoMesh.receiveShadow=true;spine.add(torsoMesh);
  const spine1=bone('mixamorigSpine1',spine,0,.17,0);
  const spine2=bone('mixamorigSpine2',spine1,0,.16,0);
- ellipsoid(spine2,'deltoid_left',-.205,.025,0,.092,.095,.092,shirt);
- ellipsoid(spine2,'deltoid_right',.205,.025,0,.092,.095,.092,shirt);
- ellipsoid(spine2,'trapezius',0,.105,-.035,.145,.075,.085,shirt);
+ ellipsoid(spine2,'trapezius',0,.105,-.035,.155,.065,.078,shirt);
  // Gola, costuras e bolsos discretos.
  ellipsoid(spine2,'shirt_collar',0,.12,.005,.105,.055,.105,shirtDark);
  box(spine2,.018,.24,.012,shirtDark,0,-.005,.151);
@@ -525,17 +523,17 @@ function makeHumanoidModel(){
  const neck=bone('mixamorigNeck',spine2,0,.13,0);
  capsule(neck,'neck_mesh',.13,.052,skin,0,.025,0);
  const head=bone('mixamorigHead',neck,0,.115,0);
- ellipsoid(head,'head_mesh',0,.055,0,.112,.145,.105,skinLight);
+ const skullProfile=[new THREE.Vector2(0,-.105),new THREE.Vector2(.045,-.10),new THREE.Vector2(.075,-.075),new THREE.Vector2(.094,-.025),new THREE.Vector2(.105,.045),new THREE.Vector2(.101,.105),new THREE.Vector2(.078,.15),new THREE.Vector2(.035,.17),new THREE.Vector2(0,.172)];const skullGeo=new THREE.LatheGeometry(skullProfile,48);skullGeo.scale(1,1,.91);const skull=new THREE.Mesh(skullGeo,skinLight);skull.name='anatomical_head';skull.position.set(0,.055,0);skull.castShadow=true;skull.receiveShadow=true;head.add(skull);
  ellipsoid(head,'nose',0,.035,.099,.025,.035,.028,skin);
  ellipsoid(head,'jaw',0,-.025,.018,.082,.062,.078,skinLight);
  ellipsoid(head,'mouth',0,-.012,.099,.025,.006,.006,hair);
  ellipsoid(head,'chin',0,-.055,.071,.038,.022,.022,skin);
- ellipsoid(head,'hair_cap',0,.145,-.012,.116,.067,.108,hair);
+ ellipsoid(head,'hair_cap',0,.145,-.012,.108,.052,.101,hair);
  ellipsoid(head,'hair_back',0,.065,-.075,.105,.105,.06,hair);
  // Boné tático de tecido: copa, aba frontal e costura central.
  const capMat=new THREE.MeshStandardMaterial({color:0x354a3b,roughness:.96});
- ellipsoid(head,'cap_crown',0,.19,-.012,.12,.075,.112,capMat);
- const capBrim=new THREE.Mesh(new THREE.BoxGeometry(.19,.025,.15),capMat);capBrim.position.set(0,.155,.105);capBrim.rotation.x=-.08;capBrim.castShadow=true;head.add(capBrim);
+ ellipsoid(head,'cap_crown',0,.178,-.012,.113,.061,.105,capMat);
+ const capBrim=new THREE.Mesh(new THREE.BoxGeometry(.18,.018,.105),capMat);capBrim.position.set(0,.151,.096);capBrim.rotation.x=-.08;capBrim.castShadow=true;head.add(capBrim);
  // Mochila compacta presa às costas, com alças visíveis sobre os ombros.
  const packMat=new THREE.MeshStandardMaterial({color:0x343f37,roughness:.98});
  ellipsoid(spine1,'combat_backpack',0,.025,-.185,.175,.235,.095,packMat);
@@ -546,11 +544,9 @@ function makeHumanoidModel(){
   ellipsoid(head,'eye',side*.043,.083,.091,.012,.012,.008,eyes);
   ellipsoid(head,'brow',side*.043,.105,.091,.022,.008,.009,hair);
   const upper=bone(side<0?'mixamorigLeftArm':'mixamorigRightArm',spine2,side*.205,.075,0);
-  ellipsoid(spine2,'shoulder',side*.205,.045,0,.09,.095,.09,shirt);
-  capsule(upper,'upper_arm',.31,.064,skin,0,-.015,0);
-  capsule(upper,'shirt_sleeve',.205,.078,shirt,0,-.015,0);
-  ellipsoid(upper,'bicep_volume',0,-.115,.008,.067,.135,.067,shirt);
-  ellipsoid(upper,'tricep_volume',0,-.13,-.035,.061,.125,.055,shirtDark);
+  ellipsoid(spine2,'shoulder',side*.205,.045,0,.083,.083,.082,shirt);
+  capsule(upper,'upper_arm',.31,.061,skin,0,-.015,0);
+  capsule(upper,'shirt_sleeve',.215,.074,shirt,0,-.015,0);
   const fore=bone(side<0?'mixamorigLeftForeArm':'mixamorigRightForeArm',upper,0,-.30,0);
   capsule(fore,'forearm',.285,.052,skin,0,-.005,0);
   capsule(fore,'forearm_sleeve',.20,.066,shirt,0,-.005,0);
@@ -572,7 +568,7 @@ function makeHumanoidModel(){
   const leg=bone(side<0?'mixamorigLeftLeg':'mixamorigRightLeg',upLeg,0,-.43,0);
   capsule(leg,'calf',.415,.064,skin,0,-.005,0);
   capsule(leg,'lower_trouser',.415,.078,pants,0,-.005,-.002);
-  ellipsoid(leg,'calf_contour',0,-.19,-.018,.078,.15,.085,pantsLight);
+  ellipsoid(leg,'calf_contour',0,-.19,-.018,.071,.13,.075,pantsLight);
   ellipsoid(leg,'shin_panel',0,-.20,.055,.058,.14,.025,pants);
   ellipsoid(leg,'knee_pad',0,-.045,.066,.078,.085,.025,pantsLight);
   const foot=bone(side<0?'mixamorigLeftFoot':'mixamorigRightFoot',leg,0,-.395,.015);
