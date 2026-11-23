@@ -213,25 +213,29 @@ function loadRealHero(){
   model.position.set(0,-bounds.min.y*model.scale.y,0);
   model.rotation.y=Math.PI;
   model.traverse(o=>{if(o.isMesh&&o.material){o.material.roughness=Math.min(o.material.roughness??.8,.92);o.material.metalness=Math.min(o.material.metalness??0,.15)}});
+  realBones={};
   model.traverse(o=>{
    if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material)o.material.side=THREE.FrontSide}
    if(o.isBone){
+    // Normalize Mixamo, Blender and common humanoid naming conventions.
+    // The previous character class accidentally removed the letter "s"
+    // instead of whitespace, preventing several real bones from matching.
     const n=o.name.toLowerCase().replace(/[\\s_.-]/g,'');
-    if(/hips|pelvis/.test(n))realBones.hips=o;
-    if(/spine2|spine1|spine$/.test(n)&&!realBones.spine)realBones.spine=o;
-    if(/neck|head/.test(n)&&!realBones.head)realBones.head=o;
-    if(/leftshoulder/.test(n))realBones.leftShoulder=o;
-    if(/rightshoulder/.test(n))realBones.rightShoulder=o;
-    if(/leftarm|leftupperarm|upperarml/.test(n))realBones.leftArm=o;
-    if(/rightarm|rightupperarm|upperarmr/.test(n))realBones.rightArm=o;
-    if(/leftforearm|leftforearm|forearml/.test(n))realBones.leftForearm=o;
-    if(/rightforearm|forearmr/.test(n))realBones.rightForearm=o;
-    if(/lefthand/.test(n))realBones.leftHand=o;
-    if(/righthand/.test(n))realBones.rightHand=o;
-    if(/leftupleg|leftthigh|thighl/.test(n))realBones.leftThigh=o;
-    if(/rightupleg|rightthigh|thighr/.test(n))realBones.rightThigh=o;
-    if(/leftleg|calfl/.test(n))realBones.leftCalf=o;
-    if(/rightleg|calfr/.test(n))realBones.rightCalf=o;
+    if(/(?:hips|pelvis)$/.test(n))realBones.hips=o;
+    if(/spine(?:1|2)?$/.test(n)&&(!realBones.spine||/spine2$/.test(n)))realBones.spine=o;
+    if(/(?:neck|head)$/.test(n))realBones.head=o;
+    if(/leftshoulder$/.test(n))realBones.leftShoulder=o;
+    if(/rightshoulder$/.test(n))realBones.rightShoulder=o;
+    if(/(?:leftarm|leftupperarm|upperarml)$/.test(n))realBones.leftArm=o;
+    if(/(?:rightarm|rightupperarm|upperarmr)$/.test(n))realBones.rightArm=o;
+    if(/(?:leftforearm|forearml)$/.test(n))realBones.leftForearm=o;
+    if(/(?:rightforearm|forearmr)$/.test(n))realBones.rightForearm=o;
+    if(/lefthand$/.test(n))realBones.leftHand=o;
+    if(/righthand$/.test(n))realBones.rightHand=o;
+    if(/(?:leftupleg|leftthigh|thighl)$/.test(n))realBones.leftThigh=o;
+    if(/(?:rightupleg|rightthigh|thighr)$/.test(n))realBones.rightThigh=o;
+    if(/(?:leftleg|leftcalf|calfl)$/.test(n))realBones.leftCalf=o;
+    if(/(?:rightleg|rightcalf|calfr)$/.test(n))realBones.rightCalf=o;
    }
   });
   hero.add(model);
@@ -253,9 +257,8 @@ function loadRealHero(){
    }
   }
   const clipNames=Object.keys(realActions);
-  // O GLB só assume o personagem se a malha corporal estiver realmente
-  // ligada a um esqueleto com quantidade razoável de ossos e clips de
-  // repouso + locomoção. Evita esconder o corpo articulado por engano.
+  // Um nome de animação não basta: verificamos se os clips realmente
+  // animam o tronco/quadril e membros, e se o rig tem ossos essenciais.
   let skinnedMeshes=0,usableSkeletonBones=0;
   model.traverse(o=>{
    if(o.isSkinnedMesh&&o.skeleton){
@@ -263,9 +266,12 @@ function loadRealHero(){
     usableSkeletonBones=Math.max(usableSkeletonBones,o.skeleton.bones.length);
    }
   });
-  const hasWalk=clipNames.some(k=>/walk|walking|locomotion|run|running|sprint/.test(k));
-  const hasIdle=clipNames.some(k=>/idle|stand|breath/.test(k));
-  const hasDeformableBody=skinnedMeshes>0&&usableSkeletonBones>=18;
+  const requiredBones=['hips','spine','head','leftArm','rightArm','leftForearm','rightForearm','leftThigh','rightThigh','leftCalf','rightCalf'];
+  const completeHumanoid=requiredBones.every(k=>!!realBones[k]);
+  const clipHasBodyTracks=clip=>clip.tracks.some(t=>/hips|pelvis|spine|upleg|thigh|leg|calf/i.test(t.name));
+  const hasWalk=clipNames.some(k=>/walk|walking|locomotion|run|running|sprint/.test(k)&&clipHasBodyTracks(gltf.animations.find(c=>c.name.toLowerCase().replace(/[^a-z0-9]/g,'')===k)));
+  const hasIdle=clipNames.some(k=>/idle|stand|breath/.test(k)&&clipHasBodyTracks(gltf.animations.find(c=>c.name.toLowerCase().replace(/[^a-z0-9]/g,'')===k)));
+  const hasDeformableBody=skinnedMeshes>0&&usableSkeletonBones>=18&&completeHumanoid;
   if(hasWalk&&hasIdle&&hasDeformableBody){
    rig.body.visible=false;
    playRealAnimation('idle');
