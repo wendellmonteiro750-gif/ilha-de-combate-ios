@@ -99,7 +99,7 @@ function addTextureGround(){
 function addPalm(x,z,s=1){
  const g=new THREE.Group();const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.12*s,.24*s,4.2*s,12),mat(0x79543a));trunk.position.y=2.1*s;trunk.rotation.z=-.08;trunk.castShadow=true;g.add(trunk);
  for(let i=0;i<8;i++){const a=i*Math.PI/4,leaf=new THREE.Mesh(new THREE.ConeGeometry(.3*s,3.1*s,7),mat(i%2?0x274e34:0x315f3a));leaf.position.set(Math.sin(a)*.95*s,4.05*s,Math.cos(a)*.95*s);leaf.rotation.z=Math.cos(a)*.95;leaf.rotation.x=-Math.sin(a)*.95;leaf.castShadow=true;g.add(leaf)}
- g.position.set(x,0,z);scene.add(g);
+ g.position.set(x,0,z);scene.add(g);worldObstacles.push({x,z,radius:.34*s});
 }
 function addHouse(x,z,rotation=0,style=0,twoStorey=false){
  const g=new THREE.Group();
@@ -607,7 +607,7 @@ function getHouseAtPosition(position){
  return null;
 }
 function resolvePlayerObstacles(previousPosition){
- const p=playerRig.holder.position,radius=.7;
+ const p=playerRig.holder.position,radius=.74;
  const previous=previousPosition||p.clone();
  for(const o of worldObstacles){
   if(o.type==='house'){
@@ -830,7 +830,7 @@ function animate(){
   const targetVelocity=move.clone().multiplyScalar(moveSpeed);
   const acceleration=movementMode==='prone'?7:movementMode==='crouch'?8:canSprint?11:9;
   playerVelocity.lerp(targetVelocity,1-Math.exp(-acceleration*dt));
-  const previousPlayerPosition=p.position.clone();p.position.addScaledVector(playerVelocity,dt);resolvePlayerObstacles(previousPlayerPosition);p.position.x=THREE.MathUtils.clamp(p.position.x,-124,124);p.position.z=THREE.MathUtils.clamp(p.position.z,-124,124);
+  const collisionSteps=Math.max(1,Math.ceil(playerVelocity.length()*dt/.12));const collisionStep=dt/collisionSteps;for(let step=0;step<collisionSteps;step++){const previousPlayerPosition=p.position.clone();p.position.addScaledVector(playerVelocity,collisionStep);resolvePlayerObstacles(previousPlayerPosition);}p.position.x=THREE.MathUtils.clamp(p.position.x,-124,124);p.position.z=THREE.MathUtils.clamp(p.position.z,-124,124);
  const grounded=p.position.y<=.001;
   const moving=playerVelocity.length()>.16;
   if(moving){dustClock-=dt;if(dustClock<=0){dustClock=movementMode==='prone'?.34:playerVelocity.length()>4.2?.12:.24;const foot=p.position.clone().add(new THREE.Vector3((Math.random()-.5)*.55,.12,(Math.random()-.5)*.55));for(let n=0;n<(movementMode==='prone'?1:3);n++)addParticle(foot,0xc6b58a,1.1,.055,.3)}
