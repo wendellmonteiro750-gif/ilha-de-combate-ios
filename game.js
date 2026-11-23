@@ -378,7 +378,11 @@ function update(dt){
  $('stamina').textContent='FÔLEGO '+Math.round(stamina);
  const speed=prone?.58:crouch?1.55:aim?2.35:sprinting?6.25:3.25;
  const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
- const right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
+ // Usa o eixo horizontal REAL da câmera: direita no joystick = direita na tela.
+ const right=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,0);
+ right.y=0;
+ if(right.lengthSq()<.0001)right.set(Math.cos(yaw),0,-Math.sin(yaw));
+ right.normalize();
  const inputDir=forward.clone().multiplyScalar(-moveY).add(right.multiplyScalar(moveX));
  if(inputDir.length()>1)inputDir.normalize();
  // Controle 360° relativo à câmera. O modelo Quaternius tem uma
