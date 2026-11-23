@@ -478,7 +478,7 @@ async function createFighter(isEnemy=false,index=0){
  for(const sourceClip of source.animations){const clip=sourceClip.clone();for(const track of clip.tracks){if(/Hips.*position/i.test(track.name)){for(let k=0;k<track.values.length;k+=3){track.values[k]=0;track.values[k+2]=0;}}}actions.set(clip.name,mixer.clipAction(clip));}
  let current=null,playing='';
  const rig={
-  holder,root:model,bones,baseRootY:model.position.y,
+  holder,root:model,bones,isPlayer:!isEnemy,baseRootY:model.position.y,
   lib:{role(role){return {clip:HUMAN_ROLE_CLIPS[role]||'Idle',loop:true}}},
   get playing(){return playing},
   playRole(role,opts={}){
@@ -492,8 +492,11 @@ async function createFighter(isEnemy=false,index=0){
   },
   stanceMode:'stand',
   _stanceApplied:[],
+  _ikRestore:[],
   _stanceBlend:0,
   update(dt){
+   for(const item of this._ikRestore)item.bone.quaternion.copy(item.quaternion);
+   this._ikRestore.length=0;
    for(const item of this._stanceApplied)this.bones.get(item.name)?.quaternion.multiply(item.inverse);
    this._stanceApplied.length=0;
    mixer.update(dt);
@@ -503,17 +506,17 @@ async function createFighter(isEnemy=false,index=0){
    const ready=this.isPlayer?1:.72,aim=THREE.MathUtils.clamp(this.weaponAimBlend||0,0,1);
    const armReady=ready*(1-aim*.12),elbowReady=ready*(1-aim*.08);
    const pose=[
-    ['mixamorigHips',prone ? .82 : crouch ? .42 : 0,0,0],
-    ['mixamorigSpine',prone ? .48 : crouch ? -.10 : -.035*aim,0,0],
-    ['mixamorigSpine1',prone ? .22 : crouch ? -.08 : -.045*aim,0,0],
-    ['mixamorigLeftUpLeg',prone ? -.42 : crouch ? -.52 : 0,0,0],
-    ['mixamorigRightUpLeg',prone ? -.42 : crouch ? -.52 : 0,0,0],
-    ['mixamorigLeftLeg',prone ? .18 : crouch ? 1.02 : 0,0,0],
-    ['mixamorigRightLeg',prone ? .18 : crouch ? 1.02 : 0,0,0],
-    ['mixamorigLeftArm',prone ? -.22 : crouch ? -.08 : -1.02*armReady,0,.10*armReady],
+    ['mixamorigHips',prone ? .82 : crouch ? .42 : -(this.jumpBlend||0)*.16,0,0],
+    ['mixamorigSpine',prone ? .48 : crouch ? -.10 : -.035*aim-(this.jumpBlend||0)*.08,0,0],
+    ['mixamorigSpine1',prone ? .22 : crouch ? -.08 : -.045*aim-(this.jumpBlend||0)*.04,0,0],
+    ['mixamorigLeftUpLeg',prone ? -.42 : crouch ? -.52 : -(this.jumpBlend||0)*.34,0,0],
+    ['mixamorigRightUpLeg',prone ? -.42 : crouch ? -.52 : -(this.jumpBlend||0)*.28,0,0],
+    ['mixamorigLeftLeg',prone ? .18 : crouch ? 1.02 : (this.jumpBlend||0)*.62,0,0],
+    ['mixamorigRightLeg',prone ? .18 : crouch ? 1.02 : (this.jumpBlend||0)*.54,0,0],
+    ['mixamorigLeftArm',prone ? -.22 : crouch ? -.08 : -1.02*armReady-(this.jumpBlend||0)*.06,0,.10*armReady],
     ['mixamorigLeftForeArm',0,0,-.08*elbowReady],
     ['mixamorigLeftHand',.08*ready,0,0],
-    ['mixamorigRightArm',prone ? -.22 : crouch ? -.08 : -.88*armReady,0,-.10*armReady],
+    ['mixamorigRightArm',prone ? -.22 : crouch ? -.08 : -.88*armReady-(this.jumpBlend||0)*.06,0,-.10*armReady],
     ['mixamorigRightForeArm',0,0,.06*elbowReady],
     ['mixamorigRightHand',-.04*ready,0,0]
    ];
@@ -522,6 +525,20 @@ async function createFighter(isEnemy=false,index=0){
     const delta=new THREE.Quaternion().setFromEuler(new THREE.Euler(x*this._stanceBlend,y*this._stanceBlend,z*this._stanceBlend,'XYZ'));
     bone.quaternion.multiply(delta);
     this._stanceApplied.push({name,inverse:delta.clone().invert()});
+   }
+   // CCD IK keeps the left hand on the rifle foregrip.
+   if(this.weaponPivot&&this.weaponSpec){
+    const upper=this.bones.get('mixamorigLeftArm'),fore=this.bones.get('mixamorigLeftForeArm'),hand=this.bones.get('mixamorigLeftHand');
+    if(upper&&fore&&hand){model.updateMatrixWorld(true);const target=this.weaponPivot.localToWorld(new THREE.Vector3(0,-.145,-this.weaponSpec.length*.29));
+     for(let pass=0;pass<5;pass++)for(const joint of [fore,upper]){
+      model.updateMatrixWorld(true);const jp=joint.getWorldPosition(new THREE.Vector3()),eff=hand.getWorldPosition(new THREE.Vector3());
+      const a=eff.sub(jp),b=target.clone().sub(jp);if(a.lengthSq()<1e-7||b.lengthSq()<1e-7)continue;
+      a.normalize();b.normalize();const worldDelta=new THREE.Quaternion().setFromUnitVectors(a,b),pq=joint.parent.getWorldQuaternion(new THREE.Quaternion());
+      const localDelta=pq.clone().invert().multiply(worldDelta).multiply(pq);
+      if(!this._ikRestore.some(item=>item.bone===joint))this._ikRestore.push({bone:joint,quaternion:joint.quaternion.clone()});
+      joint.quaternion.premultiply(localDelta);
+     }
+    }
    }
   },
   setHeight(h){const b=new THREE.Box3().setFromObject(model),v=b.max.y-b.min.y;if(v>0){holder.scale.setScalar(h/v);model.position.y=-b.min.y}}
@@ -559,7 +576,7 @@ function resolvePlayerObstacles(){
   if(distance<minimum){if(distance<.001){dx=1;dz=0;distance=1}const nx=dx/distance,nz=dz/distance;p.x=obstacle.x+nx*minimum;p.z=obstacle.z+nz*minimum;const into=playerVelocity.x*nx+playerVelocity.z*nz;if(into<0){playerVelocity.x-=into*nx;playerVelocity.z-=into*nz}}
  }
 }
-function play(rig,role,speed=1){if(!rig)return;const clip=rig.lib.role(role)?.clip;if(clip&&rig.playing!==clip)rig.playRole(role,{fade:.22,speed}).catch(()=>{})}
+function play(rig,role,speed=1){if(!rig)return;const clip=rig.lib.role(role)?.clip;if(clip)rig.playRole(role,{fade:.22,speed}).catch(()=>{})}
 function setMovementMode(mode){
  movementMode=mode;sprintHeld=false;
  const crouch=document.querySelector('#crouch'),prone=document.querySelector('#prone'),sprint=document.querySelector('#sprint');
@@ -570,9 +587,9 @@ function setMovementMode(mode){
 function applyBodyMotion(rig,forwardSpeed,lateralSpeed,dt){
  if(!rig)return;
  const holder=rig.holder;
- const run=THREE.MathUtils.clamp(Math.abs(forwardSpeed)/5.4,0,1);
+ const run=THREE.MathUtils.clamp(Math.hypot(forwardSpeed,lateralSpeed)/5.4,0,1);
  const stance=rig.stanceMode==='prone' ? -.10 : rig.stanceMode==='crouch' ? -.035 : 0;
- const targetPitch=-run*.055+stance;
+ const targetPitch=-run*(rig.runBlend ? .105 : .045)+stance;
  const targetRoll=THREE.MathUtils.clamp(-lateralSpeed*.018,-.07,.07);
  const blend=1-Math.exp(-8*dt);
  holder.rotation.x=THREE.MathUtils.lerp(holder.rotation.x,targetPitch,blend);
@@ -752,13 +769,15 @@ function animate(){
    const desiredYaw=aiming?worldYaw+Math.PI:Math.atan2(playerVelocity.x,playerVelocity.z);
    const turn=THREE.MathUtils.euclideanModulo(desiredYaw-p.rotation.y+Math.PI,Math.PI*2)-Math.PI;
    p.rotation.y+=turn*Math.min(1,(aiming?14:11)*dt);
-   const role=canSprint?'run':'walk';play(playerRig,role,canSprint?1.28:movementMode==='prone'?.48:movementMode==='crouch'?.68:aiming?.78:1.02);
+   const role=canSprint?'run':'walk';const gaitSpeed=canSprint?1.52:movementMode==='prone'?.48:movementMode==='crouch'?.62:aiming?.76:THREE.MathUtils.clamp(playerVelocity.length()/3.9,.78,1.28);play(playerRig,role,gaitSpeed);
   }else{
    const faceYaw=worldYaw+Math.PI,turn=THREE.MathUtils.euclideanModulo(faceYaw-p.rotation.y+Math.PI,Math.PI*2)-Math.PI;
    p.rotation.y+=turn*Math.min(1,(aiming||fireHeld?12:5)*dt);play(playerRig,'idle');
   }
   playerRig.weaponAimBlend=aimBlend;
+   playerRig.runBlend=canSprint?1:0;
   playerRig.jumpV=(playerRig.jumpV||0)-15*dt;p.position.y=Math.max(0,p.position.y+(playerRig.jumpV||0)*dt);if(p.position.y===0&&playerRig.jumpV<0)playerRig.jumpV=0;
+   playerRig.jumpBlend=THREE.MathUtils.clamp(p.position.y/.82,0,1);
   applyBodyMotion(playerRig,playerVelocity.dot(forward),playerVelocity.dot(right),dt);playerRig.update(dt);if(playerRig.weaponPivot){playerRig.weaponKick=Math.max(0,(playerRig.weaponKick||0)-dt*1.35);playerRig.weaponPivot.rotation.x=-.08-(playerRig.weaponKick||0);}
  for(const e of enemies){if(!e.alive)continue;const ep=e.rig.holder,delta=p.position.clone().sub(ep.position);const dist=delta.length();if(dist>2.3){delta.normalize();ep.position.addScaledVector(delta,1.35*dt);ep.rotation.y=Math.atan2(delta.x,delta.z);if(e.anim!=='run'){e.anim='run';play(e.rig,'run')}}else{if(e.anim!=='idle'){e.anim='idle';play(e.rig,'idle')}e.attack+=dt;if(e.attack>1.5){e.attack=0;const raw=4,blocked=Math.min(armor,raw*.5);armor-=blocked;health=Math.max(0,health-(raw-blocked));refreshVitals();statusEl.textContent='SOB ATAQUE';setTimeout(()=>{if(health>0)statusEl.textContent='PRONTO'},450)}}applyBodyMotion(e.rig,dist>2.3?1.35:0,0,dt);e.rig.update(dt);if(e.rig.weaponPivot){e.rig.weaponKick=Math.max(0,(e.rig.weaponKick||0)-dt*.9);e.rig.weaponPivot.rotation.x=-.08-(e.rig.weaponKick||0)}}
  for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];b.mesh.position.addScaledVector(b.dir,72*dt);b.life-=dt;let hit=false;for(const e of enemies){if(e.alive){const base=e.rig.holder.position,head=base.clone().add(new THREE.Vector3(0,1.72,0)),torso=base.clone().add(new THREE.Vector3(0,.96,0));const headHit=b.mesh.position.distanceTo(head)<.42,bodyHit=b.mesh.position.distanceTo(torso)<.72;if(headHit||bodyHit){const falloff=Math.max(.52,1-(b.travelled/Math.max(1,b.range))*.42),dealt=b.damage*falloff*(headHit?2.15:1);e.hp-=dealt;hitMarkerTimer=.18;document.querySelector('#crosshair')?.classList.add('hit');burst(b.mesh.position,headHit?16:10,headHit?0xffe16b:0xffa34d,4.8);statusEl.textContent=headHit?'TIRO NA CABEÇA!':'ACERTO';hit=true;if(e.hp<=0){e.alive=false;burst(e.rig.holder.position.clone().add(new THREE.Vector3(0,1,0)),22,0xffd06b,5);scene.remove(e.rig.holder);e.rig.dispose();kills++;scoreEl.textContent=String(kills);document.querySelector('#remainingEnemies').textContent=String(enemies.filter(x=>x.alive).length)}break}}}b.travelled+=72*dt;if(hit||b.life<=0||b.travelled>=b.range){scene.remove(b.mesh);bullets.splice(i,1)}}
