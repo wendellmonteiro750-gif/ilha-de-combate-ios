@@ -578,25 +578,15 @@ async function createFighter(isEnemy=false,index=0){
    animClock+=dt;
    for(const item of this._stanceApplied)this.bones.get(item.name)?.quaternion.multiply(item.inverse);
    this._stanceApplied.length=0;
-   const speed=THREE.MathUtils.clamp((this.motionSpeed||0)/6.8,0,1),air=THREE.MathUtils.clamp(this.airBlend||0,0,1),moving=playing==='Walk'&&this.stanceMode==='stand'&&speed>.025,phase=animClock*(moving?THREE.MathUtils.lerp(7.2,11.8,speed):1.8),swing=moving?Math.sin(phase)*THREE.MathUtils.lerp(.22,.58,speed):Math.sin(animClock*1.8)*.012;
-   for(const [name,value] of [['mixamorigLeftUpLeg',swing],['mixamorigRightUpLeg',-swing],['mixamorigLeftArm',-swing*.72],['mixamorigRightArm',swing*.72]]){
-    const b=this.bones.get(name);if(b){const jumpOffset=name.includes('UpLeg')?-.22*air:name.includes('Leg')?.42*air:name.includes('Arm')?-.28*air:0;b.rotation.x=value+jumpOffset;}
-   }
-   const target=this.stanceMode==='crouch'||this.stanceMode==='prone'?1:0;
-   this._stanceBlend=THREE.MathUtils.damp(this._stanceBlend,target,10,dt);
-   const prone=this.stanceMode==='prone',crouch=this.stanceMode==='crouch';
-   const pose=[
-    ['mixamorigHips',prone?.82:crouch?.42:0,0,0],
-    ['mixamorigSpine',prone?.48:crouch?-.10:0,0,0],
-    ['mixamorigSpine1',prone?.22:crouch?-.08:0,0,0],
-    ['mixamorigLeftUpLeg',prone?-.42:crouch?-.62:0,0,0],
-    ['mixamorigRightUpLeg',prone?-.42:crouch?-.62:0,0,0],
-    ['mixamorigLeftLeg',prone?.18:crouch?1.12:0,0,0],
-    ['mixamorigRightLeg',prone?.18:crouch?1.12:0,0,0],
-    ['mixamorigLeftArm',prone?-.22:crouch?-.08:0,0,0],
-    ['mixamorigRightArm',prone?-.22:crouch?-.08:0,0,0]
-   ];
-   for(const [name,x,y,z] of pose){const b=this.bones.get(name);if(!b)continue;const delta=new THREE.Quaternion().setFromEuler(new THREE.Euler(x*this._stanceBlend,y*this._stanceBlend,z*this._stanceBlend,'XYZ'));b.quaternion.multiply(delta);this._stanceApplied.push({name,inverse:delta.clone().invert()})}
+   const speed=THREE.MathUtils.clamp((this.motionSpeed||0)/7.1,0,1),air=THREE.MathUtils.clamp(this.airBlend||0,0,1);
+   const prone=this.stanceMode==='prone',crouch=this.stanceMode==='crouch',moving=playing==='Walk'&&speed>.025;
+   const phase=animClock*(moving?THREE.MathUtils.lerp(7.2,12.6,speed):2),wave=Math.sin(phase),counter=Math.sin(phase+Math.PI);
+   const stride=moving?(prone ? .13 : crouch ? .29 : THREE.MathUtils.lerp(.22,.62,speed)):0,armStride=prone ? .10 : crouch ? .22 : .72;
+   const gait=[['mixamorigLeftUpLeg',wave*stride-.20*air],['mixamorigRightUpLeg',counter*stride-.20*air],['mixamorigLeftLeg',Math.max(0,-wave)*stride*1.25+.30*air],['mixamorigRightLeg',Math.max(0,-counter)*stride*1.25+.30*air],['mixamorigLeftArm',-wave*stride*armStride-.25*air],['mixamorigRightArm',-counter*stride*armStride-.25*air]];
+   for(const [name,value] of gait){const bone=this.bones.get(name);if(bone)bone.rotation.x=value;}
+   const target=crouch||prone?1:0;this._stanceBlend=THREE.MathUtils.damp(this._stanceBlend,target,11,dt);
+   const pose=[['mixamorigHips',prone ? .62 : crouch ? .42 : 0,0,0],['mixamorigSpine',prone ? .54 : crouch ? -.12 : 0,0,0],['mixamorigSpine1',prone ? .24 : crouch ? -.08 : 0,0,0],['mixamorigLeftUpLeg',prone ? -.22 : crouch ? -.62 : 0,0,0],['mixamorigRightUpLeg',prone ? -.22 : crouch ? -.62 : 0,0,0],['mixamorigLeftLeg',prone ? .10 : crouch ? 1.12 : 0,0,0],['mixamorigRightLeg',prone ? .10 : crouch ? 1.12 : 0,0,0],['mixamorigLeftArm',prone ? -.38 : crouch ? -.08 : 0,0,0],['mixamorigRightArm',prone ? -.38 : crouch ? -.08 : 0,0,0],['mixamorigNeck',prone ? -.10 : crouch ? .04 : 0,0,0]];
+   for(const [name,x,y,z] of pose){const bone=this.bones.get(name);if(!bone)continue;const delta=new THREE.Quaternion().setFromEuler(new THREE.Euler(x*this._stanceBlend,y*this._stanceBlend,z*this._stanceBlend,'XYZ'));bone.quaternion.multiply(delta);this._stanceApplied.push({name,inverse:delta.clone().invert()});}
   },
   setHeight(h){const b=new THREE.Box3().setFromObject(model),v=b.max.y-b.min.y;if(v>0)holder.scale.setScalar(h/v)}
  };
