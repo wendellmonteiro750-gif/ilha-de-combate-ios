@@ -330,9 +330,30 @@ function bind(){
  $('crouch').addEventListener('pointerdown',e=>{e.preventDefault();setPose(pose==='crouch'?'stand':'crouch')});
  $('prone').addEventListener('pointerdown',e=>{e.preventDefault();setPose(pose==='prone'?'stand':'prone')});
  $('reload').addEventListener('pointerdown',e=>{e.preventDefault();if(!reloading&&ammo<30){reloading=true;reloadPoseUntil=performance.now()+1450;$('message').textContent='RECARREGANDO';setTimeout(()=>{ammo=30;reloading=false;stats();$('message').textContent='ÁREA DE TREINO'},1450)}});
- let drag=null;renderer.domElement.addEventListener('pointerdown',e=>{if(e.clientX>innerWidth*.38){drag={id:e.pointerId,x:e.clientX,y:e.clientY};renderer.domElement.setPointerCapture(e.pointerId)}});
- renderer.domElement.addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag.x=e.clientX;drag.y=e.clientY;const sensitivity=aim?.0042:.0062;yaw-=dx*sensitivity;pitch=THREE.MathUtils.clamp(pitch+dy*(aim?.0028:.0035),-.72,.42)});
- ['pointerup','pointercancel'].forEach(ev=>renderer.domElement.addEventListener(ev,e=>{if(drag&&e.pointerId===drag.id)drag=null}));
+ // Controle de câmera por arrasto: inicia na área livre do canvas e
+ // acompanha o mesmo dedo pela janela inteira, mesmo se sair do canvas.
+ let drag=null;
+ renderer.domElement.addEventListener('pointerdown',e=>{
+  if(e.pointerType==='mouse'&&e.button!==0)return;
+  if(e.clientX>innerWidth*.30){
+   e.preventDefault();
+   drag={id:e.pointerId,x:e.clientX,y:e.clientY};
+   try{renderer.domElement.setPointerCapture(e.pointerId)}catch(_){}
+  }
+ },{passive:false});
+ window.addEventListener('pointermove',e=>{
+  if(!drag||e.pointerId!==drag.id)return;
+  e.preventDefault();
+  const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
+  drag.x=e.clientX;drag.y=e.clientY;
+  const sensitivity=aim?.0052:.0075;
+  yaw-=dx*sensitivity;
+  pitch=THREE.MathUtils.clamp(pitch+dy*(aim?.0038:.0046),-.78,.48);
+ },{passive:false});
+ const endCameraDrag=e=>{if(drag&&e.pointerId===drag.id)drag=null};
+ window.addEventListener('pointerup',endCameraDrag);
+ window.addEventListener('pointercancel',endCameraDrag);
+ renderer.domElement.addEventListener('lostpointercapture',endCameraDrag);
  $('play').addEventListener('click',()=>{$('lobby').style.display='none';started=true});
  $('weapon').addEventListener('pointerdown',e=>{e.preventDefault();setWeaponMode(!weaponEquipped)});
 }
