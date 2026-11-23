@@ -273,7 +273,9 @@ function drawMap(){
 }
 const clock=new THREE.Clock(),camTarget=new THREE.Vector3(),camPos=new THREE.Vector3();
 let mapTick=0;
+let firstFrameDone=false;
 function frame(){
+ try{
  requestAnimationFrame(frame);const dt=Math.min(clock.getDelta(),.04);fireCooldown=Math.max(0,fireCooldown-dt);
  const f=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0)-joyY;
  const s=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0)+joyX;
@@ -294,10 +296,15 @@ function frame(){
  ocean.material.color.setHSL(.53,.48,.31+Math.sin(clock.elapsedTime*.35)*.012);
  if((mapTick+=dt)>.15){drawMap();mapTick=0}
  renderer.render(scene,camera);
+ if(!firstFrameDone){firstFrameDone=true;const loading=document.querySelector('#loading');if(loading)loading.style.display='none';toast('MAPA TROPICAL · PRIMEIRA VERSÃO');}
+ }catch(error){
+  const loading=document.querySelector('#loading'),panel=document.querySelector('#error');
+  if(loading)loading.style.display='none';
+  if(panel){panel.hidden=false;panel.textContent='ERRO NA RENDERIZAÇÃO 3D: '+(error?.message||String(error));}
+  console.error('Erro no frame 3D:',error);
+ }
 }
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setPixelRatio(Math.min(devicePixelRatio||1,innerWidth<700?1.15:1.6));renderer.setSize(innerWidth,innerHeight)});
-document.querySelector('#loading').style.display='none';
-toast('MAPA TROPICAL · PRIMEIRA VERSÃO');
 frame();
 
  }catch(error){
