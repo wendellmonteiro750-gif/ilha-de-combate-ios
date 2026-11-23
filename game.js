@@ -24,7 +24,7 @@ function cycleFireMode(){const modes=currentWeapon().modes;const i=modes.indexOf
 function refreshAmmo(){ammo=weaponAmmo[weaponIndex];ammoEl.textContent='MUNIÇÃO '+ammo;document.querySelector('#ammoLarge').textContent=ammo;document.querySelector('#ammoMag').textContent=currentWeapon().mag;document.querySelector('#ammoReserve').textContent=reserveAmmo[weaponIndex];document.querySelector('#weaponSwitch').textContent='ARMA: '+currentWeapon().name;setFireMode(fireMode);refreshInventory()}
 function refreshInventory(){
  const panel=document.querySelector('#inventoryPanel');if(!panel)return;
- document.querySelector('#inventoryWeapons').innerHTML=weapons.map((w,i)=>'<div class="inventory-slot '+(i===weaponIndex?'equipped':'')+'"><b>'+(i+1)+'. '+w.name+'</b><span>'+weaponAmmo[i]+'/'+w.mag+' • reserva '+reserveAmmo[i]+'</span><small>'+w.category+' • DANO '+w.damage+' • '+w.rate.toFixed(2)+'s/tiro</small></div>').join('');
+ document.querySelector('#inventoryWeapons').innerHTML=weapons.map((w,i)=>'<div class="inventory-slot '+(i===weaponIndex?'equipped':'')+'"><b>'+(i+1)+'. '+w.name+'</b><span>'+weaponAmmo[i]+'/'+w.mag+' • reserva '+reserveAmmo[i]+'</span><small>'+w.category+' • DANO '+w.damage+' • '+w.rate.toFixed(2)+'s/tiro • '+w.lengthCm+' cm</small></div>').join('');
  document.querySelector('#inventorySupplies').textContent='Kits: '+medkits+' • Colete: '+Math.round(armor)+'% • Mira: '+scopeLevel+'x • Acessórios: '+attachmentLevel;
 }
 function toggleInventory(){
