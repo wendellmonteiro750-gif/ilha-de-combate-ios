@@ -6,7 +6,7 @@ const scoreEl=document.querySelector('#score'),ammoEl=document.querySelector('#a
 const errorPanel=document.querySelector('#errorPanel');
 let renderer,scene,camera,clock,playerRig,worldYaw=0,pitch=-.12,ammo=30,kills=0,health=100,armor=0,medkits=1,library;
 const weapons=[{name:'FUZIL',mag:30,damage:35,rate:.13,spread:.014,reload:1.35},{name:'SMG',mag:40,damage:19,rate:.075,spread:.022,reload:1.5},{name:'PRECISÃO',mag:8,damage:90,rate:.72,spread:.002,reload:1.8}];
-let weaponIndex=0,weaponAmmo=[30,40,8];
+let weaponIndex=0,weaponAmmo=[30,40,8],scopeLevel=0;
 function currentWeapon(){return weapons[weaponIndex]}
 function refreshAmmo(){ammo=weaponAmmo[weaponIndex];ammoEl.textContent='MUNIÇÃO '+ammo;document.querySelector('#ammoLarge').textContent=ammo;document.querySelector('#weaponSwitch').textContent='ARMA: '+currentWeapon().name;refreshInventory()}
 function refreshInventory(){
@@ -79,6 +79,9 @@ function buildWorld(){
  for(let i=0;i<95;i++){const a=i*2.399,r=52+(i%13)*5.1;addPalm(Math.cos(a)*r,Math.sin(a)*r,.85+(i%5)*.12)}
  addHouse(-12,-12,.2);addHouse(14,-18,-.3);addHouse(22,9,.8);addHouse(-25,15,-.5);
  addHouse(68,35,.4);addHouse(-76,-42,-.7);addHouse(38,-88,.2);addHouse(-92,72,1.1);addHouse(102,5,-.4);
+ // Novas casas distribuídas pela ilha para criar mais áreas de exploração.
+ addHouse(42,54,.65);addHouse(-48,68,-.25);addHouse(84,-58,1.35);addHouse(-58,-76,.45);
+ addHouse(6,82,-.8);addHouse(-104,18,.3);addHouse(108,78,-.55);addHouse(-8,-96,1.05);
  for(let i=0;i<34;i++){const a=i*2.4,r=9+(i%6)*4;const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.55+(i%4)*.22,1),mat(i%2?0x58644d:0x7b8069));rock.position.set(Math.cos(a)*r,.3,Math.sin(a)*r);rock.scale.y=.65;rock.castShadow=true;rock.receiveShadow=true;scene.add(rock)}
  addWorldDetail();
  addCombatLandmarks();
@@ -89,14 +92,33 @@ function addSafeZone(){
  ring.rotation.x=-Math.PI/2;ring.position.y=.18;ring.scale.set(120,120,120);scene.add(ring);safeRing=ring;
 }
 function addLootDrops(){
- const spots=[[12,5],[-32,42],[55,-34],[-70,-12],[78,66]];
- spots.forEach((p,i)=>{
-  const group=new THREE.Group(),base=mat(0x6d5534,.78),trim=mat(0xe0b85f,.5,.35),glow=new THREE.MeshBasicMaterial({color:0xffd46b,transparent:true,opacity:.18});
-  box(group,1.25,.82,.9,base,0,.42,0);box(group,1.3,.12,.95,trim,0,.82,0);
-  box(group,.13,.9,.98,trim,0,.45,0);box(group,1.3,.08,.08,trim,0,.45,.49);
-  const halo=new THREE.Mesh(new THREE.TorusGeometry(.85,.035,6,24),glow);halo.rotation.x=Math.PI/2;halo.position.y=.08;group.add(halo);
-  group.position.set(p[0],0,p[1]);scene.add(group);
-  lootItems.push({group,type:['medkit','armor','ammo','medkit','armor'][i],taken:false});
+ // Caixas e itens distribuídos junto às casas e pontos de exploração.
+ const drops=[
+  [12,5,'medkit'],[-32,42,'armor'],[55,-34,'ammo'],[-70,-12,'medkit'],[78,66,'armor'],
+  [-10,-8,'weapon',0],[17,-15,'scope'],[25,12,'medkit'],[-28,18,'weapon',1],
+  [65,38,'ammo'],[-73,-45,'scope'],[41,-85,'weapon',2],[-89,70,'medkit'],
+  [99,8,'armor'],[44,57,'weapon',1],[-46,71,'ammo'],[82,-61,'scope'],
+  [-56,-79,'weapon',0],[8,85,'medkit'],[-101,21,'ammo'],[106,80,'weapon',2],[-6,-99,'scope']
+ ];
+ drops.forEach(([x,z,type,weaponSlot],i)=>{
+  const group=new THREE.Group();
+  const colors={medkit:0x42d879,armor:0x4ca8ff,ammo:0xf3c64e,weapon:0xd9823b,scope:0xb78cff};
+  const color=colors[type]||0xf3c64e,base=mat(type==='medkit'?0x315c42:0x514b3f,.72),trim=mat(color,.42,.22);
+  box(group,.72,.48,.62,base,0,.26,0);
+  box(group,.76,.09,.66,trim,0,.5,0);
+  if(type==='weapon'){
+   box(group,.82,.09,.12,trim,0,.68,0);box(group,.16,.25,.14,base,.23,.56,0);
+  }else if(type==='scope'){
+   const tube=new THREE.Mesh(new THREE.CylinderGeometry(.11,.11,.48,12),trim);tube.rotation.z=Math.PI/2; tube.position.y=.68;group.add(tube);
+   const lens=new THREE.Mesh(new THREE.CircleGeometry(.105,16),new THREE.MeshBasicMaterial({color:0x8cecff}));lens.position.set(.245,.68,0);lens.rotation.y=Math.PI/2;group.add(lens);
+  }else{
+   box(group,.12,.3,.08,trim,0,.7,0);
+   if(type==='medkit')box(group,.32,.1,.08,trim,0,.7,0);
+  }
+  const halo=new THREE.Mesh(new THREE.TorusGeometry(.58,.025,6,20),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.5}));
+  halo.rotation.x=Math.PI/2;halo.position.y=.07;group.add(halo);
+  group.position.set(x,0,z);scene.add(group);
+  lootItems.push({group,type,weaponSlot,taken:false});
  });
 }
 function refreshVitals(){
@@ -118,9 +140,13 @@ function takeLoot(){
  nearest.taken=true;scene.remove(nearest.group);
  if(nearest.type==='medkit')medkits++;
  else if(nearest.type==='armor')armor=Math.min(100,armor+50);
- else weaponAmmo[weaponIndex]=Math.min(currentWeapon().mag,weaponAmmo[weaponIndex]+15);
+ else if(nearest.type==='ammo')weaponAmmo[weaponIndex]=Math.min(currentWeapon().mag,weaponAmmo[weaponIndex]+20);
+ else if(nearest.type==='scope'){scopeLevel=Math.min(3,scopeLevel+1);statusEl.textContent='MIRA '+scopeLevel+'X COLETADA';}
+ else if(nearest.type==='weapon'){weaponIndex=nearest.weaponSlot??((weaponIndex+1)%weapons.length);weaponAmmo[weaponIndex]=Math.min(currentWeapon().mag,weaponAmmo[weaponIndex]+currentWeapon().mag);statusEl.textContent=currentWeapon().name+' ENCONTRADO';}
  refreshAmmo();refreshVitals();
- statusEl.textContent=nearest.type==='medkit'?'KIT ENCONTRADO':nearest.type==='armor'?'COLETE REFORÇADO':'MUNIÇÃO COLETADA';
+ if(nearest.type==='medkit')statusEl.textContent='KIT ENCONTRADO';
+ else if(nearest.type==='armor')statusEl.textContent='COLETE REFORÇADO';
+ else if(nearest.type==='ammo')statusEl.textContent='MUNIÇÃO COLETADA';
 }
 function updateSafeZone(dt){
  if(document.querySelector('#hud').style.display==='none')return;
@@ -306,7 +332,7 @@ function shoot(){
  ammo--;weaponAmmo[weaponIndex]=ammo;ammoEl.textContent='MUNIÇÃO '+ammo;document.querySelector('#ammoLarge').textContent=ammo;refreshInventory();
  fireCooldown=currentWeapon().rate*(aiming?.82:1);
  const dir=new THREE.Vector3();camera.getWorldDirection(dir);
- const spread=(aiming?currentWeapon().spread*.25:currentWeapon().spread)+(playerVelocity.length()>.5?currentWeapon().spread*.8:0);
+ const spread=(aiming?currentWeapon().spread*Math.max(.08,.25-scopeLevel*.055):currentWeapon().spread)+(playerVelocity.length()>.5?currentWeapon().spread*.8:0);
  dir.x+=(Math.random()-.5)*spread;dir.y+=(Math.random()-.5)*spread;dir.z+=(Math.random()-.5)*spread;dir.normalize();
  const origin=playerRig.holder.position.clone().add(new THREE.Vector3(0,1.42,0)).add(dir.clone().multiplyScalar(.8));
  muzzleFlash(origin,dir);document.querySelector('#crosshair')?.classList.add('firing');setTimeout(()=>document.querySelector('#crosshair')?.classList.remove('firing'),85);recoil=Math.min(.24,recoil+(aiming?.035:.065));
