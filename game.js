@@ -267,7 +267,17 @@ function updateEffects(dt){
 async function spawnEnemy(x,z,i){const rig=await createFighter(true,i);rig.holder.position.set(x,0,z);enemies.push({rig,hp:100,alive:true,attack:0,anim:'idle'});return rig}
 async function init(){
  renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
- renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.65));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.18;root.appendChild(renderer.domElement);
+ // Perfil gráfico equilibrado: imagem mais nítida sem sobrecarregar o Safari no iPhone.
+ const mobileQuality=innerWidth<700;
+ renderer.setPixelRatio(Math.min(devicePixelRatio||1,mobileQuality?1.5:1.85));
+ renderer.setSize(innerWidth,innerHeight);
+ renderer.shadowMap.enabled=true;
+ renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+ renderer.toneMapping=THREE.ACESFilmicToneMapping;
+ renderer.toneMappingExposure=1.12;
+ renderer.outputColorSpace=THREE.SRGBColorSpace;
+ renderer.setClearColor(0x9bcbe4,1);
+ root.appendChild(renderer.domElement);
  scene=new THREE.Scene();clock=new THREE.Clock();buildWorld();camera=new THREE.PerspectiveCamera(68,innerWidth/innerHeight,.1,900);
  loading.textContent='CARREGANDO PERSONAGEM 3D…';
  const catalog=await catalogFromFiles(BASE);catalog.animations=catalog.animations.filter(a=>['General','Movement Basic','Movement Advanced','Combat Ranged'].includes(a.group));library=new Library(catalog);
@@ -286,7 +296,7 @@ async function init(){
  document.querySelector('#hint').textContent='Joystick: andar • Deslize a tela: olhar ao redor • Botões: pular e atirar';
  renderer.setAnimationLoop(animate);
 }
-function resize(){if(!renderer)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.6))}
+function resize(){if(!renderer)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio||1,innerWidth<700?1.5:1.85))}
 const joy=document.querySelector('#joystick'),stick=document.querySelector('#stick');let joyId=null,cameraPointerId=null,lastPointerX=0,lastPointerY=0,lookDeltaX=0,lookDeltaY=0;
 function setJoy(e){const r=joy.getBoundingClientRect(),dx=e.clientX-r.left-r.width/2,dy=e.clientY-r.top-r.height/2,l=Math.hypot(dx,dy),k=Math.min(1,48/(l||1));keys.side=dx*k/48;keys.forward=-dy*k/48;stick.style.transform=`translate(${keys.side*48}px,${-keys.forward*48}px)`}
 function setupControls(){
@@ -370,7 +380,7 @@ function animate(){
  fireCooldown=Math.max(0,fireCooldown-dt);
  if(fireHeld&&fireCooldown<=0&&reloadTimer<=0)shoot();
  if(reloadTimer>0){reloadTimer-=dt;if(reloadTimer<=0){reloadTimer=0;weaponAmmo[weaponIndex]=currentWeapon().mag;refreshAmmo();document.querySelector('#reload').classList.remove('active');statusEl.textContent='PRONTO'}}
- recoil=Math.max(0,recoil-dt*.55);const forwardView=new THREE.Vector3(Math.sin(worldYaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(worldYaw)*Math.cos(pitch));const eye=p.position.clone().add(new THREE.Vector3(0,1.58,0)).add(new THREE.Vector3(Math.sin(worldYaw),0,-Math.cos(worldYaw)).multiplyScalar(.12));const desired=eye.clone().add(new THREE.Vector3(0,recoil*.025,0));const smooth=1-Math.exp(-20*dt);camera.position.lerp(desired,smooth);const lookTarget=eye.clone().add(forwardView.multiplyScalar(12)).add(new THREE.Vector3(0,recoil*.16,0));cameraLook.lerp(lookTarget,smooth);camera.lookAt(cameraLook);const wantedFov=aiming?54:78;if(Math.abs(camera.fov-wantedFov)>.1){camera.fov=THREE.MathUtils.lerp(camera.fov,wantedFov,smooth);camera.updateProjectionMatrix();}
+ recoil=Math.max(0,recoil-dt*.55);const forwardView=new THREE.Vector3(Math.sin(worldYaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(worldYaw)*Math.cos(pitch));const movingBob=playerVelocity.length()>.25?Math.sin(clock.elapsedTime*(aiming?7.5:10.5))*.018*(aiming?.4:1):0;const eye=p.position.clone().add(new THREE.Vector3(0,1.58+movingBob,0)).add(new THREE.Vector3(Math.sin(worldYaw),0,-Math.cos(worldYaw)).multiplyScalar(.12));const desired=eye.clone().add(new THREE.Vector3(0,recoil*.025,0));const smooth=1-Math.exp(-20*dt);camera.position.lerp(desired,smooth);const lookTarget=eye.clone().add(forwardView.multiplyScalar(12)).add(new THREE.Vector3(0,recoil*.16,0));cameraLook.lerp(lookTarget,smooth);camera.lookAt(cameraLook);const wantedFov=aiming?54:78;if(Math.abs(camera.fov-wantedFov)>.1){camera.fov=THREE.MathUtils.lerp(camera.fov,wantedFov,smooth);camera.updateProjectionMatrix();}
  updateSafeZone(dt);
  if(hitMarkerTimer>0){hitMarkerTimer-=dt;if(hitMarkerTimer<=0)document.querySelector('#crosshair')?.classList.remove('hit')}updateEffects(dt);radarClock-=dt;if(radarClock<=0){radarClock=.18;updateRadar()}renderer.render(scene,camera);
 }
