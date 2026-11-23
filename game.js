@@ -819,7 +819,7 @@ function updateRadar(){
 function animate(){
  const dt=Math.min(clock.getDelta(),.04),p=playerRig.holder;
  if(scene.fog&&scene.fog.isFogExp2){scene.fog.density=.00145+Math.sin(clock.elapsedTime*.035)*.00008;}
- worldYaw+=lookDeltaX*.0048*getCameraSensitivity();
+ worldYaw-=lookDeltaX*.0048*getCameraSensitivity();
  // Controle vertical progressivo, com faixa ampla para acompanhar alvos acima e abaixo.
  pitch=THREE.MathUtils.clamp(pitch-lookDeltaY*.0038*getCameraSensitivity()*(gameSettings.invertY?-1:1),-.78,.78);
  lookDeltaX=lookDeltaY=0;
