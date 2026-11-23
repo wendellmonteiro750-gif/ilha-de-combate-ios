@@ -423,3 +423,34 @@
  .actions .aim-btn,.actions .jump-btn,.actions .crouch-btn,.actions .prone-btn,.actions .reload-btn{width:44px;height:44px}
  .actions .fire-btn{width:66px;height:66px}
 }
+
+/* Menu de configurações do jogo */
+.settings-open{position:fixed;z-index:9;right:14px;bottom:calc(env(safe-area-inset-bottom) + 14px);width:48px;height:48px;border-radius:50%;border:1px solid #f5dfaa;background:linear-gradient(145deg,#526b70,#182b35);color:#fff;font-size:24px;box-shadow:0 3px 12px #0009}
+.settings-panel{display:none;position:fixed;z-index:40;inset:0;background:#050d13df;backdrop-filter:blur(7px);padding:calc(env(safe-area-inset-top) + 12px) 12px calc(env(safe-area-inset-bottom) + 12px);color:#f7f4e8;text-shadow:none;place-items:center}
+.settings-panel.open{display:grid}
+.settings-card{width:min(100%,520px);max-height:100%;display:flex;flex-direction:column;background:linear-gradient(145deg,#1c3038,#101b24);border:1px solid #c4b17b88;border-radius:15px;box-shadow:0 16px 50px #000b;overflow:hidden}
+.settings-header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #ffffff22}
+.settings-header small{font-size:9px;letter-spacing:2px;color:#d9bc78}.settings-header h2{font-size:19px;letter-spacing:1px;margin:3px 0 0}.settings-header button{border:1px solid #ffffff55;background:#ffffff12;color:white;border-radius:8px;width:36px;height:36px;font-size:17px}
+.settings-tabs{display:flex;gap:5px;padding:9px;overflow-x:auto;border-bottom:1px solid #ffffff20}
+.settings-tabs button{flex:0 0 auto;border:1px solid #ffffff25;border-radius:7px;background:#ffffff0b;color:#c8d3d4;padding:9px 10px;font-size:9px;font-weight:900;letter-spacing:.4px}
+.settings-tabs button.selected{background:#b28b42;color:#171d20;border-color:#f3d18b}
+.settings-content{padding:13px 16px;overflow:auto;min-height:245px}
+.settings-page{display:none}.settings-page.active{display:block}
+.settings-note{font-size:11px;line-height:1.5;color:#b9c7c9;margin:0 0 14px}
+.settings-page>label:not(.setting-switch){display:block;position:relative;font-size:12px;font-weight:800;margin:13px 0 17px;padding-right:42px}
+.settings-page output{position:absolute;right:0;color:#f3d18b;font-variant-numeric:tabular-nums}
+.settings-page input[type=range]{display:block;width:100%;height:5px;margin-top:10px;accent-color:#e2b65e}
+.settings-page select{display:block;width:100%;margin-top:8px;padding:10px;background:#243b44;color:white;border:1px solid #ffffff44;border-radius:7px}
+.setting-switch{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #ffffff19;font-size:12px;font-weight:700}
+.setting-switch input{width:19px;height:19px;accent-color:#d6a94f}
+.settings-action{width:100%;padding:11px;margin:6px 0;border:1px solid #e6c57e;border-radius:8px;background:#b58a3d;color:#18232a;font-size:11px;font-weight:1000}
+.settings-action.secondary{background:#ffffff0b;color:#eee;border-color:#ffffff55}
+.settings-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 14px;border-top:1px solid #ffffff22}
+.settings-footer span{font-size:8px;letter-spacing:.6px;color:#a8c8ac}
+.settings-footer button{border:0;border-radius:8px;padding:11px 13px;background:#e4b85d;color:#18232a;font-size:10px;font-weight:1000}
+#hud.hud-editing [data-hud-id]{outline:2px dashed #ffd66b!important;outline-offset:4px;pointer-events:auto!important;touch-action:none!important}
+#hud.hud-editing{pointer-events:auto}
+@media(max-height:650px){.settings-content{min-height:170px;padding:8px 13px}.settings-page>label:not(.setting-switch){margin:8px 0 11px}.settings-note{margin-bottom:8px}}
+
+#hud{opacity:var(--hud-opacity,1)}
+#hud .actions,#hud #joystick,#hud .ammo-panel{transform-origin:center;scale:var(--hud-scale,1)}
