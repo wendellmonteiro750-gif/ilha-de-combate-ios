@@ -481,193 +481,92 @@ function addRifle(rig,index=0){
  g.scale.setScalar(.68);g.position.set(.015,-.045,.035);g.rotation.set(-.08,0,0);hand.add(g);
  rig.weaponPivot=g;rig.weaponMuzzle=muzzle;rig.weaponSpec=spec;
 }
-function makeHumanoidModel(){
- const root=new THREE.Group();root.name='IlhaHumanoid_OwnModel';
- const bones=new Map();
- const skin=new THREE.MeshStandardMaterial({color:0xb98265,roughness:.82}),skinLight=new THREE.MeshStandardMaterial({color:0xc99173,roughness:.84});
- const shirt=new THREE.MeshStandardMaterial({color:0x526b58,roughness:.94}),shirtDark=new THREE.MeshStandardMaterial({color:0x35483d,roughness:.92});
- const pants=new THREE.MeshStandardMaterial({color:0x303b3d,roughness:.96}),pantsLight=new THREE.MeshStandardMaterial({color:0x46504b,roughness:.95});
- const boots=new THREE.MeshStandardMaterial({color:0x292b2a,roughness:.88}),sole=new THREE.MeshStandardMaterial({color:0x171a1a,roughness:.95});
- const belt=new THREE.MeshStandardMaterial({color:0x292b27,roughness:.78}),metal=new THREE.MeshStandardMaterial({color:0x9c895d,metalness:.55,roughness:.42});
- const hair=new THREE.MeshStandardMaterial({color:0x30251f,roughness:.95}),eyes=new THREE.MeshStandardMaterial({color:0x211b18,roughness:.45});
- const bone=(name,parent,x,y,z)=>{const b=new THREE.Bone();b.name=name;b.position.set(x,y,z);parent.add(b);bones.set(name,b);return b};
- const ellipsoid=(parent,name,x,y,z,sx,sy,sz,material)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(1,32,24),material);m.name=name;m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m};
- const capsule=(parent,name,length,radius,material,x=0,y=0,z=0)=>{const m=new THREE.Mesh(new THREE.CapsuleGeometry(radius,Math.max(.01,length-2*radius),10,16),material);m.name=name;m.position.set(x,y-length*.5,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m};
- const hips=bone('mixamorigHips',root,0,.99,0);
- ellipsoid(hips,'pelvis',0,0,0,.205,.145,.13,skin);
- ellipsoid(hips,'combat_belt',0,-.018,.006,.218,.055,.145,belt);
- box(hips,.1,.075,.025,metal,0,-.02,.145);
- const spine=bone('mixamorigSpine',hips,0,.12,0);
- // Tronco único com silhueta anatômica: cintura estreita, caixa torácica e ombros largos.
- const torsoProfile=[
-  new THREE.Vector2(.135,-.17),new THREE.Vector2(.155,-.12),
-  new THREE.Vector2(.17,-.035),new THREE.Vector2(.158,.055),
-  new THREE.Vector2(.17,.16),new THREE.Vector2(.205,.29),
-  new THREE.Vector2(.225,.39),new THREE.Vector2(.205,.47),
-  new THREE.Vector2(.16,.50)
- ];
- const torsoGeometry=new THREE.LatheGeometry(torsoProfile,32);
- torsoGeometry.scale(1,1,.68);
- const torsoMesh=new THREE.Mesh(torsoGeometry,shirt);
- torsoMesh.name='continuous_human_torso';torsoMesh.position.set(0,.02,0);
- torsoMesh.castShadow=true;torsoMesh.receiveShadow=true;spine.add(torsoMesh);
- const spine1=bone('mixamorigSpine1',spine,0,.17,0);
- const spine2=bone('mixamorigSpine2',spine1,0,.16,0);
- ellipsoid(spine2,'deltoid_left',-.205,.025,0,.092,.095,.092,shirt);
- ellipsoid(spine2,'deltoid_right',.205,.025,0,.092,.095,.092,shirt);
- ellipsoid(spine2,'trapezius',0,.105,-.035,.145,.075,.085,shirt);
- // Gola, costuras e bolsos discretos.
- ellipsoid(spine2,'shirt_collar',0,.12,.005,.105,.055,.105,shirtDark);
- box(spine2,.018,.24,.012,shirtDark,0,-.005,.151);
- for(const sx of [-1,1]){
-  box(spine2,.13,.11,.025,shirtDark,sx*.145,.025,.145);
-  box(spine2,.13,.018,.03,shirt,sx*.145,-.035,.16);
- }
- const neck=bone('mixamorigNeck',spine2,0,.13,0);
- capsule(neck,'neck_mesh',.13,.052,skin,0,.025,0);
- const head=bone('mixamorigHead',neck,0,.115,0);
- ellipsoid(head,'head_mesh',0,.055,0,.112,.145,.105,skinLight);
- ellipsoid(head,'nose',0,.035,.099,.025,.035,.028,skin);
- ellipsoid(head,'jaw',0,-.025,.018,.082,.062,.078,skinLight);
- ellipsoid(head,'mouth',0,-.012,.099,.025,.006,.006,hair);
- ellipsoid(head,'chin',0,-.055,.071,.038,.022,.022,skin);
- ellipsoid(head,'hair_cap',0,.145,-.012,.116,.067,.108,hair);
- ellipsoid(head,'hair_back',0,.065,-.075,.105,.105,.06,hair);
- // Boné tático de tecido: copa, aba frontal e costura central.
- const capMat=new THREE.MeshStandardMaterial({color:0x354a3b,roughness:.96});
- ellipsoid(head,'cap_crown',0,.19,-.012,.12,.075,.112,capMat);
- const capBrim=new THREE.Mesh(new THREE.BoxGeometry(.19,.025,.15),capMat);capBrim.position.set(0,.155,.105);capBrim.rotation.x=-.08;capBrim.castShadow=true;head.add(capBrim);
- // Mochila compacta presa às costas, com alças visíveis sobre os ombros.
- const packMat=new THREE.MeshStandardMaterial({color:0x343f37,roughness:.98});
- ellipsoid(spine1,'combat_backpack',0,.025,-.185,.175,.235,.095,packMat);
- box(spine1,.19,.07,.035,shirtDark,0,-.16,-.205);
- for(const side of [-1,1]){box(spine2,.045,.31,.035,packMat,side*.145,-.015,-.09);box(spine1,.09,.09,.035,pantsLight,side*.18,-.12,-.16)}
- for(const side of [-1,1]){
-  ellipsoid(head,'ear',side*.112,.055,0,.022,.042,.025,skin);
-  ellipsoid(head,'eye',side*.043,.083,.091,.012,.012,.008,eyes);
-  ellipsoid(head,'brow',side*.043,.105,.091,.022,.008,.009,hair);
-  const upper=bone(side<0?'mixamorigLeftArm':'mixamorigRightArm',spine2,side*.205,.075,0);
-  ellipsoid(spine2,'shoulder',side*.205,.045,0,.09,.095,.09,shirt);
-  capsule(upper,'upper_arm',.31,.064,skin,0,-.015,0);
-  capsule(upper,'shirt_sleeve',.205,.078,shirt,0,-.015,0);
-  ellipsoid(upper,'bicep_volume',0,-.115,.008,.067,.135,.067,shirt);
-  ellipsoid(upper,'tricep_volume',0,-.13,-.035,.061,.125,.055,shirtDark);
-  const fore=bone(side<0?'mixamorigLeftForeArm':'mixamorigRightForeArm',upper,0,-.30,0);
-  capsule(fore,'forearm',.285,.052,skin,0,-.005,0);
-  capsule(fore,'forearm_sleeve',.20,.066,shirt,0,-.005,0);
-  ellipsoid(fore,'forearm_shape',0,-.105,.006,.052,.125,.052,skinLight);
-  ellipsoid(fore,'wrist',0,-.235,.004,.042,.055,.042,skin);
-  ellipsoid(fore,'sleeve_cuff',0,-.19,0,.067,.045,.067,shirtDark);
-  const hand=bone(side<0?'mixamorigLeftHand':'mixamorigRightHand',fore,0,-.275,0);
-  ellipsoid(hand,'palm',0,-.035,.005,.052,.07,.035,skin);
-  ellipsoid(hand,'knuckles',0,-.075,.018,.052,.035,.026,skinLight);
-  ellipsoid(hand,'glove_cuff',0,-.018,0,.06,.035,.042,belt);
-  for(let f=0;f<4;f++)capsule(hand,'finger',.065,.009,skin,(f-1.5)*.021,-.095,.008);
-  capsule(hand,'thumb',.06,.012,skin,side*.052,-.045,.012);
-  const upLeg=bone(side<0?'mixamorigLeftUpLeg':'mixamorigRightUpLeg',hips,side*.105,-.055,0);
-  capsule(upLeg,'thigh',.445,.095,skin,0,-.015,0);
-  capsule(upLeg,'cargo_trouser',.455,.108,pants,0,-.015,-.003);
-  ellipsoid(upLeg,'thigh_contour',0,-.19,.012,.105,.19,.105,pantsLight);
-  ellipsoid(upLeg,'outer_thigh',side*.045,-.20,-.015,.07,.16,.085,pants);
-  ellipsoid(upLeg,'cargo_pocket',side*.075,-.23,.085,.075,.11,.025,pantsLight);
-  const leg=bone(side<0?'mixamorigLeftLeg':'mixamorigRightLeg',upLeg,0,-.43,0);
-  capsule(leg,'calf',.415,.064,skin,0,-.005,0);
-  capsule(leg,'lower_trouser',.415,.078,pants,0,-.005,-.002);
-  ellipsoid(leg,'calf_contour',0,-.19,-.018,.078,.15,.085,pantsLight);
-  ellipsoid(leg,'shin_panel',0,-.20,.055,.058,.14,.025,pants);
-  ellipsoid(leg,'knee_pad',0,-.045,.066,.078,.085,.025,pantsLight);
-  const foot=bone(side<0?'mixamorigLeftFoot':'mixamorigRightFoot',leg,0,-.395,.015);
-  ellipsoid(foot,'ankle_boot',0,-.012,.025,.075,.07,.09,boots);
-  ellipsoid(foot,'boot_toe',0,-.035,.095,.082,.052,.13,boots);
-  ellipsoid(foot,'boot_sole',0,-.078,.075,.084,.018,.14,sole);
-  const toe=bone(side<0?'mixamorigLeftToeBase':'mixamorigRightToeBase',foot,0,-.01,.12);
-  ellipsoid(toe,'toe_mesh',0,0,.025,.07,.035,.055,boots);
- }
- root.updateMatrixWorld(true);
- return {root,bones};
-}
-let humanSoldierAssetPromise=null;
-async function loadHumanSoldierAsset(){
- if(!humanSoldierAssetPromise){
-  humanSoldierAssetPromise=new GLTFLoader().loadAsync('https://threejs.org/examples/models/gltf/Soldier.glb');
- }
- return humanSoldierAssetPromise;
+// Modelo masculino humano completo, externo, com malha skinned, texturas PBR e esqueleto Biped.
+const HUMAN_MODEL_URL='https://models.codelove.in/models/male-adult-03.glb';
+let humanModelPromise=null;
+async function loadHumanModel(){
+ if(!humanModelPromise)humanModelPromise=new GLTFLoader().loadAsync(HUMAN_MODEL_URL);
+ return humanModelPromise;
 }
 async function createFighter(isEnemy=false,index=0){
- const holder=new THREE.Group();holder.name=isEnemy?'enemy-human-soldier':'player-human-soldier';
- let model,bones=new Map(),mixer=null,actions=new Map(),assetAnimations=[];
- try{
-  const gltf=await loadHumanSoldierAsset();
-  model=SkeletonUtils.clone(gltf.scene);
-  model.name='RealHumanSoldierModel';
-  assetAnimations=gltf.animations||[];
-  model.traverse(o=>{
-   if(o.isBone){
-    bones.set(o.name,o);
-    const normalized=o.name.replace(/[^a-z0-9]/gi,'').toLowerCase();
-    if(normalized.includes('mixamoriglefthand'))bones.set('mixamorigLeftHand',o);
-    if(normalized.includes('mixamorigrighthand'))bones.set('mixamorigRightHand',o);
-    if(normalized.includes('mixamorigleftupleg'))bones.set('mixamorigLeftUpLeg',o);
-    if(normalized.includes('mixamorigrightupleg'))bones.set('mixamorigRightUpLeg',o);
-    if(normalized.includes('mixamorigleftleg')&&!normalized.includes('upleg'))bones.set('mixamorigLeftLeg',o);
-    if(normalized.includes('mixamorigrightleg')&&!normalized.includes('upleg'))bones.set('mixamorigRightLeg',o);
-    if(normalized.includes('mixamorigleftarm')&&!normalized.includes('forearm'))bones.set('mixamorigLeftArm',o);
-    if(normalized.includes('mixamorigrightarm')&&!normalized.includes('forearm'))bones.set('mixamorigRightArm',o);
-    if(normalized.includes('mixamorigspine')&&!normalized.includes('spine1')&&!normalized.includes('spine2'))bones.set('mixamorigSpine',o);
-    if(normalized.includes('mixamorigneck'))bones.set('mixamorigNeck',o);
-    if(normalized.includes('mixamorighips'))bones.set('mixamorigHips',o);
+ const holder=new THREE.Group();holder.name=isEnemy?'enemy-human-character':'player-human-character';
+ const gltf=await loadHumanModel();
+ const model=SkeletonUtils.clone(gltf.scene);
+ model.name='MaleAdult03_SkinnedHuman';
+ const bones=new Map(),boneByKey=new Map();
+ model.traverse(o=>{
+  if(o.isBone){
+   bones.set(o.name,o);
+   const key=o.name.replace(/[^a-z0-9]/gi,'').toLowerCase();
+   boneByKey.set(key,o);
+  }
+  if(o.isMesh){
+   o.castShadow=true;o.receiveShadow=true;
+   if(o.material){
+    for(const mat of (Array.isArray(o.material)?o.material:[o.material])){
+     if(mat){mat.roughness=Math.max(mat.roughness??.72,.58);mat.needsUpdate=true;}
+    }
    }
-   if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){for(const m of (Array.isArray(o.material)?o.material:[o.material])){m.roughness=Math.max(m.roughness??.7,.62);}}}
-  });
-  const bounds=new THREE.Box3().setFromObject(model),height=bounds.max.y-bounds.min.y;
-  const scale=height>0?1.82/height:1;
-  model.scale.setScalar(scale);model.position.y=-bounds.min.y*scale;
-  holder.add(model);
-  mixer=new THREE.AnimationMixer(model);
-  for(const clip of assetAnimations){actions.set(clip.name,mixer.clipAction(clip));}
- }catch(error){
-  console.error('Falha ao carregar o modelo humano 3D; usando personagem reserva.',error);
-  const fallback=makeHumanoidModel();model=fallback.root;bones=fallback.bones;holder.add(model);
- }
- const available=(name)=>actions.has(name);
- const choose=(role)=>{
-  const requested=HUMAN_ROLE_CLIPS[role]||'Idle';
-  if(available(requested))return requested;
-  if(role==='run'&&available('Walk'))return 'Walk';
-  if(available('Idle'))return 'Idle';
-  return assetAnimations[0]?.name||null;
+  }
+ });
+ const aliases={
+  mixamorigHips:['hips','pelvis','bip001pelvis'],
+  mixamorigSpine:['spine','spine1','spine2','chest'],
+  mixamorigNeck:['neck'],
+  mixamorigHead:['head'],
+  mixamorigLeftArm:['leftarm','leftupperarm','upperarml'],
+  mixamorigRightArm:['rightarm','rightupperarm','upperarmr'],
+  mixamorigLeftForeArm:['leftforearm','lowerarml','forearml'],
+  mixamorigRightForeArm:['rightforearm','lowerarmr','forearmr'],
+  mixamorigLeftHand:['lefthand','handl'],
+  mixamorigRightHand:['righthand','handr'],
+  mixamorigLeftUpLeg:['leftupleg','thighl','upperlegl'],
+  mixamorigRightUpLeg:['rightupleg','thighr','upperlegr'],
+  mixamorigLeftLeg:['leftleg','calfl','lowerlegl'],
+  mixamorigRightLeg:['rightleg','calfr','lowerlegr'],
+  mixamorigLeftFoot:['leftfoot','footl'],
+  mixamorigRightFoot:['rightfoot','footr']
  };
- let playing=''; 
+ for(const [alias,keys] of Object.entries(aliases)){
+  const found=[...boneByKey.entries()].find(([key])=>keys.some(k=>key===k||key.endsWith(k)));
+  if(found)bones.set(alias,found[1]);
+ }
+ // O arquivo tem escala real de aproximadamente 1,81 m; não criar outro corpo por cima dele.
+ const bounds=new THREE.Box3().setFromObject(model),height=bounds.max.y-bounds.min.y;
+ if(!Number.isFinite(height)||height<.5)throw new Error('O modelo masculino 3D carregou sem uma malha humana válida.');
+ const scale=1.82/height;
+ model.scale.setScalar(scale);
+ model.position.y=-bounds.min.y*scale;
+ holder.add(model);
+ const poseNames=['mixamorigHips','mixamorigSpine','mixamorigLeftArm','mixamorigRightArm','mixamorigLeftForeArm','mixamorigRightForeArm','mixamorigLeftUpLeg','mixamorigRightUpLeg','mixamorigLeftLeg','mixamorigRightLeg','mixamorigLeftFoot','mixamorigRightFoot'];
+ const poseBases=new Map(poseNames.map(name=>[name,bones.get(name)?.quaternion.clone()]).filter(x=>x[1]));
+ let animClock=0,playing='Idle';
  const rig={
-  holder,root:model,bones,mixer,baseRootY:0,
-  lib:{role(role){return {clip:choose(role),loop:true}}},
+  holder,root:model,bones,baseRootY:0,lib:{role(role){return {clip:role==='run'||role==='walk'?'Walk':'Idle',loop:true}}},
   get playing(){return playing},
-  playRole(role,opts={}){
-   const name=choose(role);
-   if(!name||!actions.has(name)){playing=name||'Idle';return Promise.resolve(true);}
-   const next=actions.get(name);
-   if(this._activeAction!==next){
-    next.reset().setLoop(THREE.LoopRepeat,Infinity).fadeIn(opts.fade??.18).play();
-    if(this._activeAction)this._activeAction.fadeOut(opts.fade??.18);
-    this._activeAction=next;
-   }
-   if(opts.speed)next.timeScale=opts.speed;
-   playing=name;
-   return Promise.resolve(true);
-  },
+  playRole(role,opts={}){playing=role==='run'?'Run':role==='walk'?'Walk':role==='cast'?'Idle':'Idle';return Promise.resolve(true)},
   stanceMode:'stand',_stanceBlend:0,
   update(dt){
-   if(mixer)mixer.update(dt);
+   animClock+=dt;
+   const speed=THREE.MathUtils.clamp((this.motionSpeed||0)/7.1,0,1);
+   const moving=(playing==='Walk'||playing==='Run')&&speed>.025;
+   const phase=animClock*(moving?THREE.MathUtils.lerp(7,12,speed):2.1);
+   const wave=moving?Math.sin(phase):0,counter=-wave;
+   for(const [name,base] of poseBases){const b=bones.get(name);if(b)b.quaternion.copy(base);}
    const crouch=this.stanceMode==='crouch',prone=this.stanceMode==='prone';
-   const target=crouch||prone?1:0;
-   this._stanceBlend=THREE.MathUtils.damp(this._stanceBlend,target,8,dt);
-   // Pequenos ajustes pós-animação para abaixar o centro de gravidade sem deformar o rig.
-   const hip=this.bones.get('mixamorigHips'),spine=this.bones.get('mixamorigSpine');
-   if(hip)hip.rotation.x+=(prone?.18:crouch?-.12:0)*this._stanceBlend;
-   if(spine)spine.rotation.x+=(prone?.20:crouch?.08:0)*this._stanceBlend;
+   const stride=moving?(this.stanceMode==='prone'?.12:crouch?.25:THREE.MathUtils.lerp(.24,.58,speed)):0;
+   const apply=(name,x,y=0,z=0)=>{const b=bones.get(name);if(b){b.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(x,y,z,'XYZ')));}};
+   apply('mixamorigLeftUpLeg',wave*stride+(crouch?.38:prone?1.05:0));
+   apply('mixamorigRightUpLeg',counter*stride+(crouch?.38:prone?1.05:0));
+   apply('mixamorigLeftLeg',Math.max(0,-wave)*stride*1.15+(crouch?-.72:prone?-.12:0));
+   apply('mixamorigRightLeg',Math.max(0,-counter)*stride*1.15+(crouch?-.72:prone?-.12:0));
+   apply('mixamorigLeftArm',-wave*stride*1.1-(moving?0:.035));
+   apply('mixamorigRightArm',-counter*stride*1.1-(moving?0:.035));
+   apply('mixamorigSpine',crouch?.12:prone?.28:0);
+   apply('mixamorigHips',crouch?-.10:prone?.15:0);
   },
   setHeight(h){const b=new THREE.Box3().setFromObject(model),v=b.max.y-b.min.y;if(v>0)holder.scale.setScalar(h/v)},
-  dispose(){if(mixer)mixer.stopAllAction();}
+  dispose(){}
  };
  addRifle(rig);scene.add(holder);await rig.playRole('idle');return rig;
 }
