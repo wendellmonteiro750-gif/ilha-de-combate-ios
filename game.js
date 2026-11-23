@@ -125,25 +125,29 @@ function setBoneWorldRotation(bone,worldRotation){
 }
 function applyCombatWeaponPose(crouch,prone,dt){
  if(!weaponEquipped||!weaponModel||!characterVisual)return;
- // Rifle stays level in front of the chest; it is not parented to a wrist.
- const height=prone?.56:crouch?1.02:1.28;
- const forward=prone?.72:aim?.58:.48;
- weaponModel.position.set(.19,height,forward);
- weaponModel.rotation.y=Math.PI-.62;
- if(performance.now()<firePoseUntil)weaponModel.rotation.x=THREE.MathUtils.damp(weaponModel.rotation.x,.055,22,dt);
- else weaponModel.rotation.x=THREE.MathUtils.damp(weaponModel.rotation.x,0,15,dt);
+ // Military ready stance: stock tucked toward the right shoulder, firing hand
+ // on the pistol grip and support hand extended beneath the handguard.
+ const height=prone?.52:crouch?.99:1.22;
+ const forward=prone?.70:aim?.56:.43;
+ weaponModel.position.set(.13,height,forward);
+ weaponModel.rotation.set(prone?-.10:-.035,Math.PI-.62,0);
+ if(performance.now()<firePoseUntil)weaponModel.rotation.x=THREE.MathUtils.damp(weaponModel.rotation.x,.015,22,dt);
  characterVisual.updateMatrixWorld(true);
  weaponModel.updateMatrixWorld(true);
- const rightGrip=weaponModel.localToWorld(new THREE.Vector3(0,-.075,.105));
+ // Wrist targets sit inside the grip volumes, not at the center of the rifle.
+ const rightGrip=weaponModel.localToWorld(new THREE.Vector3(0,-.145,.075));
  solveArmIK(combatBones.upperarm_r,combatBones.lowerarm_r,combatBones.hand_r,rightGrip);
  characterVisual.updateMatrixWorld(true);
  weaponModel.updateMatrixWorld(true);
- const leftGrip=weaponModel.localToWorld(new THREE.Vector3(0,-.015,-.43));
+ const leftGrip=weaponModel.localToWorld(new THREE.Vector3(0,-.005,-.53));
  solveArmIK(combatBones.upperarm_l,combatBones.lowerarm_l,combatBones.hand_l,leftGrip);
  characterVisual.updateMatrixWorld(true);
  const rifleRotation=weaponModel.getWorldQuaternion(new THREE.Quaternion());
- setBoneWorldRotation(combatBones.hand_r,rifleRotation);
- setBoneWorldRotation(combatBones.hand_l,rifleRotation);
+ // Slight wrist cant differentiates the firing hand from the support hand.
+ const rightRotation=rifleRotation.clone().multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0,0,-.12)));
+ const leftRotation=rifleRotation.clone().multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0,0,.08)));
+ setBoneWorldRotation(combatBones.hand_r,rightRotation);
+ setBoneWorldRotation(combatBones.hand_l,leftRotation);
 }
 function createPlayerAnchor(){
  hero=new THREE.Group();hero.position.set(0,0,0);scene.add(hero);
