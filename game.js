@@ -42,7 +42,7 @@ let gameSettings={...defaultSettings};
 try{gameSettings={...defaultSettings,...JSON.parse(localStorage.getItem('ic-game-settings')||'{}')}}catch{}
 let hudEditing=false,hudDrag=null;
 function saveGameSettings(){try{localStorage.setItem('ic-game-settings',JSON.stringify(gameSettings));}catch{}}
-function applyGraphicsSettings(){if(!renderer)return;const mobile=innerWidth<700;const q={low:{ratio:mobile?.76:.9,shadows:false},medium:{ratio:mobile?.9:1,shadows:true},high:{ratio:mobile?.98:1.2},ultra:{ratio:mobile?1.05:1.4}}[gameSettings.quality]||{ratio:mobile?.76:.9,shadows:false};renderer.setPixelRatio(Math.min(devicePixelRatio||1,q.ratio));renderer.shadowMap.enabled=!mobile&&!!gameSettings.shadows&&!!q.shadows;renderer.shadowMap.needsUpdate=true;renderer.setSize(innerWidth,innerHeight);}
+function applyGraphicsSettings(){if(!renderer)return;const mobile=innerWidth<700;const q={low:{ratio:mobile?.76:.9,shadows:false},medium:{ratio:mobile?.9:1,shadows:true},high:{ratio:mobile?.98:1.2},ultra:{ratio:mobile?1.05:1.4}}[gameSettings.quality]||{ratio:mobile?.76:.9,shadows:false};renderer.setPixelRatio(Math.min(devicePixelRatio||1,q.ratio));renderer.shadowMap.enabled=!!gameSettings.shadows&&!!q.shadows;renderer.shadowMap.needsUpdate=true;renderer.setSize(innerWidth,innerHeight);}
 function applyHudSettings(){const hud=document.querySelector('#hud');if(!hud)return;hud.style.setProperty('--hud-scale',gameSettings.hudScale/100);hud.style.setProperty('--hud-opacity',gameSettings.hudOpacity/100);const map=document.querySelector('.minimap');if(map)map.style.display=gameSettings.minimap?'':'none';}
 function initSettings(){
  const panel=document.querySelector('#settingsPanel'),open=()=>{panel.classList.add('open');panel.setAttribute('aria-hidden','false')},close=()=>{panel.classList.remove('open');panel.setAttribute('aria-hidden','true');if(hudEditing)toggleHudEditor(false)};
@@ -69,6 +69,24 @@ function toggleHudEditor(force){hudEditing=force;document.querySelector('#hud')?
 
 
 function mat(color,roughness=.86,metalness=0){return new THREE.MeshStandardMaterial({color,roughness,metalness})}
+const surfaceMaps={};
+function makeSurfaceMap(kind){
+ if(surfaceMaps[kind])return surfaceMaps[kind];
+ const size=256,c=document.createElement('canvas');c.width=c.height=size;const ctx=c.getContext('2d');
+ if(kind==='plaster'){
+  ctx.fillStyle='#b9b4a4';ctx.fillRect(0,0,size,size);
+  for(let i=0;i<5200;i++){const v=105+Math.random()*115;ctx.fillStyle='rgba('+Math.floor(v)+','+Math.floor(Math.max(0,v-5))+','+Math.floor(Math.max(0,v-15))+','+(.025+Math.random()*.09)+')';ctx.fillRect(Math.random()*size,Math.random()*size,1+Math.random()*3,1+Math.random()*3)}
+  for(let i=0;i<18;i++){ctx.strokeStyle='rgba(75,70,58,.10)';ctx.lineWidth=1+Math.random()*2;ctx.beginPath();const x=Math.random()*size,y=Math.random()*size;ctx.moveTo(x,y);ctx.lineTo(x+(Math.random()-.5)*28,y+12+Math.random()*38);ctx.stroke()}
+ }else if(kind==='roof'){
+  ctx.fillStyle='#493b35';ctx.fillRect(0,0,size,size);
+  const colors=['#715044','#805a49','#62473d','#8a6250'];
+  for(let row=0;row<12;row++)for(let col=0;col<8;col++){const x=col*34+(row%2)*17,y=row*22;ctx.fillStyle=colors[(row*3+col)%colors.length];ctx.beginPath();ctx.roundRect(x+1,y+1,32,20,4);ctx.fill();ctx.strokeStyle='rgba(30,24,20,.45)';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='rgba(255,225,190,.12)';ctx.fillRect(x+4,y+3,22,2)}
+ }else{
+  ctx.fillStyle='#705139';ctx.fillRect(0,0,size,size);
+  for(let i=0;i<90;i++){ctx.strokeStyle=i%3?'rgba(38,24,14,.18)':'rgba(220,180,125,.16)';ctx.lineWidth=1+Math.random()*2;const y=Math.random()*size;ctx.beginPath();ctx.moveTo(0,y);ctx.bezierCurveTo(70,y-5,160,y+7,size,y+(Math.random()-.5)*8);ctx.stroke()}
+ }
+ const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=Math.min(innerWidth<700?2:8,renderer?.capabilities?.getMaxAnisotropy?.()||2);surfaceMaps[kind]=t;return t;
+}
 function box(parent,w,h,d,material,x,y,z){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m}
 function addTextureGround(){
  const mobile=innerWidth<700,size=mobile?512:1024,speckles=mobile?14000:92000;
@@ -91,7 +109,8 @@ function addHouse(x,z,rotation=0,style=0){
   {wall:0xd8b58d,trim:0xf2d7b5,roof:0x86543b,wood:0x69462f,glass:0x76aeb5,accent:0xa27a50},
   {wall:0xb8c3b9,trim:0xe0e2d7,roof:0x555047,wood:0x514638,glass:0x7da9ad,accent:0x788b7e}
  ];
- const p=palettes[Math.abs(style)%palettes.length],wall=mat(p.wall,.96),trim=mat(p.trim,.9),wood=mat(p.wood,.88),roof=mat(p.roof,.82),glass=new THREE.MeshStandardMaterial({color:p.glass,roughness:.2,metalness:.16}),accent=mat(p.accent,.9);
+ const p=palettes[Math.abs(style)%palettes.length],wall=mat(p.wall,.96),trim=mat(p.trim,.9),wood=mat(p.wood,.88),roof=mat(p.roof,.82),glass=new THREE.MeshStandardMaterial({color:p.glass,roughness:.16,metalness:.22}),accent=mat(p.accent,.9);
+ wall.map=makeSurfaceMap('plaster');wall.map.repeat.set(2.2,1.3);wall.needsUpdate=true;roof.map=makeSurfaceMap('roof');roof.map.repeat.set(1.5,1.5);roof.needsUpdate=true;wood.map=makeSurfaceMap('wood');wood.map.repeat.set(1,1.4);wood.needsUpdate=true;
  const floor=mat(style%2?0x877b68:0x9b8c73,.98),interior=mat(0xc2b69e,.96),darkWood=mat(0x59432f,.9),metal=mat(0x454b49,.58,.35);
  // Fundação elevada, paredes claras e rodapé de pedra.
  box(g,6.65,.24,5.85,mat(0x77766c),0,.12,0);
@@ -108,6 +127,14 @@ function addHouse(x,z,rotation=0,style=0){
  box(doorPivot,1.02,2.12,.13,wood,.51,1.36,0);box(doorPivot,.82,1.88,.035,accent,.51,1.36,.08);
  for(let k=0;k<3;k++)box(doorPivot,.7,.035,.045,trim,.51,.78+k*.48,.11);
  const knob=new THREE.Mesh(new THREE.SphereGeometry(.045,10,8),metal);knob.position.set(.88,1.35,.13);doorPivot.add(knob);
+ // Janelas frontais com vidro, caixilho, peitoril e venezianas.
+ for(const sx of [-1,1]){
+  const wx=sx*2.52;
+  box(g,.72,1.12,.055,wood,wx,1.92,2.66);box(g,.58,.96,.035,glass,wx,1.92,2.70);
+  box(g,.045,.98,.045,trim,wx,1.92,2.73);box(g,.62,.045,.045,trim,wx,1.92,2.73);
+  box(g,.82,.09,.22,wood,wx,1.34,2.73);
+  for(let k=0;k<3;k++)box(g,.62,.035,.035,accent,wx,1.62+k*.13,2.75);
+ }
  box(g,1.55,.16,.5,trim,0,.12,2.92);box(g,1.82,.13,.58,accent,0,.07,3.13);
  // Janelas traseiras: vãos com vidro, caixilho, divisórias e venezianas.
  for(const sx of [-1,1]){
@@ -184,7 +211,7 @@ function addRoadNetwork(){
  }
 }
 function addSettlementDetails(){
- const concrete=mat(0x777d79,.95),metal=mat(0x3d494d,.52,.58),wood=mat(0x76563a,.9),paint=mat(0xd5c6a0,.88);
+ const concrete=mat(0x777d79,.95),metal=mat(0x3d494d,.52,.58),wood=mat(0x76563a,.9),paint=mat(0xd5c6a0,.88);concrete.map=makeSurfaceMap('plaster');concrete.map.repeat.set(2,1);concrete.needsUpdate=true;wood.map=makeSurfaceMap('wood');wood.needsUpdate=true;
  // Galpão industrial com portas largas e telhado metálico.
  function warehouse(x,z,rot=0){
   const g=new THREE.Group();
@@ -243,11 +270,11 @@ function addWorldDetail(){
  const dummy=new THREE.Object3D();
  const grassGeo=new THREE.ConeGeometry(.075,.62,4);
  const grassMat=new THREE.MeshStandardMaterial({color:0x526d43,roughness:1});
- const grass=new THREE.InstancedMesh(grassGeo,grassMat,950);
- let n=0;for(let i=0;i<950;i++){const a=Math.random()*Math.PI*2,r=8+Math.random()*111,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.hypot(x,z)>120)continue;dummy.position.set(x,.25,z);dummy.rotation.set((Math.random()-.5)*.18,Math.random()*Math.PI,0);const h=.55+Math.random()*.9;dummy.scale.set(.7,h,.7);dummy.updateMatrix();grass.setMatrixAt(n++,dummy.matrix)}grass.count=n;grass.instanceMatrix.needsUpdate=true;scene.add(grass);
+ const grass=new THREE.InstancedMesh(grassGeo,grassMat,innerWidth<700?1250:2600);
+ let n=0;for(let i=0;i<(innerWidth<700?1250:2600);i++){const a=Math.random()*Math.PI*2,r=8+Math.random()*111,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.hypot(x,z)>120)continue;dummy.position.set(x,.25,z);dummy.rotation.set((Math.random()-.5)*.18,Math.random()*Math.PI,0);const h=.55+Math.random()*.9;dummy.scale.set(.7,h,.7);dummy.updateMatrix();grass.setMatrixAt(n++,dummy.matrix)}grass.count=n;grass.instanceMatrix.needsUpdate=true;scene.add(grass);
  const bushGeo=new THREE.IcosahedronGeometry(1,1),bushMat=new THREE.MeshStandardMaterial({color:0x294b32,roughness:1});
- const bushes=new THREE.InstancedMesh(bushGeo,bushMat,145);n=0;
- for(let i=0;i<145;i++){const a=Math.random()*Math.PI*2,r=12+Math.random()*105;dummy.position.set(Math.cos(a)*r,.55,Math.sin(a)*r);const q=.45+Math.random()*.8;dummy.scale.set(q*.9,q*.65,q);dummy.rotation.set(Math.random()*.3,Math.random()*6,Math.random()*.3);dummy.updateMatrix();bushes.setMatrixAt(n++,dummy.matrix)}bushes.count=n;bushes.instanceMatrix.needsUpdate=true;bushes.castShadow=true;scene.add(bushes);
+ const bushes=new THREE.InstancedMesh(bushGeo,bushMat,innerWidth<700?210:420);n=0;
+ for(let i=0;i<(innerWidth<700?210:420);i++){const a=Math.random()*Math.PI*2,r=12+Math.random()*105;dummy.position.set(Math.cos(a)*r,.55,Math.sin(a)*r);const q=.45+Math.random()*.8;dummy.scale.set(q*.9,q*.65,q);dummy.rotation.set(Math.random()*.3,Math.random()*6,Math.random()*.3);dummy.updateMatrix();bushes.setMatrixAt(n++,dummy.matrix)}bushes.count=n;bushes.instanceMatrix.needsUpdate=true;bushes.castShadow=true;scene.add(bushes);
  // Pedras maiores na costa para quebrar o horizonte plano.
  const cliffGeo=new THREE.DodecahedronGeometry(1,1),cliffMat=new THREE.MeshStandardMaterial({color:0x68766a,roughness:1});
  const cliffs=new THREE.InstancedMesh(cliffGeo,cliffMat,88);
@@ -258,10 +285,10 @@ function addWorldDetail(){
  for(let i=0;i<54;i++){const a=i/9*Math.PI*2,r=205+(i%4)*18;dummy.position.set(Math.cos(a)*r,38+(i%5)*5,Math.sin(a)*r);dummy.scale.set(9+(i%3)*5,2.5+(i%2),5+(i%4)*2);dummy.rotation.y=a;dummy.updateMatrix();clouds.setMatrixAt(i,dummy.matrix)}clouds.instanceMatrix.needsUpdate=true;scene.add(clouds);
 }
 function buildWorld(){
- scene.background=new THREE.Color(0x849ba2);scene.fog=new THREE.FogExp2(0x9aa9a5,.00155);
+ scene.background=new THREE.Color(0x849ba2);scene.fog=new THREE.FogExp2(0x9aa9a5,.00135);
  scene.add(new THREE.HemisphereLight(0xd8e0df,0x394338,1.28));
  const ambient=new THREE.AmbientLight(0xdce2df,.18);scene.add(ambient);
- const sun=new THREE.DirectionalLight(0xffe3c2,2.45);sun.position.set(-42,78,34);sun.castShadow=!!gameSettings.shadows&&gameSettings.quality!=='low';sun.shadow.mapSize.set(innerWidth<700?768:1024,innerWidth<700?768:1024);sun.shadow.camera.left=-165;sun.shadow.camera.right=165;sun.shadow.camera.top=165;sun.shadow.camera.bottom=-165;sun.shadow.bias=-.00018;sun.shadow.normalBias=.025;sun.shadow.radius=innerWidth<700?2:3;sun.shadow.camera.near=1;sun.shadow.camera.far=260;scene.add(sun);
+ const sun=new THREE.DirectionalLight(0xffe3c2,2.45);sun.position.set(-42,78,34);sun.castShadow=!!gameSettings.shadows&&gameSettings.quality!=='low';sun.shadow.mapSize.set(innerWidth<700?512:1024,innerWidth<700?512:1024);sun.shadow.camera.left=-165;sun.shadow.camera.right=165;sun.shadow.camera.top=165;sun.shadow.camera.bottom=-165;sun.shadow.bias=-.00018;sun.shadow.normalBias=.025;sun.shadow.radius=innerWidth<700?2:3;sun.shadow.camera.near=1;sun.shadow.camera.far=260;scene.add(sun);
  const fill=new THREE.DirectionalLight(0x9db5c4,.42);fill.position.set(55,28,-48);scene.add(fill);
  const ground=new THREE.Mesh(new THREE.PlaneGeometry(800,800),new THREE.MeshStandardMaterial({map:addTextureGround(),roughness:.96}));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
  const beach=new THREE.Mesh(new THREE.RingGeometry(119,141,192),new THREE.MeshStandardMaterial({color:0xd9c18c,roughness:.95}));beach.rotation.x=-Math.PI/2;beach.position.y=.035;scene.add(beach);
@@ -630,7 +657,7 @@ async function init(){
  const mobileQuality=innerWidth<700;
  renderer.setPixelRatio(Math.min(devicePixelRatio||1,mobileQuality?.68:1.25));
  renderer.setSize(innerWidth,innerHeight);
- renderer.shadowMap.enabled=!mobileQuality&&!!gameSettings.shadows&&gameSettings.quality!=='low';
+ renderer.shadowMap.enabled=!!gameSettings.shadows&&gameSettings.quality!=='low';
  renderer.shadowMap.type=THREE.PCFShadowMap;
  renderer.setScissorTest(false);
  renderer.toneMapping=THREE.ACESFilmicToneMapping;
