@@ -665,7 +665,11 @@ function updateEffects(dt){
 }
 async function spawnEnemy(x,z,i){const rig=await createFighter(true,i);rig.holder.position.set(x,0,z);enemies.push({rig,hp:100,alive:true,attack:0,anim:'idle'});return rig}
 async function init(){
- renderer=new THREE.WebGLRenderer({antialias:false,alpha:false,powerPreference:'high-performance',stencil:false,depth:true,preserveDrawingBuffer:false});
+ // Three.js r160 precisa de WebGL 2; falhar com instrução clara em aparelhos incompatíveis.
+ if(!('WebGL2RenderingContext' in window))throw new Error('Este aparelho/navegador não oferece WebGL 2. Atualize o iOS e abra o jogo no Safari mais recente (iOS 15 ou superior).');
+ try{
+  renderer=new THREE.WebGLRenderer({antialias:false,alpha:false,powerPreference:'low-power',stencil:false,depth:true,preserveDrawingBuffer:false});
+ }catch(err){throw new Error('Não foi possível ativar os gráficos WebGL 2. Feche outras abas, atualize o iOS e tente novamente. '+(err?.message||''))}
  // Perfil gráfico equilibrado: imagem mais nítida sem sobrecarregar o Safari no iPhone.
  const mobileQuality=innerWidth<700;
  renderer.setPixelRatio(Math.min(devicePixelRatio||1,mobileQuality?.68:1.25));
@@ -687,7 +691,7 @@ async function init(){
  // Mantém a cabeça visível: a câmera agora acompanha o personagem em terceira pessoa.
  const spots=[[62,18],[-70,36],[18,78],[-42,-88],[98,-52]];
  await Promise.all(spots.map((p,i)=>spawnEnemy(p[0],p[1],i)));
- setupControls();initSettings();addEventListener('resize',resize);
+ setupControls();initSettings();addEventListener('resize',resize,{passive:true});addEventListener('orientationchange',()=>setTimeout(resize,180),{passive:true});window.visualViewport?.addEventListener('resize',resize,{passive:true});
  document.querySelector('#playGame').addEventListener('click',()=>{
   const lobby=document.querySelector('#lobby');lobby.classList.add('leaving');
   document.querySelector('#hud').style.display='block';
@@ -698,7 +702,14 @@ async function init(){
  document.querySelector('#hint').textContent='Joystick: andar • Deslize a tela: olhar ao redor • Botões: pular e atirar';
  renderer.setAnimationLoop(animate);
 }
-function resize(){if(!renderer)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);const mobile=innerWidth<700;renderer.setPixelRatio(Math.min(devicePixelRatio||1,mobile?(gameSettings.quality==='low'?.9:1.1):1.5))}
+function resize(){
+ if(!renderer)return;
+ const vv=window.visualViewport,w=Math.max(1,Math.round(vv?.width||window.innerWidth)),h=Math.max(1,Math.round(vv?.height||window.innerHeight));
+ camera.aspect=w/h;camera.updateProjectionMatrix();
+ const mobile=Math.min(w,h)<700;
+ renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,mobile?(gameSettings.quality==='low'?.68:.82):1.25));
+ renderer.setSize(w,h,false);
+}
 const joy=document.querySelector('#joystick'),stick=document.querySelector('#stick');let joyId=null,cameraPointerId=null,lastPointerX=0,lastPointerY=0,lookDeltaX=0,lookDeltaY=0;
 function setJoy(e){const r=joy.getBoundingClientRect(),dx=e.clientX-r.left-r.width/2,dy=e.clientY-r.top-r.height/2,l=Math.hypot(dx,dy),k=Math.min(1,48/(l||1));keys.side=dx*k/48;keys.forward=-dy*k/48;stick.style.transform=`translate(${keys.side*48}px,${-keys.forward*48}px)`}
 function setupControls(){
@@ -865,6 +876,6 @@ function animate(){
  updateSafeZone(dt);
  if(hitMarkerTimer>0){hitMarkerTimer-=dt;if(hitMarkerTimer<=0)document.querySelector('#crosshair')?.classList.remove('hit')}updateEffects(dt);radarClock-=dt;if(radarClock<=0){radarClock=.35;updateRadar()}renderer.render(scene,camera);
 }
-init().catch(err=>{console.error(err);loading.style.display='none';errorPanel.style.display='grid';document.querySelector('#errorMessage').textContent='Não foi possível carregar os modelos 3D. Confira a internet e tente novamente.'});
+init().catch(err=>{console.error(err);loading.style.display='none';errorPanel.style.display='grid';document.querySelector('#errorMessage').textContent=err?.message||'Não foi possível iniciar. Atualize o navegador e confira a conexão.'});
 
 // syntax validation
