@@ -92,22 +92,23 @@ function addHouse(x,z,rotation=0,style=0){
   {wall:0x9fada2,trim:0xd8d9c8,roof:0x554d43,wood:0x514638,glass:0x8ab8bd}
  ];
  const p=palettes[Math.abs(style)%palettes.length],wall=mat(p.wall,.94),trim=mat(p.trim,.88),wood=mat(p.wood,.9),roof=mat(p.roof,.78),glass=new THREE.MeshStandardMaterial({color:p.glass,roughness:.22,metalness:.12});
- // Fundação, piso e paredes em módulos: a fachada deixa portas e janelas legíveis.
+ const floor=mat(style%2?0x82745f:0x9b8d72,.98),interior=mat(style%2?0xb6aa91:0xc0b69e,.96),darkWood=mat(0x59432f,.9);
+ // Planta baixa de 6 x 5,3 m: piso interno, paredes com vão real de entrada e telhado.
  box(g,6.5,.22,5.7,mat(0x777467),0,.11,0);
- box(g,6.05,.16,5.25,mat(0x9b8d72),0,.29,0);
+ box(g,6.05,.16,5.25,floor,0,.29,0);
  box(g,6.05,2.65,.22,wall,0,1.62,-2.52);
  box(g,.22,2.65,5.05,wall,-2.92,1.62,0);
  box(g,.22,2.65,5.05,wall,2.92,1.62,0);
- // Fachada frontal com abertura central para a porta.
  box(g,1.8,2.65,.22,wall,-2.02,1.62,2.52);
  box(g,1.8,2.65,.22,wall,2.02,1.62,2.52);
  box(g,2.2,.72,.22,wall,0,2.59,2.52);
- // Porta, moldura, maçaneta e degraus.
- box(g,1.12,2.12,.12,wood,0,1.36,2.64);
- box(g,.94,1.94,.035,mat(0x806044),0,1.36,2.72);
- const knob=new THREE.Mesh(new THREE.SphereGeometry(.045,8,8),mat(0xd4b36a,.32,.7));knob.position.set(.36,1.35,2.77);g.add(knob);
+ // Porta articulada e já entreaberta; a passagem fica livre para entrar e sair.
+ const doorPivot=new THREE.Group();doorPivot.position.set(-1.02,0,2.62);doorPivot.rotation.y=-1.18;g.add(doorPivot);
+ box(doorPivot,1.02,2.12,.12,wood,.51,1.36,0);
+ box(doorPivot,.84,1.94,.035,mat(0x806044),.51,1.36,.075);
+ const knob=new THREE.Mesh(new THREE.SphereGeometry(.045,8,8),mat(0xd4b36a,.32,.7));knob.position.set(.88,1.35,.12);doorPivot.add(knob);
  box(g,1.55,.16,.48,trim,0,.12,2.92);box(g,1.85,.13,.58,mat(0x817c6c),0,.07,3.12);
- // Janelas com peitoris, caixilhos e vidro.
+ // Janelas com vidro, moldura e peitoril.
  for(const sx of [-1,1]){
   box(g,1.05,.92,.08,wood,sx*2.02,1.78,2.66);
   box(g,.87,.73,.035,glass,sx*2.02,1.8,2.71);
@@ -115,29 +116,34 @@ function addHouse(x,z,rotation=0,style=0){
   box(g,1.0,.07,.045,trim,sx*2.02,1.8,2.74);
   box(g,1.22,.12,.22,wood,sx*2.02,1.28,2.75);
   box(g,1.2,.12,.18,trim,sx*2.02,2.31,2.68);
-  // Persianas simples e reforços de fachada.
   for(let k=0;k<3;k++)box(g,1.0,.035,.055,wood,sx*2.02,1.55+k*.18,2.75);
  }
- // Telhado de duas águas, beirais e cumeeira.
- const roofA=new THREE.Mesh(new THREE.BoxGeometry(3.55,.18,6.15),roof);
- roofA.position.set(-1.52,3.12,0);roofA.rotation.z=-.48;roofA.castShadow=true;roofA.receiveShadow=true;g.add(roofA);
- const roofB=new THREE.Mesh(new THREE.BoxGeometry(3.55,.18,6.15),roof);
- roofB.position.set(1.52,3.12,0);roofB.rotation.z=.48;roofB.castShadow=true;roofB.receiveShadow=true;g.add(roofB);
+ // Móveis internos simples para dar escala e cobertura real no combate.
+ box(g,1.65,.22,.88,darkWood,-1.55,.53,-1.35);
+ box(g,1.48,.16,.72,interior,-1.55,.72,-1.35);
+ box(g,.13,.58,.13,darkWood,-2.2,.29,-1.65);box(g,.13,.58,.13,darkWood,-.9,.29,-1.65);
+ box(g,.9,.72,.52,wood,1.82,.66,-1.58);
+ box(g,.96,.12,.58,trim,1.82,1.05,-1.58);
+ box(g,1.15,.12,.72,darkWood,.2,.82,-.7);
+ for(const sx of [-.27,.67])for(const sz of [-.95,-.45])box(g,.09,.75,.09,darkWood,.2+sx,.38,-.7+sz);
+ // Prateleira baixa e detalhes de parede.
+ box(g,1.25,.12,.32,wood,-1.65,1.18,.25);
+ for(let k=0;k<3;k++)box(g,.08,.48,.3,darkWood,-2.18+k*.48,.88,.25);
+ // Telhado de duas águas, beirais, cumeeira, calhas e chaminé.
+ const roofA=new THREE.Mesh(new THREE.BoxGeometry(3.55,.18,6.15),roof);roofA.position.set(-1.52,3.12,0);roofA.rotation.z=-.48;roofA.castShadow=true;roofA.receiveShadow=true;g.add(roofA);
+ const roofB=new THREE.Mesh(new THREE.BoxGeometry(3.55,.18,6.15),roof);roofB.position.set(1.52,3.12,0);roofB.rotation.z=.48;roofB.castShadow=true;roofB.receiveShadow=true;g.add(roofB);
  box(g,.2,.2,6.2,trim,0,3.94,0);
- // Calha, chaminé, unidade de ventilação e detalhes externos.
- box(g,.12,.12,5.9,mat(0x4a4b46,.55,.25),-3.05,2.78,0);
- box(g,.12,.12,5.9,mat(0x4a4b46,.55,.25),3.05,2.78,0);
- box(g,.62,.85,.62,mat(0x806f5b),-1.75,3.55,-1.2);
- box(g,.72,.14,.72,mat(0x4a4a45),-1.75,4.02,-1.2);
+ box(g,.12,.12,5.9,mat(0x4a4b46,.55,.25),-3.05,2.78,0);box(g,.12,.12,5.9,mat(0x4a4b46,.55,.25),3.05,2.78,0);
+ box(g,.62,.85,.62,mat(0x806f5b),-1.75,3.55,-1.2);box(g,.72,.14,.72,mat(0x4a4a45),-1.75,4.02,-1.2);
  box(g,.72,.42,.34,mat(0xc5c9c1,.65,.2),2.2,2.75,-1.75);
  for(let k=0;k<4;k++)box(g,.55,.025,.36,mat(0x59615e,.6,.3),2.2,2.62+k*.07,-1.75);
- // Pequena varanda lateral com pilares.
+ // Varanda frontal e pilares.
  box(g,2.3,.16,1.35,wood,0,.22,3.55);
  for(const sx of [-1,1])box(g,.12,2.25,.12,trim,sx*1.02,1.3,4.05);
  box(g,2.2,.12,.12,wood,0,2.35,4.05);
- // Detalhes de reboco e cantoneiras.
  for(const sx of [-1,1])box(g,.12,2.7,.12,trim,sx*2.94,1.62,2.58);
- g.position.set(x,0,z);g.rotation.y=rotation;scene.add(g);worldObstacles.push({x,z,radius:4.35});
+ g.position.set(x,0,z);g.rotation.y=rotation;scene.add(g);
+ worldObstacles.push({type:'house',x,z,rotation,halfWidth:3.05,halfDepth:2.65});
 }
 function addRoadNetwork(){
  // Estradas de terra batida com acostamento, conectando os pequenos bairros.
@@ -490,11 +496,28 @@ async function createFighter(isEnemy=false,index=0){
  };
  addRifle(rig);scene.add(holder);await rig.playRole('idle');return rig;
 }
+function getHouseAtPosition(position){
+ for(const o of worldObstacles){if(o.type!=='house')continue;const dx=position.x-o.x,dz=position.z-o.z,c=Math.cos(o.rotation),sn=Math.sin(o.rotation),lx=dx*c-dz*sn,lz=dx*sn+dz*c;if(Math.abs(lx)<2.48&&Math.abs(lz)<2.12)return {obstacle:o,lx,lz,c,sn};}
+ return null;
+}
 function resolvePlayerObstacles(){
  const p=playerRig.holder.position,radius=.58;
- for(const obstacle of worldObstacles){
-  let dx=p.x-obstacle.x,dz=p.z-obstacle.z,distance=Math.hypot(dx,dz),minimum=obstacle.radius+radius;
-  if(distance<minimum){if(distance<.001){dx=1;dz=0;distance=1}const nx=dx/distance,nz=dz/distance;p.x=obstacle.x+nx*minimum;p.z=obstacle.z+nz*minimum;const into=playerVelocity.x*nx+playerVelocity.z*nz;if(into<0){playerVelocity.x-=into*nx;playerVelocity.z-=into*nz}}
+ for(const o of worldObstacles){
+  if(o.type==='house'){
+   const dx=p.x-o.x,dz=p.z-o.z,c=Math.cos(o.rotation),sn=Math.sin(o.rotation);
+   let lx=dx*c-dz*sn,lz=dx*sn+dz*c,changed=false;
+   if(Math.abs(lx)<o.halfWidth+radius&&Math.abs(lz)<o.halfDepth+radius){
+    // A abertura frontal de 2,24 m permite atravessar a porta; as outras paredes bloqueiam.
+    if(lz>o.halfDepth-radius&&Math.abs(lx)>1.12-radius){lz=o.halfDepth+radius;changed=true;}
+    else if(lz< -o.halfDepth+radius){lz=-o.halfDepth-radius;changed=true;}
+    else if(lx>o.halfWidth-radius){lx=o.halfWidth+radius;changed=true;}
+    else if(lx< -o.halfWidth+radius){lx=-o.halfWidth-radius;changed=true;}
+   }
+   if(changed){p.x=o.x+lx*c+lz*sn;p.z=o.z-lx*sn+lz*c;}
+   continue;
+  }
+  let dx=p.x-o.x,dz=p.z-o.z,distance=Math.hypot(dx,dz),minimum=o.radius+radius;
+  if(distance<minimum){if(distance<.001){dx=1;dz=0;distance=1}const nx=dx/distance,nz=dz/distance;p.x=o.x+nx*minimum;p.z=o.z+nz*minimum;const into=playerVelocity.x*nx+playerVelocity.z*nz;if(into<0){playerVelocity.x-=into*nx;playerVelocity.z-=into*nz}}
  }
 }
 function play(rig,role,speed=1){if(!rig)return;const clip=rig.lib.role(role)?.clip;if(clip&&rig.playing!==clip)rig.playRole(role,{fade:.22,speed}).catch(()=>{})}
@@ -713,7 +736,15 @@ function animate(){
   const lookTarget=p.position.clone().add(new THREE.Vector3(0,stanceHeight+movingBob+recoil*.72,0)).add(forwardView.clone().multiplyScalar(aimForward));
   const cameraDistance=THREE.MathUtils.lerp(sprintHeld&&!aiming?5.0:4.8,3.18,aimBlend);
   const shoulder=THREE.MathUtils.lerp(.62,.22,aimBlend);
-  const desiredCamera=lookTarget.clone().add(forwardView.clone().multiplyScalar(-cameraDistance)).add(rightView.multiplyScalar(shoulder));
+  let desiredCamera=lookTarget.clone().add(forwardView.clone().multiplyScalar(-cameraDistance)).add(rightView.multiplyScalar(shoulder));
+  const interior=getHouseAtPosition(p.position);
+  if(interior){
+   // Dentro de construções, aproxima e limita a câmera ao espaço interno para não atravessar paredes/telhado.
+   const dx=desiredCamera.x-interior.obstacle.x,dz=desiredCamera.z-interior.obstacle.z;
+   let lx=dx*interior.c-dz*interior.sn,lz=dx*interior.sn+dz*interior.c;
+   lx=THREE.MathUtils.clamp(lx,-2.48,2.48);lz=THREE.MathUtils.clamp(lz,-2.12,2.12);
+   desiredCamera.set(interior.obstacle.x+lx*interior.c+lz*interior.sn,THREE.MathUtils.clamp(desiredCamera.y,.42,2.42),interior.obstacle.z-lx*interior.sn+lz*interior.c);
+  }
   const smooth=1-Math.exp(-15*dt);camera.position.lerp(desiredCamera,smooth);cameraLook.lerp(lookTarget,smooth);camera.lookAt(cameraLook);
   const wantedFov=THREE.MathUtils.lerp(sprintHeld&&!aiming?70:66,Math.max(36,48-scopeLevel*3.5),aimBlend);if(Math.abs(camera.fov-wantedFov)>.08){camera.fov=THREE.MathUtils.lerp(camera.fov,wantedFov,smooth);camera.updateProjectionMatrix();}
   const crosshair=document.querySelector('#crosshair');if(crosshair){const movementBloom=THREE.MathUtils.clamp(playerVelocity.length()/7.1,0,1)*(aiming?.18:.34);const bloomScale=THREE.MathUtils.clamp((aiming?.72:1)+movementBloom+recoil*.7,.68,1.55);crosshair.style.scale=String(bloomScale);}
