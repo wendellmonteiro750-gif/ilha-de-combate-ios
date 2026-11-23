@@ -15,7 +15,8 @@
 <div id="lobby" class="lobby-screen">
  <div class="lobby-vignette"></div><div class="lobby-top"><span class="lobby-mark">IC</span><span>ILHA DE COMBATE <small>BATTLE ROYALE</small></span><span class="lobby-online"><i></i> CAMPO DE TREINO</span></div>
  <div class="lobby-content"><div class="lobby-kicker">OPERAÇÃO DE SOBREVIVÊNCIA</div><h1>ILHA DE<br><em>COMBATE</em></h1><p>Entre na zona de combate. Encontre equipamentos. Seja o último sobrevivente.</p>
- <button id="playGame" class="lobby-play"><span>ENTRAR NA PARTIDA</span><b>➜</b></button>\n <button id="lobbySettings" class="lobby-settings" type="button"><span>⚙</span> CONFIGURAÇÕES</button>
+ <button id="playGame" class="lobby-play"><span>ENTRAR NA PARTIDA</span><b>➜</b></button>
+ <button id="lobbySettings" class="lobby-settings" type="button"><span>⚙</span> CONFIGURAÇÕES</button>
  <div class="lobby-features"><span>◈ BATTLE ROYALE</span><span>◈ 5 OPONENTES</span><span>◈ LOOT & COMBATE</span></div></div>
  <div class="lobby-footer"><span>PROJETO INDEPENDENTE</span><span>VERSÃO DE TESTE</span></div>
 </div>
@@ -81,10 +82,11 @@
   <footer class="settings-footer"><span id="settingsSaved">CONFIGURAÇÕES SALVAS AUTOMATICAMENTE</span><button id="settingsDone" type="button">VOLTAR AO JOGO</button></footer>
  </div>
 </section>
-\n<script type="importmap">
+
+<script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}
 </script>
-<script type="module" src="./game.js?v=houses2f"></script>
+<script type="module" src="./game.js?v=village-138-character-fix1"></script>
 <script>
 window.addEventListener('error',e=>{if(e.message){document.querySelector('#loading').style.display='none';document.querySelector('#errorPanel').style.display='grid';document.querySelector('#errorMessage').textContent='Erro ao iniciar: '+e.message}});
 window.addEventListener('unhandledrejection',e=>{document.querySelector('#loading').style.display='none';document.querySelector('#errorPanel').style.display='grid';document.querySelector('#errorMessage').textContent='Falha ao carregar os gráficos 3D. Confira a internet e tente novamente.'});
