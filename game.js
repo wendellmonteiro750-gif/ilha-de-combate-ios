@@ -452,9 +452,10 @@ function addRifle(rig,index=0){
   }
  }
  const muzzle=new THREE.Object3D();muzzle.name='muzzle';muzzle.position.set(0,.012,spec.kind==='pistol'?-.17-barrelLen*.96:-L*.39-barrelLen*.96);g.add(muzzle);
- const leftHandGrip=new THREE.Object3D();leftHandGrip.name='left-hand-grip';leftHandGrip.position.set(0,-.145,-L*.29);g.add(leftHandGrip);
+ const leftHandGrip=new THREE.Object3D();leftHandGrip.name='left-hand-grip';leftHandGrip.position.set(0,-.145,spec.kind==='pistol'?.015:-L*.29);g.add(leftHandGrip);
+ const leftReloadGrip=new THREE.Object3D();leftReloadGrip.name='left-hand-reload';leftReloadGrip.position.set(0,spec.kind==='pistol' ? -.245 : -.235,spec.kind==='pistol' ? .045 : -.055);g.add(leftReloadGrip);
  g.scale.setScalar(.78);g.position.set(.105,-.105,-.115);g.rotation.set(-.20,.14,-.10);hand.add(g);
- rig.weaponPivot=g;rig.weaponMuzzle=muzzle;rig.weaponLeftGrip=leftHandGrip;rig.weaponSpec=spec;rig.weaponBasePosition=g.position.clone();rig.weaponBaseRotation=g.rotation.clone();
+ rig.weaponPivot=g;rig.weaponMuzzle=muzzle;rig.weaponLeftGrip=leftHandGrip;rig.weaponLeftReloadGrip=leftReloadGrip;rig.weaponSpec=spec;rig.weaponBasePosition=g.position.clone();rig.weaponBaseRotation=g.rotation.clone();
 }
 async function createFighter(isEnemy=false,index=0){
  if(!humanModelPromise)humanModelPromise=new GLTFLoader().loadAsync(HUMAN_MODEL_URL);
@@ -525,10 +526,12 @@ async function createFighter(isEnemy=false,index=0){
    const armReady=this.weaponReadyBlend,elbowReady=THREE.MathUtils.clamp(armReady+aim*.12,0,1);
    const reloadPhase=Math.sin((1-reload)*Math.PI);
    const firePulse=fire*(.12+.10*Math.sin(firePhase*18));
+   const moveBob=Math.sin(this.gaitPhase*2)*(locomotion*(.018+.018*run));
+   const reloadReach=Math.sin((1-reload)*Math.PI)*reload;
    const pose=[
     ['mixamorigHips',prone ? .82 : crouch ? .42 : -(this.jumpBlend||0)*.16,0,0],
-    ['mixamorigSpine',prone ? .48 : crouch ? -.10 : -.30*combatPose-.12*aim+ .10*run-(this.jumpBlend||0)*.08,0,0],
-    ['mixamorigSpine1',prone ? .22 : crouch ? -.08 : -.22*combatPose-.07*aim+.06*run-(this.jumpBlend||0)*.04,0,0],
+    ['mixamorigSpine',prone ? .48 : crouch ? -.10 : -.30*combatPose-.12*aim+ .10*run-(this.jumpBlend||0)*.08+moveBob*.35,0,0],
+    ['mixamorigSpine1',prone ? .22 : crouch ? -.08 : -.22*combatPose-.07*aim+.06*run-(this.jumpBlend||0)*.04+moveBob*.25,0,0],
     ['mixamorigSpine2',prone ? .10 : crouch ? -.04 : -.12*combatPose-.035*aim,0,0],
     ['mixamorigNeck',0,0,0],
     ['mixamorigHead',-(this.aimPitch||0)*.32,0,0],
@@ -538,11 +541,11 @@ async function createFighter(isEnemy=false,index=0){
     ['mixamorigRightLeg',prone ? .18 : crouch ? 1.02 : (this.jumpBlend||0)*.54,0,0],
     // Ombro esquerdo sustenta o guarda-mão; o IK ajusta a mão à posição real da arma.
     ['mixamorigLeftArm',prone ? -.22 : crouch ? -.08 : -1.18*armReady-(this.jumpBlend||0)*.06, .035*aim, .20*armReady+.10*run],
-    ['mixamorigLeftForeArm',-.10*elbowReady-.08*reloadPhase*reload,0,-.12*elbowReady],
+    ['mixamorigLeftForeArm',-.10*elbowReady-.08*reloadPhase*reload-.12*reloadReach,0,-.12*elbowReady],
     ['mixamorigLeftHand',.08*armReady,0,.025*aim],
     // Mão direita permanece na empunhadura/gatilho; a flexão do cotovelo acompanha mira e recarga.
     ['mixamorigRightArm',prone ? -.22 : crouch ? -.08 : -1.10*armReady-(this.jumpBlend||0)*.06, -.025*aim, -.20*armReady-.08*run],
-    ['mixamorigRightForeArm',-.16*elbowReady-.10*reloadPhase*reload-firePulse,0,.08*elbowReady],
+    ['mixamorigRightForeArm',-.16*elbowReady-.10*reloadPhase*reload-firePulse+.035*reloadReach,0,.08*elbowReady],
     ['mixamorigRightHand',-.05*armReady,0,-.025*fire]
    ];
    for(const [name,x,y,z] of pose){
@@ -590,10 +593,14 @@ async function createFighter(isEnemy=false,index=0){
     // pois isso cria uma segunda âncora e faz a arma escapar da empunhadura.
     // A mão esquerda segue um socket real criado na geometria de cada arma longa.
     const leftUpper=this.bones.get('mixamorigLeftArm'),leftFore=this.bones.get('mixamorigLeftForeArm'),leftHand=this.bones.get('mixamorigLeftHand');
-    if(this.weaponSpec.kind!=='pistol'&&leftUpper&&leftFore&&leftHand&&this.weaponLeftGrip){
+    if(leftUpper&&leftFore&&leftHand&&this.weaponLeftGrip){
      model.updateMatrixWorld(true);this.weaponPivot.updateMatrixWorld(true);
-     const foregripTarget=this.weaponLeftGrip.getWorldPosition(new THREE.Vector3());
-     solveHand(leftUpper,leftFore,leftHand,foregripTarget,14);
+     const reload=THREE.MathUtils.clamp(this.reloadBlend||0,0,1);
+     const support=this.weaponLeftGrip.getWorldPosition(new THREE.Vector3());
+     const reloadSocket=this.weaponLeftReloadGrip||this.weaponLeftGrip;
+     const reloadTarget=reloadSocket.getWorldPosition(new THREE.Vector3());
+     const handTarget=support.lerp(reloadTarget,reload);
+     solveHand(leftUpper,leftFore,leftHand,handTarget,14);
     }
    }
   },
