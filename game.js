@@ -6,8 +6,8 @@ const root=document.querySelector('#game'),loading=document.querySelector('#load
 const scoreEl=document.querySelector('#score'),ammoEl=document.querySelector('#ammo'),healthEl=document.querySelector('#health');
 const errorPanel=document.querySelector('#errorPanel');
 let renderer,scene,camera,clock,playerRig,worldYaw=0,pitch=-.12,ammo=30,kills=0,health=100,armor=0,medkits=1;
-// Personagem humanoide procedural original do Ilha de Combate; não carrega mais o GLB antigo.
-const HUMAN_ROLE_CLIPS={idle:'Idle',walk:'Walk',run:'Walk',cast:'Boxing',hit:'Argue'};
+// Modelo humano 3D rigado (GLB) com animações; fallback procedural apenas se o download falhar.
+const HUMAN_ROLE_CLIPS={idle:'Idle',walk:'Walk',run:'Run',cast:'Idle',hit:'Idle'};
 const weapons=[
  {name:'FUZIL AR',category:'FUZIL',lengthCm:82,mag:30,damage:34,rate:.105,spread:.012,reload:1.45,modes:['SINGLE','BURST','AUTO'],range:105},
  {name:'SMG',category:'SUBMETRALHADORA',lengthCm:52,mag:40,damage:19,rate:.075,spread:.021,reload:1.35,modes:['SINGLE','AUTO'],range:62},
@@ -586,31 +586,88 @@ function makeHumanoidModel(){
  root.updateMatrixWorld(true);
  return {root,bones};
 }
+let humanSoldierAssetPromise=null;
+async function loadHumanSoldierAsset(){
+ if(!humanSoldierAssetPromise){
+  humanSoldierAssetPromise=new GLTFLoader().loadAsync('https://threejs.org/examples/models/gltf/Soldier.glb');
+ }
+ return humanSoldierAssetPromise;
+}
 async function createFighter(isEnemy=false,index=0){
- const built=makeHumanoidModel(),model=built.root,holder=new THREE.Group();holder.name=isEnemy?'enemy-humanoid':'player-humanoid';holder.add(model);
- const bones=built.bones,mixer=null,actions=new Map();
- let current=null,playing='Idle',animClock=0;
+ const holder=new THREE.Group();holder.name=isEnemy?'enemy-human-soldier':'player-human-soldier';
+ let model,bones=new Map(),mixer=null,actions=new Map(),assetAnimations=[];
+ try{
+  const gltf=await loadHumanSoldierAsset();
+  model=SkeletonUtils.clone(gltf.scene);
+  model.name='RealHumanSoldierModel';
+  assetAnimations=gltf.animations||[];
+  model.traverse(o=>{
+   if(o.isBone){
+    bones.set(o.name,o);
+    const normalized=o.name.replace(/[^a-z0-9]/gi,'').toLowerCase();
+    if(normalized.includes('mixamoriglefthand'))bones.set('mixamorigLeftHand',o);
+    if(normalized.includes('mixamorigrighthand'))bones.set('mixamorigRightHand',o);
+    if(normalized.includes('mixamorigleftupleg'))bones.set('mixamorigLeftUpLeg',o);
+    if(normalized.includes('mixamorigrightupleg'))bones.set('mixamorigRightUpLeg',o);
+    if(normalized.includes('mixamorigleftleg')&&!normalized.includes('upleg'))bones.set('mixamorigLeftLeg',o);
+    if(normalized.includes('mixamorigrightleg')&&!normalized.includes('upleg'))bones.set('mixamorigRightLeg',o);
+    if(normalized.includes('mixamorigleftarm')&&!normalized.includes('forearm'))bones.set('mixamorigLeftArm',o);
+    if(normalized.includes('mixamorigrightarm')&&!normalized.includes('forearm'))bones.set('mixamorigRightArm',o);
+    if(normalized.includes('mixamorigspine')&&!normalized.includes('spine1')&&!normalized.includes('spine2'))bones.set('mixamorigSpine',o);
+    if(normalized.includes('mixamorigneck'))bones.set('mixamorigNeck',o);
+    if(normalized.includes('mixamorighips'))bones.set('mixamorigHips',o);
+   }
+   if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){for(const m of (Array.isArray(o.material)?o.material:[o.material])){m.roughness=Math.max(m.roughness??.7,.62);}}}
+  });
+  const bounds=new THREE.Box3().setFromObject(model),height=bounds.max.y-bounds.min.y;
+  const scale=height>0?1.82/height:1;
+  model.scale.setScalar(scale);model.position.y=-bounds.min.y*scale;
+  holder.add(model);
+  mixer=new THREE.AnimationMixer(model);
+  for(const clip of assetAnimations){actions.set(clip.name,mixer.clipAction(clip));}
+ }catch(error){
+  console.error('Falha ao carregar o modelo humano 3D; usando personagem reserva.',error);
+  const fallback=makeHumanoidModel();model=fallback.root;bones=fallback.bones;holder.add(model);
+ }
+ const available=(name)=>actions.has(name);
+ const choose=(role)=>{
+  const requested=HUMAN_ROLE_CLIPS[role]||'Idle';
+  if(available(requested))return requested;
+  if(role==='run'&&available('Walk'))return 'Walk';
+  if(available('Idle'))return 'Idle';
+  return assetAnimations[0]?.name||null;
+ };
+ let playing=''; 
  const rig={
-  holder,root:model,bones,baseRootY:0,
-  lib:{role(role){return {clip:role==='run'||role==='walk'?'Walk':role==='hit'?'Hit_A':'Idle',loop:true}}},
+  holder,root:model,bones,mixer,baseRootY:0,
+  lib:{role(role){return {clip:choose(role),loop:true}}},
   get playing(){return playing},
-  playRole(role,opts={}){playing=role==='run'||role==='walk'?'Walk':role==='hit'?'Hit_A':'Idle';return Promise.resolve(true)},
-  stanceMode:'stand',_stanceApplied:[],_stanceBlend:0,
-  update(dt){
-   animClock+=dt;
-   for(const item of this._stanceApplied)this.bones.get(item.name)?.quaternion.multiply(item.inverse);
-   this._stanceApplied.length=0;
-   const speed=THREE.MathUtils.clamp((this.motionSpeed||0)/7.1,0,1),air=THREE.MathUtils.clamp(this.airBlend||0,0,1);
-   const prone=this.stanceMode==='prone',crouch=this.stanceMode==='crouch',moving=playing==='Walk'&&speed>.025;
-   const phase=animClock*(moving?THREE.MathUtils.lerp(7.2,12.6,speed):2),wave=Math.sin(phase),counter=Math.sin(phase+Math.PI);
-   const stride=moving?(prone ? .13 : crouch ? .29 : THREE.MathUtils.lerp(.22,.62,speed)):0,armStride=prone ? .10 : crouch ? .22 : .72;
-   const gait=[['mixamorigLeftUpLeg',wave*stride-.20*air],['mixamorigRightUpLeg',counter*stride-.20*air],['mixamorigLeftLeg',Math.max(0,-wave)*stride*1.25+.30*air],['mixamorigRightLeg',Math.max(0,-counter)*stride*1.25+.30*air],['mixamorigLeftArm',-wave*stride*armStride-.25*air],['mixamorigRightArm',-counter*stride*armStride-.25*air]];
-   for(const [name,value] of gait){const bone=this.bones.get(name);if(bone)bone.rotation.x=value;}
-   const target=crouch||prone?1:0;this._stanceBlend=THREE.MathUtils.damp(this._stanceBlend,target,11,dt);
-   const pose=[['mixamorigHips',prone ? .62 : crouch ? .42 : 0,0,0],['mixamorigSpine',prone ? .54 : crouch ? -.12 : 0,0,0],['mixamorigSpine1',prone ? .24 : crouch ? -.08 : 0,0,0],['mixamorigLeftUpLeg',prone ? -.22 : crouch ? -.62 : 0,0,0],['mixamorigRightUpLeg',prone ? -.22 : crouch ? -.62 : 0,0,0],['mixamorigLeftLeg',prone ? .10 : crouch ? 1.12 : 0,0,0],['mixamorigRightLeg',prone ? .10 : crouch ? 1.12 : 0,0,0],['mixamorigLeftArm',prone ? -.38 : crouch ? -.08 : 0,0,0],['mixamorigRightArm',prone ? -.38 : crouch ? -.08 : 0,0,0],['mixamorigNeck',prone ? -.10 : crouch ? .04 : 0,0,0]];
-   for(const [name,x,y,z] of pose){const bone=this.bones.get(name);if(!bone)continue;const delta=new THREE.Quaternion().setFromEuler(new THREE.Euler(x*this._stanceBlend,y*this._stanceBlend,z*this._stanceBlend,'XYZ'));bone.quaternion.multiply(delta);this._stanceApplied.push({name,inverse:delta.clone().invert()});}
+  playRole(role,opts={}){
+   const name=choose(role);
+   if(!name||!actions.has(name)){playing=name||'Idle';return Promise.resolve(true);}
+   const next=actions.get(name);
+   if(this._activeAction!==next){
+    next.reset().setLoop(THREE.LoopRepeat,Infinity).fadeIn(opts.fade??.18).play();
+    if(this._activeAction)this._activeAction.fadeOut(opts.fade??.18);
+    this._activeAction=next;
+   }
+   if(opts.speed)next.timeScale=opts.speed;
+   playing=name;
+   return Promise.resolve(true);
   },
-  setHeight(h){const b=new THREE.Box3().setFromObject(model),v=b.max.y-b.min.y;if(v>0)holder.scale.setScalar(h/v)}
+  stanceMode:'stand',_stanceBlend:0,
+  update(dt){
+   if(mixer)mixer.update(dt);
+   const crouch=this.stanceMode==='crouch',prone=this.stanceMode==='prone';
+   const target=crouch||prone?1:0;
+   this._stanceBlend=THREE.MathUtils.damp(this._stanceBlend,target,8,dt);
+   // Pequenos ajustes pós-animação para abaixar o centro de gravidade sem deformar o rig.
+   const hip=this.bones.get('mixamorigHips'),spine=this.bones.get('mixamorigSpine');
+   if(hip)hip.rotation.x+=(prone?.18:crouch?-.12:0)*this._stanceBlend;
+   if(spine)spine.rotation.x+=(prone?.20:crouch?.08:0)*this._stanceBlend;
+  },
+  setHeight(h){const b=new THREE.Box3().setFromObject(model),v=b.max.y-b.min.y;if(v>0)holder.scale.setScalar(h/v)},
+  dispose(){if(mixer)mixer.stopAllAction();}
  };
  addRifle(rig);scene.add(holder);await rig.playRole('idle');return rig;
 }
