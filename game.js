@@ -378,6 +378,14 @@ function update(dt){
  const right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
  const inputDir=forward.clone().multiplyScalar(-moveY).add(right.multiplyScalar(moveX));
  if(inputDir.length()>1)inputDir.normalize();
+ // Locomoção 360 graus: o corpo acompanha suavemente a direção do
+ // joystick; ao mirar, mantém o tronco orientado para a direção da câmera
+ // para permitir deslocamento lateral e para trás sem girar a mira.
+ if(inputMagnitude>.08){
+  const facing=aim?Math.PI-yaw:Math.atan2(inputDir.x,inputDir.z);
+  const turn=THREE.MathUtils.euclideanModulo(facing-hero.rotation.y+Math.PI,Math.PI*2)-Math.PI;
+  hero.rotation.y+=turn*(1-Math.exp(-dt*(aim?11:9)));
+ }
  const targetVX=inputDir.x*speed*inputMagnitude;
  const targetVZ=inputDir.z*speed*inputMagnitude;
  const accel=moving?(sprinting?10:13):18;
