@@ -190,7 +190,7 @@ function cameraUpdate(dt){
  }
  const inside=!!indoor;
  // Interior close-follow framing: roughly 70% tighter than the previous indoor view.
- const distance=inside?(aim?0.95:1.45):(aim?3.8:7.0);
+ const distance=inside?(aim?0.285:0.435):(aim?3.8:7.0); // 30% da distância interna anterior
  const shoulder=inside?(aim?.12:.22):(aim?.82:1.18);
  const targetHeight=inside?THREE.MathUtils.lerp(1.48,.86,poseBlend):THREE.MathUtils.lerp(2.05,.88,poseBlend);
  cameraLookTarget.copy(hero.position).add(new THREE.Vector3(0,targetHeight,0));
