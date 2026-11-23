@@ -2,7 +2,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
 import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
 const $=id=>document.getElementById(id);
 const root=$('game');
-let scene,camera,renderer,clock,hero,rig={},weapon,muzzleFlash,muzzleLight,weaponKick=0,reloadBlend=0,muzzleTime=0,targets=[],realHero=null,realMixer=null,realActions={},activeRealAction='',realBones={},realPoseOffsets=[],realCrouchBlend=0,realProneBlend=0,realAimBlend=0,yaw=0,pitch=-.12,moveX=0,moveY=0,velocityX=0,velocityZ=0,locomotionSpeed=0,run=false,aim=false,shoot=false,pose='stand',proneBlend=0,velocityY=0,grounded=true,walkT=0,ammo=30,reloading=false,lastShot=0,started=false;
+let scene,camera,renderer,clock,hero,rig={},weapon,muzzleFlash,muzzleLight,weaponKick=0,reloadBlend=0,muzzleTime=0,targets=[],realHero=null,realMixer=null,realActions={},activeRealAction='',realBones={},realPoseOffsets=[],realCrouchBlend=0,realProneBlend=0,realAimBlend=0,yaw=0,pitch=-.12,moveX=0,moveY=0,velocityX=0,velocityZ=0,locomotionSpeed=0,run=false,aim=false,shoot=false,pose='stand',proneBlend=0,velocityY=0,grounded=true,walkT=0,ammo=30,reloading=false,lastShot=0,started=false,cameraRecoil=0,cameraShake=0,stamina=100,worldBlockers=[],cameraRay=new THREE.Raycaster(),cameraDesired=new THREE.Vector3(),cameraCurrentDistance=5.6;
 const mat=(color,roughness=.9)=>new THREE.MeshStandardMaterial({color,roughness});
 function mesh(parent,geo,material,pos){const o=new THREE.Mesh(geo,material);o.position.set(...pos);parent.add(o);o.castShadow=true;o.receiveShadow=true;return o}
 function cube(parent,w,h,d,m,x,y,z){return mesh(parent,new THREE.BoxGeometry(w,h,d),m,[x,y,z])}
@@ -53,6 +53,7 @@ function buildForest(){
  const crownB=new THREE.InstancedMesh(new THREE.SphereGeometry(.72,12,10),mat(0x2c693b,1),count);
  for(let i=0;i<count;i++){
   const a=i/count*Math.PI*2,r=14+Math.random()*21,scale=.72+Math.random()*.72,x=Math.cos(a)*r,z=Math.sin(a)*r;
+  if(r>17)worldBlockers.push({x,z,r:.55*scale});
   dummy.position.set(x,scale,z);dummy.scale.setScalar(scale);dummy.updateMatrix();trunk.setMatrixAt(i,dummy.matrix);
   dummy.position.set(x,2.35*scale,z);dummy.scale.setScalar(scale);dummy.updateMatrix();crown.setMatrixAt(i,dummy.matrix);
   dummy.position.set(x+.48*scale,2.72*scale,z+.08*scale);dummy.scale.setScalar(scale);dummy.updateMatrix();crownA.setMatrixAt(i,dummy.matrix);
@@ -82,6 +83,7 @@ function house(x,z,color){
   cube(g,.06,.82,.06,dark,sx,1.92,2.69);cube(g,.82,.06,.06,dark,sx,1.92,2.69);
  }
  for(const side of [-1,1])cube(g,.12,3.05,.12,trim,side*2.92,1.55,2.52);
+ worldBlockers.push({x,z,r:3.8});
 }
 function buildHero(){
  hero=new THREE.Group();scene.add(hero);
@@ -321,7 +323,7 @@ function bind(){
  $('prone').addEventListener('pointerdown',e=>{e.preventDefault();setPose(pose==='prone'?'stand':'prone')});
  $('reload').addEventListener('pointerdown',e=>{e.preventDefault();if(!reloading&&ammo<30){reloading=true;$('message').textContent='RECARREGANDO';setTimeout(()=>{ammo=30;reloading=false;stats();$('message').textContent='ÁREA DE TREINO'},1450)}});
  let drag=null;renderer.domElement.addEventListener('pointerdown',e=>{if(e.clientX>innerWidth*.38){drag={id:e.pointerId,x:e.clientX,y:e.clientY};renderer.domElement.setPointerCapture(e.pointerId)}});
- renderer.domElement.addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag.x=e.clientX;drag.y=e.clientY;yaw-=dx*.006;pitch=THREE.MathUtils.clamp(pitch+dy*.0035,-.65,.35)});
+ renderer.domElement.addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag.x=e.clientX;drag.y=e.clientY;const sensitivity=aim?.0042:.0062;yaw-=dx*sensitivity;pitch=THREE.MathUtils.clamp(pitch+dy*(aim?.0028:.0035),-.72,.42)});
  ['pointerup','pointercancel'].forEach(ev=>renderer.domElement.addEventListener(ev,e=>{if(drag&&e.pointerId===drag.id)drag=null}));
  $('play').addEventListener('click',()=>{$('lobby').style.display='none';started=true});
 }
@@ -329,18 +331,20 @@ function setPose(p){pose=p;$('poseLabel').textContent='POSTURA: '+(p==='stand'?'
 function stats(){$('ammo').textContent=ammo+' / 90'}
 function fireShot(){
  if(reloading||ammo<=0||performance.now()-lastShot<155)return;
- lastShot=performance.now();ammo--;stats();weaponKick=Math.min(1,weaponKick+.72);
+ lastShot=performance.now();ammo--;stats();weaponKick=Math.min(1,weaponKick+.72);cameraRecoil=Math.min(.12,cameraRecoil+.035);cameraShake=Math.min(.08,cameraShake+.018);
  muzzleTime=.075;if(muzzleFlash){muzzleFlash.visible=true;muzzleLight.intensity=2.8}
  const origin=camera.position.clone(),direction=new THREE.Vector3();camera.getWorldDirection(direction);
  const ray=new THREE.Raycaster(origin,direction,0,85);const hits=ray.intersectObjects(targets,true);
- if(hits.length){const target=hits[0].object;target.material=mat(0xe5a43a);$('message').textContent='ALVO ATINGIDO!';setTimeout(()=>{$('message').textContent='ÁREA DE TREINO';target.material=mat(0xd6d1bd)},500)}
+ if(hits.length){const target=hits[0].object;target.material=mat(0xe5a43a);$('message').textContent='ALVO ATINGIDO!';$('message').classList.add('hit');setTimeout(()=>{$('message').textContent='ÁREA DE TREINO';$('message').classList.remove('hit');target.material=mat(0xd6d1bd)},500)}
 }
 function update(dt){
  const inputMagnitude=Math.min(1,Math.hypot(moveX,moveY));
  const moving=inputMagnitude>.08;
  const crouch=pose==='crouch',prone=pose==='prone';
  proneBlend=THREE.MathUtils.damp(proneBlend,prone?1:0,7.5,dt);
- const speed=prone?.62:crouch?1.75:run?6.1:3.15;
+ const sprinting=run&&!crouch&&!prone&&moving&&stamina>1;
+ if(sprinting)stamina=Math.max(0,stamina-22*dt);else stamina=Math.min(100,stamina+14*dt);
+ const speed=prone?.62:crouch?1.75:sprinting?6.1:3.15;
  // Aceleração e desaceleração progressivas: evita arrancadas e paradas instantâneas.
  const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
  const right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
@@ -348,20 +352,22 @@ function update(dt){
  if(inputDir.length()>1)inputDir.normalize();
  const targetVX=inputDir.x*speed*inputMagnitude;
  const targetVZ=inputDir.z*speed*inputMagnitude;
- const accel=moving?12:17;
+ const accel=moving?(sprinting?10:13):18;
  velocityX=THREE.MathUtils.damp(velocityX,targetVX,accel,dt);
  velocityZ=THREE.MathUtils.damp(velocityZ,targetVZ,accel,dt);
  const horizontalSpeed=Math.hypot(velocityX,velocityZ);
  locomotionSpeed=THREE.MathUtils.damp(locomotionSpeed,horizontalSpeed,10,dt);
- hero.position.x+=velocityX*dt;
- hero.position.z+=velocityZ*dt;
+ const nextX=hero.position.x+velocityX*dt,nextZ=hero.position.z+velocityZ*dt;
+ let blocked=false;
+ for(const b of worldBlockers){const dx=nextX-b.x,dz=nextZ-b.z,min=b.r+.42;if(dx*dx+dz*dz<min*min){blocked=true;break}}
+ if(!blocked){hero.position.x=nextX;hero.position.z=nextZ}else{velocityX*=.18;velocityZ*=.18}
  if(realHero)clearRealPoseOffsets();
  if(realMixer){
   realMixer.update(dt);
   playRealAnimation(horizontalSpeed>.12?(run?'run':'walk'):'idle');
  }
  if(realHero){
-  applyRealCharacterPose(dt,crouch,prone,aim,inputMagnitude,run&&!crouch&&!prone?1:0);
+  applyRealCharacterPose(dt,crouch,prone,aim,inputMagnitude,sprinting?1:0);
   const bob=horizontalSpeed>.12?Math.abs(Math.sin(walkT*1.7))*.018:Math.sin(walkT*1.2)*.006;
   realHero.position.y=bob;
   realHero.rotation.z=THREE.MathUtils.damp(realHero.rotation.z,THREE.MathUtils.clamp(-velocityX*.018,-.09,.09),8,dt);
@@ -374,10 +380,10 @@ function update(dt){
  hero.rotation.y+=yawDelta*Math.min(1,dt*(aim?12:7.5));
  // Jump arc and grounded recovery.
  if(!grounded){velocityY-=17*dt;hero.position.y+=velocityY*dt;if(hero.position.y<=0){hero.position.y=0;velocityY=0;grounded=true}}
- walkT+=dt*(horizontalSpeed>.12?(run&&!crouch&&!prone?10.5:5.8):1.6);
+ walkT+=dt*(horizontalSpeed>.12?(sprinting?10.5:5.8):1.6);
  const gait=Math.sin(walkT),opposite=Math.sin(walkT+Math.PI);
  const strafe=THREE.MathUtils.clamp(moveX,-1,1);
- const movingBlend=horizontalSpeed>.12?1:0,runBlend=run&&!crouch&&!prone&&horizontalSpeed>.12?1:0;
+ const movingBlend=horizontalSpeed>.12?1:0,runBlend=sprinting&&horizontalSpeed>.12?1:0;
  // Smooth transitions between standing, crouched and prone silhouettes.
  // Deitar em sequência: abaixa o centro de gravidade, leva o peito ao chão
  // e estende o corpo gradualmente, em vez de apenas girar a câmera.
@@ -446,12 +452,24 @@ function update(dt){
  // Inclinação do tronco acompanha a direção lateral sem quebrar a mira.
  rig.pelvis.rotation.y=THREE.MathUtils.damp(rig.pelvis.rotation.y,aim?-.025*strafe:0,7,dt);
  if(shoot)fireShot();
- // Shoulder camera follows the player and tightens when aiming.
- const target=hero.position.clone().add(new THREE.Vector3(0,THREE.MathUtils.lerp(crouch?1.55:2.02,.62,proneBlend),0));
- const dist=THREE.MathUtils.lerp(aim?3.45:5.65,4.15,proneBlend);
- const offset=new THREE.Vector3(Math.sin(yaw)*dist*Math.cos(pitch),dist*(.32+Math.sin(-pitch)),Math.cos(yaw)*dist*Math.cos(pitch));
- camera.position.lerp(target.clone().add(offset),1-Math.exp(-dt*8));
- camera.lookAt(target);
+ // Câmera de ombro com FOV dinâmico, recuo, colisão e amortecimento.
+ cameraRecoil=THREE.MathUtils.damp(cameraRecoil,0,9,dt);
+ cameraShake=THREE.MathUtils.damp(cameraShake,0,12,dt);
+ const target=hero.position.clone().add(new THREE.Vector3(0,THREE.MathUtils.lerp(crouch?1.48:1.92,.58,proneBlend),0));
+ const baseDist=aim?3.15:sprinting?5.15:5.6;
+ const dist=THREE.MathUtils.lerp(baseDist,3.85,proneBlend);
+ const shoulder=aim?.48:.72;
+ const offset=new THREE.Vector3(Math.sin(yaw)*dist*Math.cos(pitch)+Math.cos(yaw)*shoulder,dist*(.30+Math.sin(-pitch)),Math.cos(yaw)*dist*Math.cos(pitch)-Math.sin(yaw)*shoulder);
+ cameraDesired.copy(target).add(offset);
+ cameraRay.set(target,offset.clone().normalize());cameraRay.far=dist;
+ const cameraHits=cameraRay.intersectObjects(scene.children,true).filter(hit=>{let o=hit.object;while(o){if(o===hero)return false;o=o.parent}return true});
+ cameraCurrentDistance=THREE.MathUtils.damp(cameraCurrentDistance,cameraHits.length?Math.max(.9,cameraHits[0].distance-.22):dist,18,dt);
+ cameraDesired.copy(target).addScaledVector(offset.normalize(),cameraCurrentDistance);
+ camera.position.lerp(cameraDesired,1-Math.exp(-dt*(aim?13:8)));
+ camera.position.y+=cameraShake*.22;
+ camera.fov=THREE.MathUtils.damp(camera.fov,aim?53:sprinting?68:65,8,dt);camera.updateProjectionMatrix();
+ camera.lookAt(target.clone().add(new THREE.Vector3(0,cameraRecoil+cameraShake*.12,0)));
+ const cross=$('hud').querySelector('.crosshair');if(cross){const spread=1+Math.min(1,horizontalSpeed/6)+(shoot?.55:0)+(aim?-.45:0);cross.style.transform='translate(-50%,-50%) scale('+Math.max(.65,spread)+')';}
 }
 function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);if(started)update(dt);renderer.render(scene,camera)}
 function resize(){if(!camera||!renderer)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.5))}
