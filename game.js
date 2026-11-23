@@ -268,13 +268,14 @@ function animateRig(dt,speed,sprinting,crouch,prone){
  const crouchMove=chooseClip([['crouch','fwd'],['crouch','walk']],walk);
  const proneIdle=chooseClip([['prone','idle'],['lying','idle'],['lie','idle']],crouchIdle);
  const proneMove=chooseClip([['prone','crawl'],['prone','move'],['crawl','loop']],crouchMove);
- const aimClip=chooseClip([['rifle','aim'],['weapon','aim'],['pistol','aim']],idle);
- const shootClip=chooseClip([['rifle','shoot'],['weapon','shoot'],['pistol','shoot']],aimClip);
- const reloadClip=chooseClip([['rifle','reload'],['weapon','reload'],['pistol','reload']],aimClip);
+ // Mantém a postura ereta também ao mirar, atirar e recarregar.
+ const aimClip=idle;
+ const shootClip=idle;
+ const reloadClip=idle;
  let clip=idle;
  if(prone)clip=moving?proneMove:proneIdle;
  else if(crouch)clip=moving?crouchMove:crouchIdle;
- else if(!grounded)clip=chooseClip([['rifle','jump'],['jump','loop']],idle);
+ else if(!grounded)clip=chooseClip([['jump','loop']],idle);
  else if(now<reloadPoseUntil&&weaponEquipped)clip=reloadClip;
  else if(now<firePoseUntil&&weaponEquipped)clip=shootClip;
  else if(aim&&weaponEquipped)clip=aimClip;
