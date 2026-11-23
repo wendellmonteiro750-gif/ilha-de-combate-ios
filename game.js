@@ -272,6 +272,7 @@ async function init(){
  loading.textContent='CARREGANDO PERSONAGEM 3D…';
  const catalog=await catalogFromFiles(BASE);catalog.animations=catalog.animations.filter(a=>['General','Movement Basic','Movement Advanced','Combat Ranged'].includes(a.group));library=new Library(catalog);
  playerRig=await createFighter(false,0);playerRig.holder.position.set(0,0,0);playerRig.holder.rotation.y=Math.PI;
+ const localHead=playerRig.bones.get('head')||playerRig.bones.get('Head');if(localHead)localHead.visible=false;
  const spots=[[62,18],[-70,36],[18,78],[-42,-88],[98,-52]];
  await Promise.all(spots.map((p,i)=>spawnEnemy(p[0],p[1],i)));
  setupControls();addEventListener('resize',resize);
@@ -369,7 +370,7 @@ function animate(){
  fireCooldown=Math.max(0,fireCooldown-dt);
  if(fireHeld&&fireCooldown<=0&&reloadTimer<=0)shoot();
  if(reloadTimer>0){reloadTimer-=dt;if(reloadTimer<=0){reloadTimer=0;weaponAmmo[weaponIndex]=currentWeapon().mag;refreshAmmo();document.querySelector('#reload').classList.remove('active');statusEl.textContent='PRONTO'}}
- recoil=Math.max(0,recoil-dt*.55);const target=p.position.clone().add(new THREE.Vector3(0,1.48,0));const forwardView=new THREE.Vector3(Math.sin(worldYaw),0,-Math.cos(worldYaw));const back=new THREE.Vector3(-forwardView.x,0,-forwardView.z);const shoulder=new THREE.Vector3(Math.cos(worldYaw),0,Math.sin(worldYaw));const cameraDistance=aiming?2.35:4.15;const horizontal=cameraDistance*Math.cos(pitch);const desired=target.clone().add(back.multiplyScalar(horizontal)).add(shoulder.multiplyScalar(aiming?.28:.46)).add(new THREE.Vector3(0,.58+cameraDistance*Math.sin(pitch)+recoil*1.15,0));const smooth=1-Math.exp(-13*dt);camera.position.lerp(desired,smooth);const lookTarget=target.clone().add(forwardView.multiplyScalar(aiming?2.0:2.35)).add(new THREE.Vector3(0,Math.sin(pitch)*(aiming?1.25:1.55)+recoil*1.7,0));cameraLook.lerp(lookTarget,smooth);camera.lookAt(cameraLook);const wantedFov=aiming?48:(playerVelocity.length()>4.2?72:68);if(Math.abs(camera.fov-wantedFov)>.1){camera.fov=THREE.MathUtils.lerp(camera.fov,wantedFov,smooth);camera.updateProjectionMatrix();}
+ recoil=Math.max(0,recoil-dt*.55);const forwardView=new THREE.Vector3(Math.sin(worldYaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(worldYaw)*Math.cos(pitch));const eye=p.position.clone().add(new THREE.Vector3(0,1.58,0)).add(new THREE.Vector3(Math.sin(worldYaw),0,-Math.cos(worldYaw)).multiplyScalar(.12));const desired=eye.clone().add(new THREE.Vector3(0,recoil*.025,0));const smooth=1-Math.exp(-20*dt);camera.position.lerp(desired,smooth);const lookTarget=eye.clone().add(forwardView.multiplyScalar(12)).add(new THREE.Vector3(0,recoil*.16,0));cameraLook.lerp(lookTarget,smooth);camera.lookAt(cameraLook);const wantedFov=aiming?54:78;if(Math.abs(camera.fov-wantedFov)>.1){camera.fov=THREE.MathUtils.lerp(camera.fov,wantedFov,smooth);camera.updateProjectionMatrix();}
  updateSafeZone(dt);
  if(hitMarkerTimer>0){hitMarkerTimer-=dt;if(hitMarkerTimer<=0)document.querySelector('#crosshair')?.classList.remove('hit')}updateEffects(dt);radarClock-=dt;if(radarClock<=0){radarClock=.18;updateRadar()}renderer.render(scene,camera);
 }
