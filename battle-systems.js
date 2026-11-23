@@ -89,8 +89,8 @@ export class BattleSystems {
   }
   spawnLoot(){
     const T=this.T; const defs=[['RIFLE AR','weapon',0x9a9f91],['ESCOPETA','weapon',0x9b7650],['SNIPER','weapon',0x667b8d],['PISTOLA','weapon',0x7c8a7c],['MUNIÇÃO','ammo',0xd6bd55],['KIT MÉDICO','medkit',0xd64d4d],['COLETE','vest',0x4b7883],['CAPACETE','helmet',0x9caa74],['MOCHILA','backpack',0x856a4b]];
-    for(let i=0;i<108;i++){
-      const [name,type,color]=defs[i%defs.length],a=Math.random()*Math.PI*2,r=10+Math.random()*88,x=Math.cos(a)*r,z=Math.sin(a)*r;
+    for(let i=0;i<156;i++){
+      const [name,type,color]=defs[i%defs.length],a=Math.random()*Math.PI*2,r=10+Math.random()*125,x=Math.cos(a)*r,z=Math.sin(a)*r;
       const g=new T.Group();g.position.set(x,.45,z);
       const box=new T.Mesh(new T.BoxGeometry(.48,.38,.38),new T.MeshStandardMaterial({color,roughness:.5,metalness:.1}));box.castShadow=true;g.add(box);
       const glow=new T.Mesh(new T.TorusGeometry(.38,.035,6,16),new T.MeshBasicMaterial({color:0xffdf73}));glow.rotation.x=Math.PI/2;glow.position.y=-.2;g.add(glow);
@@ -131,7 +131,7 @@ export class BattleSystems {
     if(this.phase!=='lobby')return;this.phase='plane';this.elapsed=0;
     this.hero.position.copy(this.planeStart);
     this.plane=this.createPlane();this.scene.add(this.plane);
-    this.plane.position.copy(this.hero.position);this.plane.rotation.y=Math.atan2(this.planeEnd.z-this.planeStart.z,this.planeEnd.x-this.planeStart.x);
+    this.plane.position.copy(this.hero.position);this.plane.rotation.y=-Math.atan2(this.planeEnd.z-this.planeStart.z,this.planeEnd.x-this.planeStart.x);
     document.getElementById('br-panel').style.display='block';document.getElementById('br-hint').style.display='block';
     document.getElementById('br-hint').textContent='AVIÃO EM ROTA — ESCOLHA O MOMENTO DO SALTO';
     this.onStatus('AVIÃO DE TRANSPORTE EM ROTA — PREPARE-SE PARA SALTAR');
@@ -147,7 +147,7 @@ export class BattleSystems {
   }
   jump(){
     if(this.phase!=='plane')return;this.phase='freefall';this.freefallTime=0;document.getElementById('br-panel').style.display='none';
-    this.hero.position.y=29;this.dropTarget.set(this.hero.position.x+16,0,this.hero.position.z);
+    this.hero.position.y=39;this.dropTarget.set(this.hero.position.x+16,0,this.hero.position.z);
     this.onStatus('SALTO! QUEDA LIVRE — PARAQUEDAS ABRIRÁ AUTOMATICAMENTE');
     document.getElementById('br-hint').textContent='QUEDA LIVRE · PREPARE-SE PARA ABRIR O PARAQUEDAS';
   }
