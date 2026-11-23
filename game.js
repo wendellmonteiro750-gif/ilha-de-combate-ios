@@ -558,7 +558,7 @@ async function createFighter(isEnemy=false,index=0){
    const ready=this.isPlayer?1:.72,aim=THREE.MathUtils.clamp(this.weaponAimBlend||0,0,1),combatPose=Math.max(aim,THREE.MathUtils.clamp(this.weaponFireBlend||0,0,1));
    const fire=THREE.MathUtils.clamp(this.weaponFireBlend||0,0,1),run=THREE.MathUtils.clamp(this.weaponRunBlend||0,0,1),reload=THREE.MathUtils.clamp(this.reloadBlend||0,0,1);
    const firePhase=this.firePosePhase||0;
-   const readyTarget=this.isPlayer?(run?.82:Math.max(.78,aim*.98,fire*.96,reload*.82)):.62;
+   const readyTarget=this.isPlayer?(run?.64:1):.72;
    this.weaponReadyBlend=THREE.MathUtils.damp(this.weaponReadyBlend??.72,readyTarget,12,dt);
    const armReady=this.weaponReadyBlend,elbowReady=THREE.MathUtils.clamp(armReady+aim*.12,0,1);
    const reloadPhase=Math.sin((1-reload)*Math.PI);
@@ -572,18 +572,19 @@ async function createFighter(isEnemy=false,index=0){
     ['mixamorigSpine2',prone ? .10 : crouch ? -.04 : -.12*combatPose-.035*aim,0,0],
     ['mixamorigNeck',0,0,0],
     ['mixamorigHead',-(this.aimPitch||0)*.32,0,0],
-    ['mixamorigLeftUpLeg',prone ? -.42 : crouch ? -.52 : -(this.jumpBlend||0)*.34,0,0],
-    ['mixamorigRightUpLeg',prone ? -.42 : crouch ? -.52 : -(this.jumpBlend||0)*.28,0,0],
-    ['mixamorigLeftLeg',prone ? .18 : crouch ? 1.02 : (this.jumpBlend||0)*.62,0,0],
-    ['mixamorigRightLeg',prone ? .18 : crouch ? 1.02 : (this.jumpBlend||0)*.54,0,0],
-    // Ombro esquerdo sustenta o guarda-mão; o IK ajusta a mão à posição real da arma.
-    ['mixamorigLeftArm',prone ? -.22 : crouch ? -.08 : -1.18*armReady-(this.jumpBlend||0)*.06, .035*aim, .20*armReady+.10*run],
-    ['mixamorigLeftForeArm',-.10*elbowReady-.08*reloadPhase*reload-.12*reloadReach,0,-.12*elbowReady],
-    ['mixamorigLeftHand',.08*armReady,0,.025*aim],
-    // Mão direita permanece na empunhadura/gatilho; a flexão do cotovelo acompanha mira e recarga.
-    ['mixamorigRightArm',prone ? -.22 : crouch ? -.08 : -1.10*armReady-(this.jumpBlend||0)*.06, -.025*aim, -.20*armReady-.08*run],
-    ['mixamorigRightForeArm',-.16*elbowReady-.10*reloadPhase*reload-firePulse+.035*reloadReach,0,.08*elbowReady],
-    ['mixamorigRightHand',-.05*armReady,0,-.025*fire]
+    ['mixamorigLeftUpLeg',prone ? -.62 : crouch ? -.58 : -(this.jumpBlend||0)*.34,0,0],
+    ['mixamorigRightUpLeg',prone ? -.62 : crouch ? -.58 : -(this.jumpBlend||0)*.28,0,0],
+    ['mixamorigLeftLeg',prone ? .42 : crouch ? 1.12 : (this.jumpBlend||0)*.62,0,0],
+    ['mixamorigRightLeg',prone ? .42 : crouch ? 1.12 : (this.jumpBlend||0)*.54,0,0],
+    // Postura de combate: ombros avançados e cotovelos flexionados para sustentar a arma.
+    // Agachar/deitar não deve fazer o operador soltar o fuzil.
+    ['mixamorigLeftArm',(prone?-.92:crouch?-1.12:-1.18)*armReady-(this.jumpBlend||0)*.06, .035*aim, .20*armReady+.10*run],
+    ['mixamorigLeftForeArm',-.20*elbowReady-.08*reloadPhase*reload-.12*reloadReach,0,-.16*elbowReady],
+    ['mixamorigLeftHand',.10*armReady,0,.025*aim],
+    // A mão direita continua presa à empunhadura; o cotovelo acompanha a posição de tiro.
+    ['mixamorigRightArm',(prone?-.88:crouch?-1.06:-1.10)*armReady-(this.jumpBlend||0)*.06, -.025*aim, -.20*armReady-.08*run],
+    ['mixamorigRightForeArm',-.22*elbowReady-.10*reloadPhase*reload-firePulse+.035*reloadReach,0,.08*elbowReady],
+    ['mixamorigRightHand',-.07*armReady,0,-.025*fire]
    ];
    for(const [name,x,y,z] of pose){
     const bone=this.bones.get(name);if(!bone)continue;
@@ -648,17 +649,8 @@ async function createFighter(isEnemy=false,index=0){
      rotateJoint(upper,fore,desiredElbow);
      rotateJoint(fore,hand,target);
     };
-    // A arma fica presa à mão direita: não mover novamente o punho para um ponto fixo do corpo,
-    // pois isso cria uma segunda âncora e faz a arma escapar da empunhadura.
-    // A mão esquerda segue um socket real criado na geometria de cada arma longa.
-    const rightUpper=this.bones.get('mixamorigRightArm'),rightFore=this.bones.get('mixamorigRightForeArm'),rightHand=this.bones.get('mixamorigRightHand');
-    // A mão direita é a âncora da arma; resolvemos o cotovelo em torno dessa
-    // posição fixa antes de calcular o apoio da mão esquerda.
-    if(rightUpper&&rightFore&&rightHand){
-     model.updateMatrixWorld(true);
-     const triggerGrip=rightHand.getWorldPosition(new THREE.Vector3());
-     solveHand(rightUpper,rightFore,rightHand,triggerGrip);
-    }
+    // A mão direita ancora a arma. Um segundo alvo IK no próprio punho
+    // deformava o cotovelo; apenas a mão esquerda alcança o guarda-mão.
     const leftUpper=this.bones.get('mixamorigLeftArm'),leftFore=this.bones.get('mixamorigLeftForeArm'),leftHand=this.bones.get('mixamorigLeftHand');
     const reload=THREE.MathUtils.clamp(this.reloadBlend||0,0,1);
     if(leftUpper&&leftFore&&leftHand&&this.weaponLeftGrip&&(this.weaponSpec.kind!=='pistol'||reload>.02)){
@@ -735,7 +727,7 @@ function applyBodyMotion(rig,forwardSpeed,lateralSpeed,dt){
  const stance=rig.stanceMode==='prone' ? -.10 : rig.stanceMode==='crouch' ? -.035 : 0;
  const firing=rig.isPlayer?THREE.MathUtils.clamp(rig.weaponFireBlend||0,0,1):0;
  const aiming=rig.isPlayer?THREE.MathUtils.clamp(rig.weaponAimBlend||0,0,1):0;
- const targetPitch=-run*(rig.runBlend ? .105 : .045)+stance+firing*.17+aiming*.055;
+ const targetPitch=-run*(rig.runBlend ? .14 : .065)+stance+firing*.20+aiming*.075;
  const targetRoll=THREE.MathUtils.clamp(-lateralSpeed*.024,-.095,.095);
  const blend=1-Math.exp(-8*dt);
  holder.rotation.x=THREE.MathUtils.lerp(holder.rotation.x,targetPitch,blend);
@@ -931,7 +923,7 @@ function animate(){
   const moveSpeed=movementMode==='prone'?.95:movementMode==='crouch'?1.85:aiming?2.65:canSprint?7.1:5.35;
   const targetVelocity=move.clone().multiplyScalar(moveSpeed);
   const hasInput=move.lengthSq()>.0025;
-  const acceleration=hasInput?(movementMode==='prone'?7:movementMode==='crouch'?8:canSprint?11:9):19;
+  const acceleration=hasInput?(movementMode==='prone'?5.5:movementMode==='crouch'?7:canSprint?10:8):22;
   playerVelocity.lerp(targetVelocity,1-Math.exp(-acceleration*dt));
   // Freio mais firme ao soltar o joystick: evita o efeito de patinação ao parar.
   if(!hasInput&&playerVelocity.lengthSq()<.0064)playerVelocity.set(0,0,0);
