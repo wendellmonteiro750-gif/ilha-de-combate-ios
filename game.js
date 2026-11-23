@@ -359,6 +359,14 @@ function bind(){
 }
 function setPose(p){pose=p;$('poseLabel').textContent='POSTURA: '+(p==='stand'?'EM PÉ':p==='crouch'?'AGACHADO':'DEITADO');$('crouch').classList.toggle('active',p==='crouch');$('prone').classList.toggle('active',p==='prone')}
 function stats(){$('ammo').textContent=ammo+' / 90'}
+function showBulletTrail(start,end){
+ const geometry=new THREE.BufferGeometry().setFromPoints([start,end]);
+ const material=new THREE.LineBasicMaterial({color:0xffd27a,transparent:true,opacity:.95,depthWrite:false});
+ const trail=new THREE.Line(geometry,material);
+ trail.renderOrder=20;
+ scene.add(trail);
+ setTimeout(()=>{scene.remove(trail);geometry.dispose();material.dispose()},95);
+}
 function fireShot(){
  if(reloading||ammo<=0||performance.now()-lastShot<155)return;
  lastShot=performance.now();ammo--;stats();cameraRecoil=Math.min(.12,cameraRecoil+.035);cameraShake=Math.min(.08,cameraShake+.018);
@@ -369,6 +377,13 @@ function fireShot(){
  ray.setFromCamera(new THREE.Vector2(0,0),camera);
  ray.far=85;
  const hits=ray.intersectObjects(targets,true);
+ const endPoint=hits.length?hits[0].point.clone():ray.ray.origin.clone().addScaledVector(ray.ray.direction,55);
+ let muzzlePoint=camera.position.clone();
+ if(weaponModel&&weaponModel.visible){
+  weaponModel.updateMatrixWorld(true);
+  muzzlePoint=weaponModel.localToWorld(new THREE.Vector3(0,.012,-1.14));
+ }
+ showBulletTrail(muzzlePoint,endPoint);
  if(hits.length){const target=hits[0].object;target.material=mat(0xe5a43a);$('message').textContent='ALVO ATINGIDO!';$('message').classList.add('hit');setTimeout(()=>{$('message').textContent='ÁREA DE TREINO';$('message').classList.remove('hit');target.material=mat(0xd6d1bd)},500)}
 }
 function update(dt){
