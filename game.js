@@ -147,26 +147,33 @@ function setBoneWorldRotation(bone,worldRotation){
 }
 function applyCombatWeaponPose(crouch=false,prone=false,dt=0){
  if(!weaponEquipped||!weaponModel||!characterVisual)return;
- const upper=combatBones.upperarm_l,lower=combatBones.lowerarm_l,hand=combatBones.hand_l;
- if(!upper||!lower||!hand)return;
- characterVisual.updateMatrixWorld(true);
- weaponModel.updateMatrixWorld(true);
+ const rightUpper=combatBones.upperarm_r,rightLower=combatBones.lowerarm_r,rightHand=combatBones.hand_r;
+ const leftUpper=combatBones.upperarm_l,leftLower=combatBones.lowerarm_l,leftHand=combatBones.hand_l;
+ if(!rightUpper||!rightLower||!rightHand||!leftUpper||!leftLower||!leftHand)return;
  const now=performance.now();
- let supportPoint=new THREE.Vector3(0,.005,-.53);
+ // A arma fica referenciada ao ombro, não pendurada na mão. A coronha
+ // encosta no pivô do ombro direito; as duas mãos são então resolvidas por IK.
+ characterVisual.updateMatrixWorld(true);
+ const shoulderLocal=characterVisual.worldToLocal(rightUpper.getWorldPosition(new THREE.Vector3()));
+ weaponModel.rotation.copy(weaponBaseRotation);
+ const stockEnd=new THREE.Vector3(0,0,.305*weaponModel.scale.x).applyEuler(weaponModel.rotation);
+ weaponModel.position.copy(shoulderLocal).sub(stockEnd);
+ weaponModel.position.y-=weaponRecoil;
+ weaponModel.updateMatrixWorld(true);
+ const gripPoint=new THREE.Vector3(0,-.105,.075);
+ const supportRest=new THREE.Vector3(0,.005,-.53);
+ let supportPoint=supportRest.clone();
  if(reloading&&reloadPoseUntil>0){
   const progress=THREE.MathUtils.clamp(1-(reloadPoseUntil-now)/1450,0,1);
   const magPoint=new THREE.Vector3(0,-.18,-.16);
-  if(progress<.34)supportPoint.lerpVectors(new THREE.Vector3(0,.005,-.53),magPoint,progress/.34);
+  if(progress<.34)supportPoint.lerpVectors(supportRest,magPoint,progress/.34);
   else if(progress<.68)supportPoint.copy(magPoint);
-  else supportPoint.lerpVectors(magPoint,new THREE.Vector3(0,.005,-.53),(progress-.68)/.32);
+  else supportPoint.lerpVectors(magPoint,supportRest,(progress-.68)/.32);
  }
- solveArmIK(upper,lower,hand,weaponModel.localToWorld(supportPoint));
- const recoilTarget=now<firePoseUntil?.045:0;
+ solveArmIK(rightUpper,rightLower,rightHand,weaponModel.localToWorld(gripPoint));
+ solveArmIK(leftUpper,leftLower,leftHand,weaponModel.localToWorld(supportPoint));
+ const recoilTarget=now<firePoseUntil?.025:0;
  weaponRecoil=THREE.MathUtils.damp(weaponRecoil,recoilTarget,now<firePoseUntil?28:12,dt);
- weaponModel.position.copy(weaponBasePosition);
- weaponModel.position.y-=weaponRecoil;
- weaponModel.rotation.copy(weaponBaseRotation);
- weaponModel.rotation.x+=weaponRecoil*.42;
  if(weaponMagazine){
   const p=reloading?THREE.MathUtils.clamp(1-Math.abs((now-(reloadPoseUntil-950))/380),0,1):0;
   weaponMagazine.position.y=-.18-.13*p;
@@ -258,18 +265,11 @@ function createCombatWeapon(){
  const proportionalScale=(bodyHeight>0&&rifleLength>0)?targetLength/rifleLength:.56;
  const finalScale=THREE.MathUtils.clamp(proportionalScale,.42,.62);
  weaponModel.scale.setScalar(finalScale);
- // Alinha o ponto de empunhadura à mão dominante e faz o rifle acompanhá-la.
- const dominantHand=combatBones.hand_r;
- if(dominantHand){
-  characterVisual.updateMatrixWorld(true);
-  const handLocal=characterVisual.worldToLocal(dominantHand.getWorldPosition(new THREE.Vector3()));
-  const gripOffset=new THREE.Vector3(0,-.105,.075).multiplyScalar(finalScale).applyQuaternion(weaponModel.quaternion);
-  weaponModel.position.copy(handLocal.sub(gripOffset));
-  characterVisual.updateMatrixWorld(true);
-  dominantHand.attach(weaponModel);
- }
- weaponBasePosition.copy(weaponModel.position);
+ // Rifle orientado para a frente e apoiado no ombro direito.
+ // O ponto de apoio e recalculado por frame em applyCombatWeaponPose().
+ weaponModel.rotation.set(0,Math.PI,0);
  weaponBaseRotation.copy(weaponModel.rotation);
+ characterVisual.updateMatrixWorld(true);
  weaponModel.userData.bodyHeight=bodyHeight;
  weaponModel.userData.targetLength=targetLength;
  weaponModel.userData.proportionalScale=finalScale;
