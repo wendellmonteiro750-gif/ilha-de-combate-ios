@@ -471,10 +471,10 @@ async function createFighter(isEnemy=false,index=0){
  if(walkClip)HUMAN_ROLE_CLIPS.walk=walkClip.name;
  if(runClip)HUMAN_ROLE_CLIPS.run=runClip.name;
  if(jumpClip)HUMAN_ROLE_CLIPS.jump=jumpClip.name;
- const model=SkeletonUtils.clone(source.scene),holder=new THREE.Group();holder.add(model);
+ const model=SkeletonUtils.clone(source.scene),holder=new THREE.Group(),posePivot=new THREE.Group();holder.add(posePivot);posePivot.add(model);
  model.updateMatrixWorld(true);
- const bounds=new THREE.Box3().setFromObject(model),height=Math.max(.1,bounds.max.y-bounds.min.y);
- holder.scale.setScalar(1.82/height);model.position.y=-bounds.min.y;
+ const bounds=new THREE.Box3().setFromObject(model),height=Math.max(.1,bounds.max.y-bounds.min.y),pivotY=(bounds.min.y+bounds.max.y)*.5;
+ holder.scale.setScalar(1.82/height);posePivot.position.y=pivotY;model.position.y=-bounds.min.y-pivotY;
  const bones=new Map(),palette=['#35483d','#5a4938','#3c4b5d','#4c3d35','#4b5144','#51443b'],outfitColor=isEnemy?palette[index%palette.length]:'#17191d';
  model.traverse(o=>{
   if(o.isBone)bones.set(o.name,o);
@@ -515,7 +515,7 @@ async function createFighter(isEnemy=false,index=0){
  for(const sourceClip of source.animations){const clip=sourceClip.clone();for(const track of clip.tracks){if(/Hips.*position/i.test(track.name)){for(let k=0;k<track.values.length;k+=3){track.values[k]=0;track.values[k+2]=0;}}}actions.set(clip.name,mixer.clipAction(clip));}
  let current=null,playing='';
  const rig={
-  holder,root:model,bones,isPlayer:!isEnemy,baseRootY:model.position.y,baseModelY:model.position.y,baseModelRotationX:model.rotation.x,proneBlend:0,crouchBlend:0,
+  holder,root:model,posePivot,bones,isPlayer:!isEnemy,baseRootY:0,basePosePivotY:pivotY,proneBlend:0,crouchBlend:0,
   lib:{role(role){return {clip:HUMAN_ROLE_CLIPS[role]||'Idle',loop:true}}},
   get playing(){return playing},
   playRole(role,opts={}){
@@ -546,7 +546,7 @@ async function createFighter(isEnemy=false,index=0){
    this.root.position.y=this.baseRootY+Math.abs(Math.sin(this.gaitPhase*2))*locomotion*(this.sprintBlend?.035:.018);
    const proneTarget=this.stanceMode==='prone'?1:0,crouchTarget=this.stanceMode==='crouch'?1:0;
     this.proneBlend=THREE.MathUtils.damp(this.proneBlend||0,proneTarget,4.2,dt);this.crouchBlend=THREE.MathUtils.damp(this.crouchBlend||0,crouchTarget,9,dt);
-    model.rotation.x=this.baseModelRotationX-1.28*this.proneBlend;model.position.y=this.baseModelY+.38*this.proneBlend;
+    posePivot.rotation.x=-Math.PI*.5*this.proneBlend;posePivot.position.y=THREE.MathUtils.lerp(this.basePosePivotY,.13,this.proneBlend);
     const prone=this.proneBlend,crouch=this.crouchBlend,crouchFactor=1-prone*.92-crouch*.58;
    // A animação do GLB já movimenta as pernas; a camada procedural só corrige a passada para evitar duplicação exagerada.
    const gaitAmount=locomotion*crouchFactor*(this.sprintBlend?.42:.30);
