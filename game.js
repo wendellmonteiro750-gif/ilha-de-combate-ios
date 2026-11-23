@@ -10,9 +10,9 @@ function capsule(parent,r,len,m,x,y,z){return mesh(parent,new THREE.CapsuleGeome
 function init(){
  scene=new THREE.Scene();scene.background=new THREE.Color(0x91cbd5);scene.fog=new THREE.Fog(0x91cbd5,48,115);
  camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,180);
- renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;root.appendChild(renderer.domElement);
+ const mobileProfile=matchMedia('(max-width: 800px)').matches||navigator.maxTouchPoints>0;renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,mobileProfile?1.35:1.75));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;root.appendChild(renderer.domElement);
  scene.add(new THREE.HemisphereLight(0xe8f3ff,0x3e4b35,1.55));
- const sun=new THREE.DirectionalLight(0xffe5c2,3.0);sun.position.set(-20,32,16);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-45;sun.shadow.camera.right=45;sun.shadow.camera.top=45;sun.shadow.camera.bottom=-45;sun.shadow.bias=-0.00018;scene.add(sun);
+ const sun=new THREE.DirectionalLight(0xffe5c2,3.0);sun.position.set(-20,32,16);sun.castShadow=true;sun.shadow.mapSize.set(mobileProfile?1024:2048,mobileProfile?1024:2048);sun.shadow.camera.near=1;sun.shadow.camera.far=90;sun.shadow.radius=mobileProfile?2:3;sun.shadow.camera.left=-45;sun.shadow.camera.right=45;sun.shadow.camera.top=45;sun.shadow.camera.bottom=-45;sun.shadow.bias=-0.00018;scene.add(sun);
  buildIsland();buildHero();loadRealHero();bind();addEventListener('resize',resize);clock=new THREE.Clock();animate();
 }
 function buildIsland(){
@@ -21,11 +21,25 @@ function buildIsland(){
  const beach=mesh(scene,new THREE.RingGeometry(40,43,64),mat(0xd8c58d),[0,-.1,0]);beach.rotation.x=-Math.PI/2;
  const road=cube(scene,7,.05,48,mat(0x898775),0,.005,-1);
  house(-10,-8,0xd4a65f);house(12,-13,0xc5d0bf);house(-13,15,0xd58b62);
- for(let i=0;i<24;i++){const a=i/24*Math.PI*2,r=15+Math.random()*18;tree(Math.cos(a)*r,Math.sin(a)*r,.75+Math.random()*.6)}
+ buildForest();
  for(let i=0;i<5;i++){const g=new THREE.Group();g.position.set(-4+i*2,-.02,-25);scene.add(g);cube(g,.85,1.65,.16,mat(0xd6d1bd),0,.85,0);cube(g,.35,.35,.2,mat(0xc84735),0,1.05,.12);targets.push(g)}
  for(let i=0;i<16;i++){const a=i/16*Math.PI*2,x=Math.cos(a)*38,z=Math.sin(a)*38;const rock=mesh(scene,new THREE.DodecahedronGeometry(1.5,0),mat(0x788078),[x,.45,z]);rock.scale.y=.7}
 }
 function tree(x,z,s){const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);mesh(g,new THREE.CylinderGeometry(.18*s,.27*s,2*s,7),mat(0x79502f),[0,s,0]);mesh(g,new THREE.SphereGeometry(1.25*s,9,8),mat(0x287b43),[0,2.45*s,0]);mesh(g,new THREE.SphereGeometry(.78*s,9,8),mat(0x3d914b),[.55*s,2.85*s,.12])}
+function buildForest(){
+ const count=24;
+ const trunk=new THREE.InstancedMesh(new THREE.CylinderGeometry(.18,.27,2,7),mat(0x79502f),count);
+ const crown=new THREE.InstancedMesh(new THREE.SphereGeometry(1.25,10,8),mat(0x287b43),count);
+ const crownTop=new THREE.InstancedMesh(new THREE.SphereGeometry(.78,10,8),mat(0x3d914b),count);
+ const dummy=new THREE.Object3D();
+ for(let i=0;i<count;i++){
+  const a=i/count*Math.PI*2,r=15+Math.random()*18,scale=.75+Math.random()*.6,x=Math.cos(a)*r,z=Math.sin(a)*r;
+  dummy.position.set(x,scale,z);dummy.scale.setScalar(scale);dummy.rotation.set(0,0,0);dummy.updateMatrix();trunk.setMatrixAt(i,dummy.matrix);
+  dummy.position.set(x,2.45*scale,z);dummy.scale.setScalar(scale);dummy.updateMatrix();crown.setMatrixAt(i,dummy.matrix);
+  dummy.position.set(x+.55*scale,2.85*scale,z+.12*scale);dummy.scale.setScalar(scale);dummy.updateMatrix();crownTop.setMatrixAt(i,dummy.matrix);
+ }
+ for(const batch of [trunk,crown,crownTop]){batch.castShadow=true;batch.receiveShadow=true;batch.instanceMatrix.needsUpdate=true;scene.add(batch)}
+}
 function house(x,z,color){const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);cube(g,6,3.1,5,mat(color),0,1.55,0);const roof=mesh(g,new THREE.ConeGeometry(4.5,2,4),mat(0x984d37),[0,4,0]);roof.rotation.y=Math.PI/4;cube(g,1,2,.12,mat(0x59402e),0,1,2.56);for(const sx of [-1.7,1.7])cube(g,.9,.8,.1,mat(0x77b9c7),sx,1.9,2.57)}
 function buildHero(){
  hero=new THREE.Group();scene.add(hero);
