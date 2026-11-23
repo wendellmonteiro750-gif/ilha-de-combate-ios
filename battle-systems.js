@@ -8,7 +8,7 @@ export class BattleSystems {
       {name:'ESCOPETA',damage:18,rate:650,mag:6,reserve:30},
       {name:'SNIPER',damage:85,rate:950,mag:5,reserve:20},
       {name:'PISTOLA',damage:24,rate:280,mag:15,reserve:60}
-    ]; this.weaponIndex=0; this.zoneRadius=68; this.zoneCenter=new THREE.Vector3(0,0,0);
+    ]; this.weaponIndex=0; this.zoneRadius=108; this.zoneCenter=new THREE.Vector3(0,0,0);
     this.elapsed=0; this.dropTarget=new THREE.Vector3(0,0,0); this.parachute=null; this.plane=null;
     this.makeUI(); this.makeZone(); this.spawnLoot(); this.makeMap();
   }
@@ -46,23 +46,27 @@ export class BattleSystems {
   makeMap(){
     const T=this.T, mat=(c)=>new T.MeshStandardMaterial({color:c,roughness:.9});
     // Three compact settlements with accessible-looking low buildings and perimeter roads.
-    const sites=[[-30,-28],[29,-25],[-28,29],[30,27],[0,-43],[0,42]];
+    const sites=[[-58,-48],[58,-48],[-58,48],[58,48],[0,-82],[0,82],[-84,0],[84,0]];
     sites.forEach(([x,z],i)=>{
       const group=new T.Group();group.position.set(x,0,z);this.scene.add(group);
-      for(let j=0;j<4;j++){
-        const ox=(j%2)*7-3.5,oz=Math.floor(j/2)*7-3.5;
-        const w=4.8,h=2.7,d=4.8;
+      for(let j=0;j<6;j++){
+        const ox=(j%3)*10-10,oz=Math.floor(j/3)*10-5;
+        const w=8.2,h=3.5,d=7.6;
         const wallMat=mat([0xb7a17d,0x9eaa9d,0xb78b69][(i+j)%3]);
+        const door=1.45;
         const walls=[
-          [w,h,.18,ox,h/2,oz-d/2],[.18,h,d,ox-w/2,h/2,oz],[.18,h,d,ox+w/2,h/2,oz],
-          [(w-1.05)/2,h,.18,ox-(w+1.05)/4,h/2,oz+d/2],
-          [(w-1.05)/2,h,.18,ox+(w+1.05)/4,h/2,oz+d/2]
+          [w,h,.22,ox,h/2,oz-d/2],[.22,h,d,ox-w/2,h/2,oz],[.22,h,d,ox+w/2,h/2,oz],
+          [(w-door)/2,h,.22,ox-(w+door)/4,h/2,oz+d/2],
+          [(w-door)/2,h,.22,ox+(w+door)/4,h/2,oz+d/2]
         ];
         walls.forEach(([ww,hh,dd,px,py,pz])=>{const part=new T.Mesh(new T.BoxGeometry(ww,hh,dd),wallMat);part.position.set(px,py,pz);part.castShadow=true;group.add(part)});
-        const floor=new T.Mesh(new T.BoxGeometry(w,.12,d),mat(0x796b55));floor.position.set(ox,.02,oz);group.add(floor);
-        const roof=new T.Mesh(new T.ConeGeometry(3.9,1.5,4),mat(0x58483d));roof.position.set(ox,h+.7,oz);roof.rotation.y=Math.PI/4;group.add(roof);
-        const openDoor=new T.Mesh(new T.BoxGeometry(.08,1.9,1.0),mat(0x342b24));openDoor.position.set(ox-.48,.95,oz+d/2);openDoor.rotation.y=.35;group.add(openDoor);
-        const window=new T.Mesh(new T.BoxGeometry(1,.75,.08),mat(0x668d91));window.position.set(ox-1.35,1.8,oz+d/2+.05);group.add(window);
+        const floor=new T.Mesh(new T.BoxGeometry(w,.16,d),mat(0x796b55));floor.position.set(ox,.02,oz);group.add(floor);
+        const roof=new T.Mesh(new T.BoxGeometry(w+.5,.28,d+.5),mat([0x58483d,0x3f4b4d,0x6a5140][(i+j)%3]));roof.position.set(ox,h+.15,oz);group.add(roof);
+        const lintel=new T.Mesh(new T.BoxGeometry(door,.22,.28),mat(0x594536));lintel.position.set(ox,h-.11,oz+d/2);group.add(lintel);
+        const window=new T.Mesh(new T.BoxGeometry(1.25,1.05,.08),new T.MeshStandardMaterial({color:0x668d91,roughness:.22,metalness:.12}));window.position.set(ox-2.25,2.15,oz+d/2+.05);group.add(window);
+        const table=new T.Mesh(new T.BoxGeometry(1.6,.16,.9),mat(0x65452e));table.position.set(ox+1.3,.95,oz-.8);group.add(table);
+        for(const legX of [-.65,.65])for(const legZ of [-.32,.32]){const leg=new T.Mesh(new T.BoxGeometry(.12,.9,.12),mat(0x4b3528));leg.position.set(ox+1.3+legX,.48,oz-.8+legZ);group.add(leg)}
+        const cabinet=new T.Mesh(new T.BoxGeometry(.85,1.6,.55),mat(0x8c765a));cabinet.position.set(ox-2.8,.9,oz-2.5);group.add(cabinet);
       }
     });
     const roadMat=mat(0x696c60);
@@ -72,8 +76,8 @@ export class BattleSystems {
   }
   spawnLoot(){
     const T=this.T; const defs=[['RIFLE AR','weapon',0x9a9f91],['ESCOPETA','weapon',0x9b7650],['SNIPER','weapon',0x667b8d],['PISTOLA','weapon',0x7c8a7c],['MUNIÇÃO','ammo',0xd6bd55],['KIT MÉDICO','medkit',0xd64d4d],['COLETE','vest',0x4b7883],['CAPACETE','helmet',0x9caa74],['MOCHILA','backpack',0x856a4b]];
-    for(let i=0;i<54;i++){
-      const [name,type,color]=defs[i%defs.length],a=Math.random()*Math.PI*2,r=8+Math.random()*53,x=Math.cos(a)*r,z=Math.sin(a)*r;
+    for(let i=0;i<108;i++){
+      const [name,type,color]=defs[i%defs.length],a=Math.random()*Math.PI*2,r=10+Math.random()*88,x=Math.cos(a)*r,z=Math.sin(a)*r;
       const g=new T.Group();g.position.set(x,.45,z);
       const box=new T.Mesh(new T.BoxGeometry(.48,.38,.38),new T.MeshStandardMaterial({color,roughness:.5,metalness:.1}));box.castShadow=true;g.add(box);
       const glow=new T.Mesh(new T.TorusGeometry(.38,.035,6,16),new T.MeshBasicMaterial({color:0xffdf73}));glow.rotation.x=Math.PI/2;glow.position.y=-.2;g.add(glow);
@@ -112,7 +116,7 @@ export class BattleSystems {
   }
   start(){
     if(this.phase!=='lobby')return;this.phase='plane';this.elapsed=0;
-    this.hero.position.set(-55,31,-8);
+    this.hero.position.set(-88,31,-8);
     this.plane=this.createPlane();this.scene.add(this.plane);
     this.plane.position.copy(this.hero.position);this.plane.rotation.y=Math.PI/2;
     document.getElementById('br-panel').style.display='block';document.getElementById('br-hint').style.display='block';
@@ -157,10 +161,10 @@ export class BattleSystems {
     if(this.phase==='lobby'||this.phase==='ended')return;
     this.elapsed+=dt;
     if(this.phase==='plane'){
-      this.hero.position.x=Math.min(58,this.hero.position.x+dt*8);this.hero.position.y=31;this.plane.position.copy(this.hero.position);
+      this.hero.position.x=Math.min(88,this.hero.position.x+dt*8);this.hero.position.y=31;this.plane.position.copy(this.hero.position);
       this.plane.rotation.z=Math.sin(this.elapsed*1.1)*.018;
       for(const prop of this.propellers||[])prop.rotation.x+=dt*34;
-      if(this.hero.position.x>=58)this.jump();
+      if(this.hero.position.x>=88)this.jump();
     }else if(this.phase==='freefall'){
       this.freefallTime+=dt;this.hero.position.y=Math.max(0,this.hero.position.y-dt*9.2);
       this.hero.position.x+=moveX*dt*5.5;this.hero.position.z+=(-moveY)*dt*5.5;
@@ -171,7 +175,7 @@ export class BattleSystems {
       if(this.parachute){this.parachute.position.set(this.hero.position.x,this.hero.position.y,this.hero.position.z)}
       if(this.hero.position.y<=0){this.phase='match';this.hero.position.y=0;this.onStatus('POUSOU — ENCONTRE ARMAS E EQUIPAMENTOS');document.getElementById('br-hint').style.display='none';if(this.parachute){this.scene.remove(this.parachute);this.parachute=null}if(this.plane){this.scene.remove(this.plane);this.plane=null}}
     }else if(this.phase==='match'){
-      const radius=Math.max(12,68-this.elapsed*.22);if(radius!==this.zoneRadius){this.zoneRadius=radius;this.syncZone()}
+      const radius=Math.max(18,108-this.elapsed*.28);if(radius!==this.zoneRadius){this.zoneRadius=radius;this.syncZone()}
       const outside=this.hero.position.distanceTo(new this.T.Vector3(this.zoneCenter.x,0,this.zoneCenter.z))>this.zoneRadius;
       if(outside){this.onZoneDamage?.(dt*(this.zoneRadius<25?9:4));if(Math.floor(this.elapsed)%5===0)this.onStatus('FORA DA ZONA SEGURA — VOLTE!')}
       const nearest=this.items.some(it=>it.group.visible&&it.group.position.distanceTo(this.hero.position)<3.4);
