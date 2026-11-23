@@ -2,7 +2,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
 import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
 const $=id=>document.getElementById(id);
 const root=$('game');
-let scene,camera,renderer,clock,hero,rig={},weapon,muzzleFlash,muzzleLight,weaponKick=0,reloadBlend=0,muzzleTime=0,targets=[],realHero=null,realMixer=null,realActions={},activeRealAction='',realBones={},yaw=0,pitch=-.12,moveX=0,moveY=0,velocityX=0,velocityZ=0,locomotionSpeed=0,run=false,aim=false,shoot=false,pose='stand',proneBlend=0,velocityY=0,grounded=true,walkT=0,ammo=30,reloading=false,lastShot=0,started=false;
+let scene,camera,renderer,clock,hero,rig={},weapon,muzzleFlash,muzzleLight,weaponKick=0,reloadBlend=0,muzzleTime=0,targets=[],realHero=null,realMixer=null,realActions={},activeRealAction='',realBones={},realPoseOffsets=[],realCrouchBlend=0,realProneBlend=0,realAimBlend=0,yaw=0,pitch=-.12,moveX=0,moveY=0,velocityX=0,velocityZ=0,locomotionSpeed=0,run=false,aim=false,shoot=false,pose='stand',proneBlend=0,velocityY=0,grounded=true,walkT=0,ammo=30,reloading=false,lastShot=0,started=false;
 const mat=(color,roughness=.9)=>new THREE.MeshStandardMaterial({color,roughness});
 function mesh(parent,geo,material,pos){const o=new THREE.Mesh(geo,material);o.position.set(...pos);parent.add(o);o.castShadow=true;o.receiveShadow=true;return o}
 function cube(parent,w,h,d,m,x,y,z){return mesh(parent,new THREE.BoxGeometry(w,h,d),m,[x,y,z])}
@@ -158,10 +158,20 @@ function loadRealHero(){
    if(o.isBone){
     const n=o.name.toLowerCase().replace(/[\\s_.-]/g,'');
     if(/hips|pelvis/.test(n))realBones.hips=o;
-    else if(/spine2|spine1|spine$/.test(n)&&!realBones.spine)realBones.spine=o;
+    if(/spine2|spine1|spine$/.test(n)&&!realBones.spine)realBones.spine=o;
     if(/neck|head/.test(n)&&!realBones.head)realBones.head=o;
-    if(/leftarm|upperarml/.test(n))realBones.leftArm=o;
-    if(/rightarm|upperarmr/.test(n))realBones.rightArm=o;
+    if(/leftshoulder/.test(n))realBones.leftShoulder=o;
+    if(/rightshoulder/.test(n))realBones.rightShoulder=o;
+    if(/leftarm|leftupperarm|upperarml/.test(n))realBones.leftArm=o;
+    if(/rightarm|rightupperarm|upperarmr/.test(n))realBones.rightArm=o;
+    if(/leftforearm|leftforearm|forearml/.test(n))realBones.leftForearm=o;
+    if(/rightforearm|forearmr/.test(n))realBones.rightForearm=o;
+    if(/lefthand/.test(n))realBones.leftHand=o;
+    if(/righthand/.test(n))realBones.rightHand=o;
+    if(/leftupleg|leftthigh|thighl/.test(n))realBones.leftThigh=o;
+    if(/rightupleg|rightthigh|thighr/.test(n))realBones.rightThigh=o;
+    if(/leftleg|calfl/.test(n))realBones.leftCalf=o;
+    if(/rightleg|calfr/.test(n))realBones.rightCalf=o;
    }
   });
   hero.add(model);
@@ -204,6 +214,43 @@ function playRealAnimation(name){
  next.reset().fadeIn(.22).play();
  if(realActions[activeRealAction])realActions[activeRealAction].fadeOut(.22);
  activeRealAction=key;
+}
+function clearRealPoseOffsets(){
+ for(const entry of realPoseOffsets)entry.bone.quaternion.multiply(entry.offset.clone().invert());
+ realPoseOffsets.length=0;
+}
+function offsetRealBone(bone,x=0,y=0,z=0){
+ if(!bone)return;
+ const q=new THREE.Quaternion().setFromEuler(new THREE.Euler(x,y,z,'XYZ'));
+ bone.quaternion.multiply(q);
+ realPoseOffsets.push({bone,offset:q});
+}
+function applyRealCharacterPose(dt,crouch,prone,aim,moveAmount,runAmount){
+ if(!realHero)return;
+ realCrouchBlend=THREE.MathUtils.damp(realCrouchBlend,crouch?1:0,9,dt);
+ realProneBlend=THREE.MathUtils.damp(realProneBlend,prone?1:0,8,dt);
+ realAimBlend=THREE.MathUtils.damp(realAimBlend,aim?1:0,10,dt);
+ const c=realCrouchBlend,p=realProneBlend,a=realAimBlend;
+ // Additive pose layer is applied after the GLTF locomotion mixer, so
+ // crouch/prone/aim affect the visible humanoid instead of the hidden proxy.
+ offsetRealBone(realBones.hips,-.08*c-1.02*p,0,0);
+ offsetRealBone(realBones.spine,.13*c+.18*p-.12*a,0,0);
+ offsetRealBone(realBones.head,.04*c+.10*p+.08*a,0,0);
+ for(const side of ['left','right']){
+  const phase=walkT+(side==='left'?0:Math.PI);
+  const swing=Math.sin(phase)*moveAmount*(runAmount?.16:.09);
+  const thigh=realBones[side+'Thigh'];
+  const calf=realBones[side+'Calf'];
+  offsetRealBone(thigh,.24*c-.08*p+swing,0,side==='left'?.015:-.015);
+  offsetRealBone(calf,-.48*c+.10*p+Math.max(0,-Math.sin(phase))*moveAmount*.18,0,0);
+ }
+ // Subtle shoulder/forearm adjustments bring the rifle closer to a ready-to-fire stance.
+ offsetRealBone(realBones.rightArm,-.18*a-.10*c-.08*p,0,-.10*a);
+ offsetRealBone(realBones.leftArm,-.24*a-.08*c-.08*p,0,.08*a);
+ offsetRealBone(realBones.rightForearm,-.16*a+.10*c,0,0);
+ offsetRealBone(realBones.leftForearm,-.12*a+.10*c,0,0);
+ offsetRealBone(realBones.rightShoulder,0,0,-.035*a);
+ offsetRealBone(realBones.leftShoulder,0,0,.035*a);
 }
 function bind(){
  const stick=$('stick'),knob=$('knob');let sid=null,rect=null;
@@ -252,11 +299,13 @@ function update(dt){
  locomotionSpeed=THREE.MathUtils.damp(locomotionSpeed,horizontalSpeed,10,dt);
  hero.position.x+=velocityX*dt;
  hero.position.z+=velocityZ*dt;
+ if(realHero)clearRealPoseOffsets();
  if(realMixer){
   realMixer.update(dt);
-  playRealAnimation(prone?'prone':crouch?'crouch':horizontalSpeed>.12?(run?'run':'walk'):'idle');
+  playRealAnimation(horizontalSpeed>.12?(run?'run':'walk'):'idle');
  }
  if(realHero){
+  applyRealCharacterPose(dt,crouch,prone,aim,inputMagnitude,run&&!crouch&&!prone?1:0);
   const bob=horizontalSpeed>.12?Math.abs(Math.sin(walkT*1.7))*.018:Math.sin(walkT*1.2)*.006;
   realHero.position.y=bob;
   realHero.rotation.z=THREE.MathUtils.damp(realHero.rotation.z,THREE.MathUtils.clamp(-velocityX*.018,-.09,.09),8,dt);
