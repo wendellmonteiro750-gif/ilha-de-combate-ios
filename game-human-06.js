@@ -33,7 +33,7 @@ function switchWeapon(){if(reloadTimer>0)return;weaponIndex=(weaponIndex+1)%weap
 
 const playerVelocity=new THREE.Vector3(),cameraLook=new THREE.Vector3(),_shotOrigin=new THREE.Vector3(),_bulletUp=new THREE.Vector3(0,1,0),_enemyDeathOffset=new THREE.Vector3(0,1,0);
 let safeRing=null,zoneElapsed=0,zoneDamageClock=0,lootItems=[];const worldObstacles=[];
-const keys={forward:0,side:0},bullets=[],bulletPool=[],enemies=[],effects=[];const bulletGeometry=new THREE.CylinderGeometry(.012,.012,.72,5),bulletMaterial=new THREE.MeshBasicMaterial({color:0xffdf91,transparent:true,opacity:.92}),particleGeometry=new THREE.SphereGeometry(1,5,4);let dustClock=0,recoil=0,recoilPitch=0,aiming=false,aimBlend=0,hitMarkerTimer=0,fireHeld=false,fireCooldown=0,reloadTimer=0,movementMode='stand';
+const keys={forward:0,side:0},bullets=[],bulletPool=[],enemies=[],effects=[],particlePool=[],particleVelocityPool=[],particleMaterials=new Map();const bulletGeometry=new THREE.CylinderGeometry(.012,.012,.72,5),bulletMaterial=new THREE.MeshBasicMaterial({color:0xffdf91,transparent:true,opacity:.92}),particleGeometry=new THREE.SphereGeometry(1,5,4);let dustClock=0,recoil=0,recoilPitch=0,aiming=false,aimBlend=0,hitMarkerTimer=0,fireHeld=false,fireCooldown=0,reloadTimer=0,movementMode='stand';
 const BASE='https://raw.githubusercontent.com/NoLimitNexus/game-models/main/';
 const defaultSettings={general:100,red:100,two:100,four:100,awm:100,look:100,autoFire:true,invertY:false,minimap:true,hudScale:100,hudOpacity:100,quality:'ultra',shadows:true,vibration:false};
 let gameSettings={...defaultSettings};
@@ -298,19 +298,50 @@ function addWorldDetail(){
  const dummy=new THREE.Object3D();
  const grassGeo=new THREE.ConeGeometry(.075,.62,4);
  const grassMat=new THREE.MeshStandardMaterial({color:0x526d43,roughness:1});
- const grass=new THREE.InstancedMesh(grassGeo,grassMat,innerWidth<700?1250:2600);
- let n=0;for(let i=0;i<(innerWidth<700?1250:2600);i++){const a=Math.random()*Math.PI*2,r=8+Math.random()*111,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.hypot(x,z)>120)continue;dummy.position.set(x,.25,z);dummy.rotation.set((Math.random()-.5)*.18,Math.random()*Math.PI,0);const h=.55+Math.random()*.9;dummy.scale.set(.7,h,.7);dummy.updateMatrix();grass.setMatrixAt(n++,dummy.matrix)}grass.count=n;grass.instanceMatrix.needsUpdate=true;scene.add(grass);
+ const grass=new THREE.InstancedMesh(grassGeo,grassMat,innerWidth<700?1500:3000);
+ let n=0;for(let i=0;i<(innerWidth<700?1500:3000);i++){const a=Math.random()*Math.PI*2,r=8+Math.random()*137,x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.hypot(x,z)>145)continue;dummy.position.set(x,.25,z);dummy.rotation.set((Math.random()-.5)*.18,Math.random()*Math.PI,0);const h=.55+Math.random()*.9;dummy.scale.set(.7,h,.7);dummy.updateMatrix();grass.setMatrixAt(n++,dummy.matrix)}grass.count=n;grass.instanceMatrix.needsUpdate=true;scene.add(grass);
  const bushGeo=new THREE.IcosahedronGeometry(1,1),bushMat=new THREE.MeshStandardMaterial({color:0x294b32,roughness:1});
- const bushes=new THREE.InstancedMesh(bushGeo,bushMat,innerWidth<700?210:420);n=0;
- for(let i=0;i<(innerWidth<700?210:420);i++){const a=Math.random()*Math.PI*2,r=12+Math.random()*105;dummy.position.set(Math.cos(a)*r,.55,Math.sin(a)*r);const q=.45+Math.random()*.8;dummy.scale.set(q*.9,q*.65,q);dummy.rotation.set(Math.random()*.3,Math.random()*6,Math.random()*.3);dummy.updateMatrix();bushes.setMatrixAt(n++,dummy.matrix)}bushes.count=n;bushes.instanceMatrix.needsUpdate=true;bushes.castShadow=true;scene.add(bushes);
+ const bushes=new THREE.InstancedMesh(bushGeo,bushMat,innerWidth<700?250:500);n=0;
+ for(let i=0;i<(innerWidth<700?250:500);i++){const a=Math.random()*Math.PI*2,r=12+Math.random()*128;dummy.position.set(Math.cos(a)*r,.55,Math.sin(a)*r);const q=.45+Math.random()*.8;dummy.scale.set(q*.9,q*.65,q);dummy.rotation.set(Math.random()*.3,Math.random()*6,Math.random()*.3);dummy.updateMatrix();bushes.setMatrixAt(n++,dummy.matrix)}bushes.count=n;bushes.instanceMatrix.needsUpdate=true;bushes.castShadow=true;scene.add(bushes);
  // Pedras maiores na costa para quebrar o horizonte plano.
  const cliffGeo=new THREE.DodecahedronGeometry(1,1),cliffMat=new THREE.MeshStandardMaterial({color:0x68766a,roughness:1});
- const cliffs=new THREE.InstancedMesh(cliffGeo,cliffMat,88);
- for(let i=0;i<88;i++){const a=i/88*Math.PI*2,r=127+Math.random()*8;dummy.position.set(Math.cos(a)*r,1.1,Math.sin(a)*r);const q=2+Math.random()*5;dummy.scale.set(q,q*(.7+Math.random()*.8),q*.8);dummy.rotation.set(Math.random()*.4,Math.random()*6,Math.random()*.4);dummy.updateMatrix();cliffs.setMatrixAt(i,dummy.matrix)}cliffs.instanceMatrix.needsUpdate=true;cliffs.castShadow=true;scene.add(cliffs);
+ const cliffs=new THREE.InstancedMesh(cliffGeo,cliffMat,104);
+ for(let i=0;i<104;i++){const a=i/104*Math.PI*2,r=154+Math.random()*10;dummy.position.set(Math.cos(a)*r,1.1,Math.sin(a)*r);const q=2+Math.random()*5;dummy.scale.set(q,q*(.7+Math.random()*.8),q*.8);dummy.rotation.set(Math.random()*.4,Math.random()*6,Math.random()*.4);dummy.updateMatrix();cliffs.setMatrixAt(i,dummy.matrix)}cliffs.instanceMatrix.needsUpdate=true;cliffs.castShadow=true;scene.add(cliffs);
  // Nuvens volumétricas simples no horizonte.
  const cloudGeo=new THREE.SphereGeometry(1,10,7),cloudMat=new THREE.MeshBasicMaterial({color:0xf4fbff,transparent:true,opacity:.62,depthWrite:false});
  const clouds=new THREE.InstancedMesh(cloudGeo,cloudMat,54);
  for(let i=0;i<54;i++){const a=i/9*Math.PI*2,r=205+(i%4)*18;dummy.position.set(Math.cos(a)*r,38+(i%5)*5,Math.sin(a)*r);dummy.scale.set(9+(i%3)*5,2.5+(i%2),5+(i%4)*2);dummy.rotation.y=a;dummy.updateMatrix();clouds.setMatrixAt(i,dummy.matrix)}clouds.instanceMatrix.needsUpdate=true;scene.add(clouds);
+}
+function addOuterDistricts(){
+ // Nova pista de pouso e hangar no setor oeste: ponto de referência e combate de média distância.
+ const concrete=mat(0x747a77,.94),stripe=mat(0xe4e2d6,.78),metal=mat(0x465052,.62,.35),wall=mat(0x89908b,.9),roof=mat(0x394448,.68,.28);
+ const runway=new THREE.Group();
+ box(runway,58,.12,13,mat(0x5e625f,.98),0,.04,0);
+ for(let x=-25;x<=25;x+=10)box(runway,4,.025,.22,stripe,x,.112,0);
+ for(const side of [-1,1])for(let x=-27;x<=27;x+=6)box(runway,.18,.03,.18,stripe,x,.115,side*5.55);
+ runway.position.set(-126,0,-4);scene.add(runway);
+ const hangar=new THREE.Group();
+ box(hangar,13,.3,10,concrete,0,.15,0);
+ box(hangar,13,4.6,.28,wall,0,2.6,-4.85);
+ box(hangar,.28,4.6,9.7,wall,-6.35,2.6,0);box(hangar,.28,4.6,9.7,wall,6.35,2.6,0);
+ box(hangar,2.15,4.6,.28,wall,-5.4,2.6,4.85);box(hangar,2.15,4.6,.28,wall,5.4,2.6,4.85);
+ box(hangar,8.5,.24,10.5,roof,0,4.95,0);
+ for(let x=-3.6;x<=3.6;x+=1.2)box(hangar,.07,3.8,.1,metal,x,2.5,5.02);
+ hangar.position.set(-126,0,-24);scene.add(hangar);worldObstacles.push({x:-126,z:-24,radius:8.2});
+ // Torre de radar costeira com antena giratória visual e plataforma de observação.
+ const tower=new THREE.Group(),steel=mat(0x566166,.55,.62),platform=mat(0x737d7d,.78);
+ for(const x of [-1.6,1.6])for(const z of [-1.4,1.4]){const leg=new THREE.Mesh(new THREE.BoxGeometry(.18,7,.18),steel);leg.position.set(x,3.5,z);leg.castShadow=true;tower.add(leg);}
+ box(tower,4,.24,3.6,platform,0,5.9,0);
+ const mast=new THREE.Mesh(new THREE.CylinderGeometry(.11,.16,4.8,10),steel);mast.position.set(0,8.35,0);tower.add(mast);
+ const dish=new THREE.Mesh(new THREE.SphereGeometry(1,14,10,0,Math.PI*2,0,Math.PI*.52),mat(0xb9c2bd,.48,.55));dish.scale.set(1.25,.18,1.25);dish.position.set(0,9.4,0);dish.rotation.x=-.2;tower.add(dish);
+ const beacon=new THREE.Mesh(new THREE.SphereGeometry(.16,10,8),new THREE.MeshBasicMaterial({color:0xff5947}));beacon.position.set(0,10.8,0);tower.add(beacon);
+ tower.position.set(112,0,96);scene.add(tower);worldObstacles.push({x:112,z:96,radius:4.2});
+ // Cais de madeira e pequenos pilares na costa sul.
+ const dock=new THREE.Group(),wood=mat(0x76563a,.9),dark=mat(0x4d463b,.9);
+ box(dock,22,.42,5.8,wood,0,.12,0);
+ for(let x=-10;x<=10;x+=2.5){for(const z of [-2.25,2.25]){const post=new THREE.Mesh(new THREE.CylinderGeometry(.14,.19,1.7,8),dark);post.position.set(x,-.48,z);dock.add(post);}}
+ for(let x=-10;x<=10;x+=2.5)box(dock,.12,.14,5.9,dark,x,.38,0);
+ dock.position.set(24,0,137);scene.add(dock);
 }
 function buildWorld(){
  scene.background=new THREE.Color(0x9dbdce);scene.fog=new THREE.FogExp2(0xb8c5bb,.00082);
@@ -321,19 +352,21 @@ function buildWorld(){
  const sun=new THREE.DirectionalLight(0xffe8ca,2.85);sun.position.set(-42,78,34);sun.castShadow=!!gameSettings.shadows&&gameSettings.quality!=='low';sun.shadow.mapSize.set(innerWidth<700?1024:2048,innerWidth<700?1024:2048);sun.shadow.camera.left=-132;sun.shadow.camera.right=132;sun.shadow.camera.top=132;sun.shadow.camera.bottom=-132;sun.shadow.bias=-.00016;sun.shadow.normalBias=.022;sun.shadow.radius=innerWidth<700?2:3;sun.shadow.camera.near=1;sun.shadow.camera.far=240;scene.add(sun);
  const fill=new THREE.DirectionalLight(0x9dbbd0,.5);fill.position.set(55,28,-48);scene.add(fill);
  const groundMap=addTextureGround();const groundMaterial=new THREE.MeshStandardMaterial({map:groundMap,roughness:.98,bumpMap:groundMap,bumpScale:innerWidth<700?.018:.055});const ground=new THREE.Mesh(new THREE.PlaneGeometry(800,800),groundMaterial);ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
- const beach=new THREE.Mesh(new THREE.RingGeometry(119,141,192),new THREE.MeshStandardMaterial({color:0xd9c18c,roughness:.95}));beach.rotation.x=-Math.PI/2;beach.position.y=.035;scene.add(beach);
+ const beach=new THREE.Mesh(new THREE.RingGeometry(145,168,192),new THREE.MeshStandardMaterial({color:0xd9c18c,roughness:.95}));beach.rotation.x=-Math.PI/2;beach.position.y=.035;scene.add(beach);
  const waterMat=new THREE.MeshStandardMaterial({color:0x168aa6,roughness:.24,metalness:.12,transparent:false});
  const water=new THREE.Mesh(new THREE.PlaneGeometry(1100,1100,1,1),waterMat);water.rotation.x=-Math.PI/2;water.position.y=-.28;scene.add(water);
  waterMat.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\\nvarying vec3 vWaterWorld;').replace('#include <begin_vertex>','#include <begin_vertex>\\n vWaterWorld=(modelMatrix*vec4(transformed,1.0)).xyz; float waveA=sin(vWaterWorld.x*.035+vWaterWorld.z*.022);float waveB=cos(vWaterWorld.z*.04-vWaterWorld.x*.018);transformed.y += waveA*.035+waveB*.022;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\\nvarying vec3 vWaterWorld;').replace('#include <color_fragment>','#include <color_fragment>\\n float ripple=0.5+0.5*sin(vWaterWorld.x*.22+vWaterWorld.z*.16)*cos(vWaterWorld.z*.19-vWaterWorld.x*.12);float fresnel=pow(1.0-max(dot(normalize(cameraPosition-vWaterWorld),vec3(0.0,1.0,0.0)),0.0),2.4);float glint=pow(max(sin(vWaterWorld.x*.31+vWaterWorld.z*.17)*cos(vWaterWorld.z*.27),0.0),12.0);diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.38,.78,.82),ripple*.14+fresnel*.20);diffuseColor.rgb+=vec3(.30,.38,.34)*glint*.12;');};
  for(let i=0;i<18;i++){const a=i*2.399,r=22+(i%8)*3.3;addPalm(Math.cos(a)*r,Math.sin(a)*r,.75+(i%4)*.1)}
- for(let i=0;i<34;i++){const a=i*2.399,r=52+(i%13)*5.1;addPalm(Math.cos(a)*r,Math.sin(a)*r,.85+(i%5)*.12)}
+ for(let i=0;i<46;i++){const a=i*2.399,r=52+(i%17)*5.1;addPalm(Math.cos(a)*r,Math.sin(a)*r,.85+(i%5)*.12)}
  addHouse(-12,-12,.2,0,true);addHouse(14,-18,-.3,1,true);addHouse(22,9,.8,2,true);addHouse(-25,15,-.5,3,true);
  addHouse(68,35,.4,2,true);addHouse(-76,-42,-.7,1);addHouse(38,-88,.2,0);addHouse(-92,72,1.1,3);addHouse(102,5,-.4,2);
  // Novas casas distribuídas pela ilha para criar mais áreas de exploração.
  addHouse(42,54,.65,1);addHouse(-48,68,-.25,2,true);addHouse(84,-58,1.35,3);addHouse(-58,-76,.45,0);
  addHouse(6,82,-.8,2,true);addHouse(-104,18,.3,1);addHouse(108,78,-.55,0);addHouse(-8,-96,1.05,3);
+ addHouse(-128,34,.2,1);addHouse(126,-38,-.4,2);addHouse(28,128,.7,3);
  for(let i=0;i<34;i++){const a=i*2.4,r=9+(i%6)*4;const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.55+(i%4)*.22,1),mat(i%2?0x58644d:0x7b8069));rock.position.set(Math.cos(a)*r,.3,Math.sin(a)*r);rock.scale.y=.65;rock.castShadow=true;rock.receiveShadow=true;scene.add(rock)}
  addRoadNetwork();
+ addOuterDistricts();
  addSettlementDetails();
  addWorldDetail();
  addCombatLandmarks();
@@ -341,7 +374,7 @@ function buildWorld(){
 }
 function addSafeZone(){
  const ring=new THREE.Mesh(new THREE.TorusGeometry(1,.012,8,256),new THREE.MeshBasicMaterial({color:0x54dfff,transparent:true,opacity:.82}));
- ring.rotation.x=-Math.PI/2;ring.position.y=.18;ring.scale.set(120,120,120);scene.add(ring);safeRing=ring;
+ ring.rotation.x=-Math.PI/2;ring.position.y=.18;ring.scale.set(145,145,145);scene.add(ring);safeRing=ring;
 }
 function addLootDrops(){
  // Caixas e itens distribuídos junto às casas e pontos de exploração.
@@ -409,7 +442,7 @@ function takeLoot(){
 function updateSafeZone(dt){
  if(document.querySelector('#hud').style.display==='none')return;
  zoneElapsed+=dt;
- const radius=Math.max(24,120-zoneElapsed*.42);
+ const radius=Math.max(28,145-zoneElapsed*.42);
  if(safeRing){safeRing.scale.set(radius,radius,radius);const pulse=.72+Math.sin(zoneElapsed*3)*.1;safeRing.material.opacity=pulse}
  document.querySelector('#zoneText').textContent='ZONA '+Math.round(radius)+'m';
  const p=playerRig.holder.position;
@@ -752,9 +785,11 @@ function applyBodyMotion(rig,forwardSpeed,lateralSpeed,dt){
 }
 function addParticle(position,color=0xffb34d,speed=3,size=.09,life=.35){
  if(effects.length>=(innerWidth<700?18:75))return;
- const mesh=new THREE.Mesh(particleGeometry,new THREE.MeshBasicMaterial({color,transparent:true,opacity:1}));
+ let mesh=particlePool.pop();
+ if(!mesh){let material=particleMaterials.get(color);if(!material){material=new THREE.MeshBasicMaterial({color,transparent:true,opacity:1,depthWrite:false});particleMaterials.set(color,material);}mesh=new THREE.Mesh(particleGeometry,material);}
+ let material=particleMaterials.get(color);if(!material){material=new THREE.MeshBasicMaterial({color,transparent:true,opacity:1,depthWrite:false});particleMaterials.set(color,material);}mesh.material=material;mesh.visible=true;
  mesh.position.copy(position);mesh.scale.setScalar(size);scene.add(mesh);
- const velocity=new THREE.Vector3((Math.random()-.5)*speed,(Math.random()*.85)*speed,(Math.random()-.5)*speed);
+ const velocity=particleVelocityPool.pop()||new THREE.Vector3();velocity.set((Math.random()-.5)*speed,Math.random()*.85*speed,(Math.random()-.5)*speed);
  effects.push({mesh,velocity,life,maxLife:life,gravity:5,kind:'particle',baseScale:size});
 }
 function burst(position,count=9,color=0xffa33d,speed=4){
@@ -775,11 +810,11 @@ function updateEffects(dt){
   const fx=effects[i];fx.life-=dt;
   if(fx.kind==='particle'){
    fx.velocity.y-=fx.gravity*dt;fx.mesh.position.addScaledVector(fx.velocity,dt);
-   const k=Math.max(0,fx.life/fx.maxLife);fx.mesh.material.opacity=k;fx.mesh.scale.setScalar(fx.baseScale*(.45+k*.55));
+   const k=Math.max(0,fx.life/fx.maxLife);fx.mesh.scale.setScalar(fx.baseScale*k);
   }else if(fx.kind==='flash'){
    const k=Math.max(0,fx.life/fx.maxLife);fx.mesh.scale.setScalar(.55+k*.7);fx.light.intensity=5*k;
   }
-  if(fx.life<=0){scene.remove(fx.mesh);fx.mesh.traverse?.(o=>{if(o.material)o.material.dispose()});if(fx.mesh.material)fx.mesh.material.dispose();if(fx.light)scene.remove(fx.light);effects.splice(i,1)}
+  if(fx.life<=0){scene.remove(fx.mesh);if(fx.kind==='particle'){fx.mesh.visible=false;fx.mesh.scale.setScalar(0);particlePool.push(fx.mesh);fx.velocity.set(0,0,0);particleVelocityPool.push(fx.velocity)}else{fx.mesh.traverse?.(o=>{if(o.material)o.material.dispose()});if(fx.mesh.material)fx.mesh.material.dispose();if(fx.light)scene.remove(fx.light)}effects.splice(i,1)}
  }
 }
 async function spawnEnemy(x,z,i){const rig=await createFighter(true,i);rig.holder.position.set(x,0,z);enemies.push({rig,hp:100,alive:true,attack:0,anim:'idle'});return rig}
@@ -921,7 +956,7 @@ function animate(){
   const targetVelocity=move.clone().multiplyScalar(moveSpeed);
   const acceleration=movementMode==='prone'?7:movementMode==='crouch'?8:canSprint?11:9;
   playerVelocity.lerp(targetVelocity,1-Math.exp(-acceleration*dt));
-  const collisionSteps=Math.max(1,Math.ceil(playerVelocity.length()*dt/.12));const collisionStep=dt/collisionSteps;for(let step=0;step<collisionSteps;step++){const previousPlayerPosition=p.position.clone();p.position.addScaledVector(playerVelocity,collisionStep);resolvePlayerObstacles(previousPlayerPosition);}p.position.x=THREE.MathUtils.clamp(p.position.x,-124,124);p.position.z=THREE.MathUtils.clamp(p.position.z,-124,124);
+  const collisionSteps=Math.max(1,Math.ceil(playerVelocity.length()*dt/.12));const collisionStep=dt/collisionSteps;for(let step=0;step<collisionSteps;step++){const previousPlayerPosition=p.position.clone();p.position.addScaledVector(playerVelocity,collisionStep);resolvePlayerObstacles(previousPlayerPosition);}p.position.x=THREE.MathUtils.clamp(p.position.x,-158,158);p.position.z=THREE.MathUtils.clamp(p.position.z,-158,158);
  const grounded=p.position.y<=.001;
   const moving=playerVelocity.length()>.16;
   if(moving){dustClock-=dt;if(dustClock<=0){dustClock=movementMode==='prone'?.34:playerVelocity.length()>4.2?.12:.24;const foot=p.position.clone().add(new THREE.Vector3((Math.random()-.5)*.55,.12,(Math.random()-.5)*.55));for(let n=0;n<(movementMode==='prone'?1:3);n++)addParticle(foot,0xc6b58a,1.1,.055,.3)}
