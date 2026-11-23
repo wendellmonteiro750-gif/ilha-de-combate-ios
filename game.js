@@ -509,7 +509,8 @@ async function createFighter(isEnemy=false,index=0){
    this.gaitPhase=(this.gaitPhase||0)+dt*(this.sprintBlend?13.5:8.5)*(.25+locomotion*.75);
    const gait=Math.sin(this.gaitPhase),opposite=Math.sin(this.gaitPhase+Math.PI);
    const crouchFactor=this.stanceMode==='crouch'?.42:this.stanceMode==='prone'?.08:1;
-   // A animação do GLB já movimenta as pernas; a camada procedural só corrige a passada para evitar duplicação exagerada.\n   const gaitAmount=locomotion*crouchFactor*(this.sprintBlend?.16:.11);
+   // A animação do GLB já movimenta as pernas; a camada procedural só corrige a passada para evitar duplicação exagerada.
+   const gaitAmount=locomotion*crouchFactor*(this.sprintBlend?.16:.11);
    for(const [name,angle] of [['mixamorigLeftUpLeg',gait*.42],['mixamorigRightUpLeg',opposite*.42],['mixamorigLeftLeg',Math.max(0,-gait)*.52],['mixamorigRightLeg',Math.max(0,-opposite)*.52]]){
     const bone=this.bones.get(name);if(!bone||gaitAmount<.001)continue;
     const delta=new THREE.Quaternion().setFromEuler(new THREE.Euler(angle*gaitAmount,0,0,'XYZ'));
@@ -622,7 +623,19 @@ async function createFighter(isEnemy=false,index=0){
      const reloadSocket=this.weaponLeftReloadGrip||this.weaponLeftGrip;
      const reloadTarget=reloadSocket.getWorldPosition(new THREE.Vector3());
      const handTarget=support.lerp(reloadTarget,reload);
-     solveHand(leftUpper,leftFore,leftHand,handTarget);\n     // Mantém a orientação do punho esquerdo relativa à arma, sem torcer a mão a cada quadro.\n     model.updateMatrixWorld(true);this.weaponPivot.updateMatrixWorld(true);\n     const weaponWorldQ=this.weaponPivot.getWorldQuaternion(new THREE.Quaternion());\n     if(!this.leftGripOrientationOffset){\n      const handWorldQ=leftHand.getWorldQuaternion(new THREE.Quaternion());\n      this.leftGripOrientationOffset=weaponWorldQ.clone().invert().multiply(handWorldQ);\n     }\n     const desiredHandWorldQ=weaponWorldQ.clone().multiply(this.leftGripOrientationOffset);\n     const handParentQ=leftHand.parent.getWorldQuaternion(new THREE.Quaternion());\n     const desiredHandLocalQ=handParentQ.invert().multiply(desiredHandWorldQ);\n     leftHand.quaternion.slerp(desiredHandLocalQ,.72);\n     if(!this._ikRestore.some(item=>item.bone===leftHand))this._ikRestore.push({bone:leftHand,quaternion:leftHand.quaternion.clone()});
+     solveHand(leftUpper,leftFore,leftHand,handTarget);
+     // Mantém a orientação do punho esquerdo relativa à arma, sem torcer a mão a cada quadro.
+     model.updateMatrixWorld(true);this.weaponPivot.updateMatrixWorld(true);
+     const weaponWorldQ=this.weaponPivot.getWorldQuaternion(new THREE.Quaternion());
+     if(!this.leftGripOrientationOffset){
+      const handWorldQ=leftHand.getWorldQuaternion(new THREE.Quaternion());
+      this.leftGripOrientationOffset=weaponWorldQ.clone().invert().multiply(handWorldQ);
+     }
+     const desiredHandWorldQ=weaponWorldQ.clone().multiply(this.leftGripOrientationOffset);
+     const handParentQ=leftHand.parent.getWorldQuaternion(new THREE.Quaternion());
+     const desiredHandLocalQ=handParentQ.invert().multiply(desiredHandWorldQ);
+     if(!this._ikRestore.some(item=>item.bone===leftHand))this._ikRestore.push({bone:leftHand,quaternion:leftHand.quaternion.clone()});
+     leftHand.quaternion.slerp(desiredHandLocalQ,.72);
     }
    }
   },
@@ -672,7 +685,9 @@ function setMovementMode(mode){
 function applyBodyMotion(rig,forwardSpeed,lateralSpeed,dt){
  if(!rig)return;
  const holder=rig.holder;
- const run=THREE.MathUtils.clamp(Math.hypot(forwardSpeed,lateralSpeed)/5.4,0,1);\n rig.lateralMotion=THREE.MathUtils.clamp(lateralSpeed/5.4,-1,1);\n rig.forwardMotion=THREE.MathUtils.clamp(forwardSpeed/5.4,-1,1);
+ const run=THREE.MathUtils.clamp(Math.hypot(forwardSpeed,lateralSpeed)/5.4,0,1);
+ rig.lateralMotion=THREE.MathUtils.clamp(lateralSpeed/5.4,-1,1);
+ rig.forwardMotion=THREE.MathUtils.clamp(forwardSpeed/5.4,-1,1);
  const stance=rig.stanceMode==='prone' ? -.10 : rig.stanceMode==='crouch' ? -.035 : 0;
  const firing=rig.isPlayer?THREE.MathUtils.clamp(rig.weaponFireBlend||0,0,1):0;
  const aiming=rig.isPlayer?THREE.MathUtils.clamp(rig.weaponAimBlend||0,0,1):0;
