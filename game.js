@@ -505,28 +505,29 @@ async function createFighter(isEnemy=false,index=0){
    const target=this.stanceMode==='crouch'||this.stanceMode==='prone'?1:0;
    this._stanceBlend=THREE.MathUtils.damp(this._stanceBlend,target,10,dt);
    const prone=this.stanceMode==='prone',crouch=this.stanceMode==='crouch';
-   const ready=this.isPlayer?1:.72,aim=THREE.MathUtils.clamp(this.weaponAimBlend||0,0,1);
+   const ready=this.isPlayer?1:.72,aim=THREE.MathUtils.clamp(this.weaponAimBlend||0,0,1),combatPose=Math.max(aim,THREE.MathUtils.clamp(this.weaponFireBlend||0,0,1));
    const armReady=ready*(1-aim*.12),elbowReady=ready*(1-aim*.08);
    const pose=[
     ['mixamorigHips',prone ? .82 : crouch ? .42 : -(this.jumpBlend||0)*.16,0,0],
-    ['mixamorigSpine',prone ? .48 : crouch ? -.10 : -.035*aim-(this.jumpBlend||0)*.08,0,0],
-    ['mixamorigSpine1',prone ? .22 : crouch ? -.08 : -.045*aim-(this.jumpBlend||0)*.04,0,0],
+    ['mixamorigSpine',prone ? .48 : crouch ? -.10 : -.19*combatPose-(this.jumpBlend||0)*.08,0,0],
+    ['mixamorigSpine1',prone ? .22 : crouch ? -.08 : -.13*combatPose-(this.jumpBlend||0)*.04,0,0],
     ['mixamorigLeftUpLeg',prone ? -.42 : crouch ? -.52 : -(this.jumpBlend||0)*.34,0,0],
     ['mixamorigRightUpLeg',prone ? -.42 : crouch ? -.52 : -(this.jumpBlend||0)*.28,0,0],
     ['mixamorigLeftLeg',prone ? .18 : crouch ? 1.02 : (this.jumpBlend||0)*.62,0,0],
     ['mixamorigRightLeg',prone ? .18 : crouch ? 1.02 : (this.jumpBlend||0)*.54,0,0],
-    ['mixamorigLeftArm',prone ? -.22 : crouch ? -.08 : -1.02*armReady-(this.jumpBlend||0)*.06,0,.10*armReady],
+    ['mixamorigLeftArm',prone ? -.22 : crouch ? -.08 : -1.12*armReady-(this.jumpBlend||0)*.06,0,.13*armReady],
     ['mixamorigLeftForeArm',0,0,-.08*elbowReady],
     ['mixamorigLeftHand',.08*ready,0,0],
-    ['mixamorigRightArm',prone ? -.22 : crouch ? -.08 : -.88*armReady-(this.jumpBlend||0)*.06,0,-.10*armReady],
+    ['mixamorigRightArm',prone ? -.22 : crouch ? -.08 : -1.02*armReady-(this.jumpBlend||0)*.06,0,-.13*armReady],
     ['mixamorigRightForeArm',0,0,.06*elbowReady],
     ['mixamorigRightHand',-.04*ready,0,0]
    ];
    for(const [name,x,y,z] of pose){
     const bone=this.bones.get(name);if(!bone)continue;
-    const delta=new THREE.Quaternion().setFromEuler(new THREE.Euler(x*this._stanceBlend,y*this._stanceBlend,z*this._stanceBlend,'XYZ'));
+    const torsoPose=/mixamorigSpine(1|2)?$/.test(name),poseAmount=torsoPose?combatPose:this._stanceBlend;
+    const delta=new THREE.Quaternion().setFromEuler(new THREE.Euler(x*(torsoPose?1:this._stanceBlend),y*(torsoPose?1:this._stanceBlend),z*(torsoPose?1:this._stanceBlend),'XYZ'));
     const armPose=/mixamorig(Left|Right)(Arm|ForeArm|Hand)$/.test(name);
-    const poseBlend=armPose?1:this._stanceBlend;
+    const poseBlend=armPose?1:poseAmount;
     if(poseBlend>0){
      const applied=new THREE.Quaternion().slerp(delta,poseBlend);
      bone.quaternion.multiply(applied);
@@ -791,6 +792,7 @@ function animate(){
    p.rotation.y+=turn*Math.min(1,(aiming||fireHeld?12:5)*dt);play(playerRig,p.position.y>.04?'jump':'idle');
   }
   playerRig.weaponAimBlend=aimBlend;
+   playerRig.weaponFireBlend=THREE.MathUtils.damp(playerRig.weaponFireBlend||0,fireHeld?1:THREE.MathUtils.clamp(recoil*5,0,1),14,dt);
    playerRig.runBlend=canSprint?1:0;
    playerRig.weaponRunBlend=THREE.MathUtils.damp(playerRig.weaponRunBlend||0,canSprint?1:0,9,dt);
    if(playerRig.weaponPivot&&playerRig.weaponBasePosition&&playerRig.weaponBaseRotation){
