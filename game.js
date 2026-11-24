@@ -518,24 +518,32 @@ function sound(freq=140,duration=.07,kind='sawtooth',volume=.035){try{audioCtx |
 function hitEffect(point,color=0xffd27a){const p=new THREE.Mesh(new THREE.SphereGeometry(.13,8,8),new THREE.MeshBasicMaterial({color}));p.position.copy(point);scene.add(p);effects.push({o:p,t:.22})}
 function shoot(){
  if(!gameStarted||reloading||ammo<=0)return;
- const now=performance.now();if(now-lastShot<(activeWeapon==='RIFLE'?115:220))return;lastShot=now;ammo--;recoilAnim=1;
- flash.visible=true;muzzle.intensity=4;sound(115,.095,'sawtooth',.055);
- setTimeout(()=>{flash.visible=false;muzzle.intensity=0},65);
- rifle.position.z=-.215;setTimeout(()=>rifle.position.z=-.27,75);
+ const config=weaponConfigs[activeWeapon],now=performance.now();
+ if(now-lastShot<config.rate)return;
+ lastShot=now;ammo=Math.max(0,ammo-1);ammoByWeapon[activeWeapon]=ammo;reserveByWeapon[activeWeapon]=reserve;
+ weaponKick=1;muzzleTime=activeWeapon==='RIFLE'?.075:.055;
+ if(activeWeapon==='RIFLE'){flash.visible=true;muzzle.intensity=4}
+ else{pistolFlash.visible=true;pistolMuzzle.intensity=2.8}
+ sound(activeWeapon==='RIFLE'?115:175,.095,'sawtooth',.055);
  const origin=camera.position.clone(),direction=new THREE.Vector3();camera.getWorldDirection(direction);ray.set(origin,direction);
  const live=bots.filter(b=>b.alive),hits=ray.intersectObjects(live.map(b=>b.g),true);
  let distance=80;
  if(hits.length&&hits[0].distance<115){
   distance=hits[0].distance;const hit=hits[0],bot=live.find(b=>{let node=hit.object;while(node&&node!==b.g)node=node.parent;return node===b.g});
-  if(bot){bot.hp-=activeWeapon==='RIFLE'?34:22;bot.hit=.22;bot.torsoBot.rotation.x=-.24;hitEffect(hit.point,0xffb85c);setMsg('ACERTO CONFIRMADO');$('message').classList.add('hit');setTimeout(()=>$('message').classList.remove('hit'),180);if(bot.hp<=0){bot.alive=false;bot.g.visible=false;score++;setMsg('INIMIGO ELIMINADO')}}
+  if(bot){bot.hp-=config.damage;bot.hit=.22;bot.torsoBot.rotation.x=-.24;hitEffect(hit.point,0xffb85c);setMsg('ACERTO CONFIRMADO');$('message').classList.add('hit');setTimeout(()=>$('message').classList.remove('hit'),180);if(bot.hp<=0){bot.alive=false;bot.g.visible=false;score++;setMsg('INIMIGO ELIMINADO')}}
  }
  const end=origin.clone().addScaledVector(direction,Math.min(distance,80));
  const geo=new THREE.BufferGeometry().setFromPoints([origin,end]);
  const line=new THREE.Line(geo,new THREE.LineBasicMaterial({color:0xffd98a,transparent:true,opacity:.9}));
  scene.add(line);effects.push({o:line,t:.11});updateHud();
 }
-function reload(){if(reloading||ammo===30||reserve<=0)return;reloading=true;reloadAnim=1;setMsg('RECARREGANDO');sound(260,.16,'triangle',.025);setTimeout(()=>sound(190,.13,'triangle',.025),520);setTimeout(()=>{const n=Math.min(30-ammo,reserve);ammo+=n;reserve-=n;reloading=false;updateHud();setMsg('PRONTO PARA COMBATE')},1450)}
-function updateLoot(){for(const l of loot){if(!l.active)continue;l.g.rotation.y+=.012;if(l.g.position.distanceTo(hero.position)<2.4){l.active=false;l.g.visible=false;sound(620,.07,'sine',.025);if(l.kind==='MUNIÇÃO')reserve+=45;else if(l.kind==='KIT MÉDICO')health=Math.min(100,health+35);else if(l.kind==='COLETE')health=Math.min(150,health+15);else{ammo=Math.min(30,ammo+10);reserve+=20}setMsg('COLETADO: '+l.kind);updateHud()}}}
+function reload(){
+ const capacity=weaponConfigs[activeWeapon].capacity;
+ if(reloading||ammo>=capacity||reserve<=0)return;
+ reloading=true;reloadElapsed=0;reloadProgress=0;reloadCommitted=false;reloadBlend=0;
+ setMsg('RECARREGANDO');sound(260,.16,'triangle',.025);
+}
+function updateLoot(){for(const l of loot){if(!l.active)continue;l.g.rotation.y+=.012;if(l.g.position.distanceTo(hero.position)<2.4){l.active=false;l.g.visible=false;sound(620,.07,'sine',.025);if(l.kind==='MUNIÇÃO')reserve+=45;else if(l.kind==='KIT MÉDICO')health=Math.min(100,health+35);else if(l.kind==='COLETE')health=Math.min(150,health+15);else{ammo=Math.min(weaponConfigs[activeWeapon].capacity,ammo+10);reserve+=20}ammoByWeapon[activeWeapon]=ammo;reserveByWeapon[activeWeapon]=reserve;setMsg('COLETADO: '+l.kind);updateHud()}}}
 function updateBots(dt){
  for(const b of bots){
   if(!b.alive)continue;
@@ -564,8 +572,8 @@ function updateBots(dt){
   }
  }
 }
-function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);if(gameStarted){updateKeyboardMove();move(dt);if(shooting)shoot();updateLoot();updateBots(dt)}animateSoldierRig(dt);cameraUpdate(dt);for(let i=effects.length-1;i>=0;i--){effects[i].t-=dt;if(effects[i].t<=0){scene.remove(effects[i].o);effects[i].o.geometry.dispose();effects[i].o.material.dispose();effects.splice(i,1)}}renderer.render(scene,camera)}
-function start(){gameStarted=true;health=100;ammo=30;reserve=120;score=0;hero.position.set(0,0,10);playerVelocity.set(0,0,0);jumpVelocity=0;airborne=false;$('lobby').classList.add('hidden');setMsg('POUSO CONCLUÍDO · EXPLORE AS NOVE CIDADES');updateHud()}
+function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04);if(gameStarted){updateKeyboardMove();move(dt);animatePlayerRig(dt);if(shooting)shoot();updateLoot();updateBots(dt)}else animatePlayerRig(dt);cameraUpdate(dt);for(let i=effects.length-1;i>=0;i--){effects[i].t-=dt;if(effects[i].t<=0){scene.remove(effects[i].o);effects[i].o.geometry.dispose();effects[i].o.material.dispose();effects.splice(i,1)}}renderer.render(scene,camera)}
+function start(){gameStarted=true;health=100;ammo=30;reserve=120;ammoByWeapon.RIFLE=30;reserveByWeapon.RIFLE=120;ammoByWeapon.PISTOLA=15;reserveByWeapon.PISTOLA=60;activeWeapon='RIFLE';rifle.visible=true;pistol.visible=false;score=0;hero.position.set(0,0,10);playerVelocity.set(0,0,0);jumpVelocity=0;airborne=false;reloading=false;reloadElapsed=0;reloadProgress=0;reloadCommitted=false;weaponKick=0;crouchBlend=0;proneBlend=0;aimBlend=0;$('lobby').classList.add('hidden');setMsg('POUSO CONCLUÍDO · EXPLORE AS NOVE CIDADES');updateHud()}
 $('play').addEventListener('click',start);
 $('fire').addEventListener('pointerdown',e=>{e.preventDefault();shooting=true;shoot()});['pointerup','pointercancel','pointerleave'].forEach(t=>$('fire').addEventListener(t,()=>shooting=false));
 $('reload').addEventListener('pointerdown',e=>{e.preventDefault();reload()});
