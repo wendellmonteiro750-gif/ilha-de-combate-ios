@@ -14,7 +14,7 @@ Projeto original de battle royale em terceira pessoa para navegador mobile e des
 
 ## Executar
 
-Abra 'index.html' por um servidor estático ou GitHub Pages. O Three.js e o GLTFLoader são carregados pelo jsDelivr. O service worker mantém os arquivos principais em cache para uso posterior.
+Abra 'index.html' por um servidor estático ou GitHub Pages. O Three.js é carregado pelo jsDelivr; o GLTFLoader só é importado quando o slot de modelo externo é ativado. O service worker mantém os arquivos principais em cache para uso posterior.
 
 ## Testes automatizados
 
