@@ -6,6 +6,8 @@ on:
       - 'game.js'
       - 'player-rig-math.mjs'
       - 'tests/**'
+      - 'index.html'
+      - 'service-worker.js'
       - '.github/workflows/syntax-check.yml'
 jobs:
   syntax:
