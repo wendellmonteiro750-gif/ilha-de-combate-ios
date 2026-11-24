@@ -1,8 +1,12 @@
-name: JavaScript syntax check
+name: JavaScript syntax and rig tests
 on:
   push:
     branches: [main, novo-battle-royale]
-    paths: [game.js]
+    paths:
+      - 'game.js'
+      - 'player-rig-math.mjs'
+      - 'tests/**'
+      - '.github/workflows/syntax-check.yml'
 jobs:
   syntax:
     runs-on: ubuntu-latest
@@ -12,3 +16,5 @@ jobs:
         with:
           node-version: 22
       - run: node --check game.js
+      - run: node --check player-rig-math.mjs
+      - run: node --test tests/*.test.mjs
