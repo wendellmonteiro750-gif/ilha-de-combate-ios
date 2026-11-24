@@ -234,7 +234,8 @@ function loadSoldierModel(){
   soldierLoadState='loaded';setMsg('SOLDADO 3D ORIGINAL CARREGADO');
  },undefined,error=>{soldierLoadState='fallback';console.info('GLB militar opcional ausente; rig tático local ativo.',error)});
 }
-loadSoldierModel();
+const ENABLE_EXTERNAL_MILITARY_GLB=false; // Ativar após incluir assets/military-male-03.glb no repositório.
+if(ENABLE_EXTERNAL_MILITARY_GLB)loadSoldierModel();
 let yaw=0,pitch=-.16,mx=0,my=0,run=false,aim=false,pose='stand',health=100,ammo=30,reserve=120,shooting=false,lastShot=0,reloading=false,gameStarted=false,score=0;
 const weaponConfigs={RIFLE:{capacity:30,rate:115,damage:34},PISTOLA:{capacity:15,rate:220,damage:22}};
 const ammoByWeapon={RIFLE:30,PISTOLA:15},reserveByWeapon={RIFLE:120,PISTOLA:60};
