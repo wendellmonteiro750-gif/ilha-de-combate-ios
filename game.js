@@ -1,5 +1,4 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
 import { stepDampedVelocity, solveTwoBoneIK } from './player-rig-math.mjs?v=rig-math-1';
 
 const $=id=>document.getElementById(id);
@@ -201,7 +200,7 @@ box(pistolMagazine,.09,.22,.12,black,0,-.02,0);
 const pistolMuzzle=new THREE.PointLight(0xffb34f,0,4);pistolMuzzle.position.set(0,0,-.54);pistol.add(pistolMuzzle);
 const pistolFlash=new THREE.Mesh(new THREE.ConeGeometry(.085,.24,8),new THREE.MeshBasicMaterial({color:0xffc45d}));pistolFlash.rotation.x=-Math.PI/2;pistolFlash.position.set(0,0,-.62);pistolFlash.visible=false;pistol.add(pistolFlash);
 let activeWeapon='RIFLE',weaponKick=0,reloadBlend=0,muzzleTime=0,reloadElapsed=0,reloadProgress=0,reloadCommitted=false;
-const downAxis=new THREE.Vector3(0,-1,0),ikShoulder=new THREE.Vector3(),ikTarget=new THREE.Vector3(),ikPole=new THREE.Vector3();
+const downAxis=new THREE.Vector3(0,-1,0);
 function switchWeapon(){
  if(reloading)return;
  ammoByWeapon[activeWeapon]=ammo;reserveByWeapon[activeWeapon]=reserve;
@@ -212,9 +211,11 @@ function switchWeapon(){
 }
 // Optional original GLB slot. The repository currently keeps the detailed local rig as fallback.
 let soldierModel=null,soldierBones={},soldierRest={},soldierLoadState='fallback';
-const gltfLoader=new GLTFLoader();
-function loadSoldierModel(){
- gltfLoader.load('./assets/military-male-03.glb',gltf=>{
+async function loadSoldierModel(){
+ try{
+  const {GLTFLoader}=await import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js');
+  const gltfLoader=new GLTFLoader();
+  gltfLoader.load('./assets/military-male-03.glb',gltf=>{
   const model=gltf.scene;model.updateMatrixWorld(true);
   const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3());
   if(size.y<.01){soldierLoadState='fallback';return;}
@@ -232,7 +233,8 @@ function loadSoldierModel(){
   rifle.position.set(.015,-.035,.045);rifle.rotation.set(0,Math.PI,0);rifle.scale.setScalar(.72);
   pistol.position.set(.015,-.025,.045);pistol.rotation.set(0,Math.PI,0);pistol.scale.setScalar(.8);
   soldierLoadState='loaded';setMsg('SOLDADO 3D ORIGINAL CARREGADO');
- },undefined,error=>{soldierLoadState='fallback';console.info('GLB militar opcional ausente; rig tático local ativo.',error)});
+  },undefined,error=>{soldierLoadState='fallback';console.info('GLB militar opcional ausente; rig tático local ativo.',error)});
+ }catch(error){soldierLoadState='fallback';console.info('GLTFLoader opcional não carregado.',error)}
 }
 const ENABLE_EXTERNAL_MILITARY_GLB=false; // Ativar após incluir assets/military-male-03.glb no repositório.
 if(ENABLE_EXTERNAL_MILITARY_GLB)loadSoldierModel();
