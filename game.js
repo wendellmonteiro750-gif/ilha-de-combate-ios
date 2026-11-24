@@ -273,7 +273,7 @@ spawnBots();
 function setMsg(s){$('message').textContent=s}
 function updateHud(){$('health').textContent='VIDA '+Math.max(0,Math.round(health));$('ammo').textContent=ammo+' / '+reserve;$('kills').textContent='ELIMINAÇÕES '+score;$('poseLabel').textContent='POSTURA: '+(pose==='prone'?'DEITADO':pose==='crouch'?'AGACHADO':'EM PÉ')}
 function collidesAt(x,z){return blockers.some(b=>x>b.minX-.32&&x<b.maxX+.32&&z>b.minZ-.32&&z<b.maxZ+.32)}
-let poseBlend=0,jumpVelocity=0,walkPhase=0,crouchBlend=0,proneBlend=0,aimBlend=0;
+let jumpVelocity=0,walkPhase=0,crouchBlend=0,proneBlend=0,aimBlend=0;
 const playerVelocity=new THREE.Vector3(),moveTarget=new THREE.Vector3();
 let airborne=false,landSquash=0,lastMoveDirection=new THREE.Vector3();
 function move(dt){
@@ -299,8 +299,6 @@ function move(dt){
  const facingYaw=aim?yaw:moving?Math.atan2(-lastMoveDirection.x,-lastMoveDirection.z):yaw;
  const angleDelta=Math.atan2(Math.sin(facingYaw-hero.rotation.y),Math.cos(facingYaw-hero.rotation.y));
  hero.rotation.y+=angleDelta*(1-Math.exp(-dt*(aim?12:8)));
- const targetPose=pose==='prone'?1:pose==='crouch'?.48:0;
- poseBlend=THREE.MathUtils.damp(poseBlend,targetPose,9,dt);
  walkPhase+=dt*(moving?(run&&pose==='stand'&&!aim?10.5:5.8):1.05);
  if(hero.position.y>0||jumpVelocity>0){
   airborne=true;jumpVelocity-=19.5*dt;
@@ -375,7 +373,7 @@ function animateRealSoldierRig(dt,speed,sprinting){
    if(reloadProgress<.24)target.lerp(mag,smooth01(reloadProgress/.24));
    else if(reloadProgress<.55)target.lerpVectors(mag,pouchPoint,smooth01((reloadProgress-.24)/.31));
    else if(reloadProgress<.82)target.lerpVectors(pouchPoint,mag,smooth01((reloadProgress-.55)/.27));
-   else target.lerp(mag,smooth01((reloadProgress-.82)/.18));
+   else target.lerpVectors(mag,rifle.localToWorld(new THREE.Vector3(0,-.105,-.43)),smooth01((reloadProgress-.82)/.18));
   }
   solveBoneArmIK(soldierBones.leftUpperArm,soldierBones.leftForearm,soldierBones.leftHand,target);
  }
@@ -423,7 +421,7 @@ function animateProceduralRig(dt,speed,sprinting){
  rifle.visible=activeWeapon==='RIFLE';pistol.visible=activeWeapon==='PISTOLA';
  magazine.position.y=-.18-(reloadProgress<.45?smooth01(reloadProgress/.45)*.20:0);
  magazine.visible=reloadProgress<.45||reloadProgress>.82;
- spareMagazine.visible=reloadProgress>=.40&&reloadProgress<=.86;
+ spareMagazine.visible=reloadProgress>=.40&&reloadProgress<=.82;
  spareMagazine.position.set(0,THREE.MathUtils.lerp(-.43,-.18,smooth01((reloadProgress-.40)/.46)),.10);
  pistolMagazine.position.y=-.16-(activeWeapon==='PISTOLA'&&reloading?smooth01(reloadProgress)*.08:0);
  rig.body.updateMatrixWorld(true);
