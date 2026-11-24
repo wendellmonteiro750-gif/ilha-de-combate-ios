@@ -217,15 +217,14 @@ function loadSoldierModel(){
  gltfLoader.load('./assets/military-male-03.glb',gltf=>{
   const model=gltf.scene;model.updateMatrixWorld(true);
   const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3());
-  if(size.y<.01)throw new Error('GLB sem altura válida');
+  if(size.y<.01){soldierLoadState='fallback';return;}
   const scale=1.82/size.y;model.scale.setScalar(scale);
   model.position.set(-bounds.getCenter(new THREE.Vector3()).x*scale,-bounds.min.y*scale,-bounds.getCenter(new THREE.Vector3()).z*scale);
-  model.rotation.y=Math.PI;
   model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.side=THREE.FrontSide;o.material.roughness=Math.max(.5,o.material.roughness??.8)}}if(o.isBone)soldierRest[o.name]=o.rotation.clone()});
   const bone=(name)=>model.getObjectByName('Bip01 '+name);
   soldierBones={pelvis:bone('Pelvis'),spine:bone('Spine'),spine1:bone('Spine1'),spine2:bone('Spine2'),head:bone('Head'),rightUpperArm:bone('R UpperArm'),leftUpperArm:bone('L UpperArm'),rightForearm:bone('R Forearm'),leftForearm:bone('L Forearm'),rightHand:bone('R Hand'),leftHand:bone('L Hand'),rightThigh:bone('R Thigh'),leftThigh:bone('L Thigh'),rightCalf:bone('R Calf'),leftCalf:bone('L Calf')};
   const required=['pelvis','spine','head','rightUpperArm','leftUpperArm','rightForearm','leftForearm','rightHand','leftHand','rightThigh','leftThigh','rightCalf','leftCalf'];
-  if(!required.every(k=>soldierBones[k]))throw new Error('Rig Bip01 incompleto');
+  if(!required.every(k=>soldierBones[k])){soldierLoadState='fallback';soldierBones={};soldierRest={};return;}
   hero.add(model);soldierModel=model;
   rig.body.visible=false;
   rifle.removeFromParent();pistol.removeFromParent();
@@ -382,7 +381,6 @@ function animateRealSoldierRig(dt,speed,sprinting){
 }
 function animateProceduralRig(dt,speed,sprinting){
  const moving=speed>.12,phase=walkPhase,strafe=THREE.MathUtils.clamp(mx,-1,1);
- const gait=Math.sin(phase),opposite=Math.sin(phase+Math.PI);
  const breathing=Math.sin(performance.now()*.0018)*.009;
  const landing=landSquash;
  rig.body.position.y=THREE.MathUtils.lerp(1.03,.72,crouchBlend);
@@ -411,8 +409,6 @@ function animateProceduralRig(dt,speed,sprinting){
   ankle.rotation.x=THREE.MathUtils.damp(ankle.rotation.x,(stance&&cycle>.48?-.12:0)-footLift*.25,14,dt);
  });
  const idleSway=Math.sin(phase*.72)*.012,aimSway=aim?Math.sin(phase*1.15)*.008:0;
- weaponKick=THREE.MathUtils.damp(weaponKick,0,aim?13:8,dt);
- reloadBlend=THREE.MathUtils.damp(reloadBlend,reloading?1:0,7,dt);
  rifle.position.x=.28+(aim?-.035:0)+Math.sin(phase*.9)*.006;
  rifle.position.y=.50+(aim?.055:0)+idleSway+aimSway-reloadBlend*.07;
  rifle.position.z=-.28;
@@ -470,6 +466,7 @@ function animatePlayerRig(dt){
  reloadBlend=THREE.MathUtils.damp(reloadBlend,reloading?1:0,7,dt);
  muzzleTime=Math.max(0,muzzleTime-dt);
  if(muzzleTime===0){flash.visible=false;pistolFlash.visible=false;muzzle.intensity=0;pistolMuzzle.intensity=0}
+ rifle.visible=activeWeapon==='RIFLE';pistol.visible=activeWeapon==='PISTOLA';
  if(soldierModel)animateRealSoldierRig(dt,speed,sprinting);
  else animateProceduralRig(dt,speed,sprinting);
 }
