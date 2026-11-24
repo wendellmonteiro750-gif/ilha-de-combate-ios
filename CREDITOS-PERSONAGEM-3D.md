@@ -1,13 +1,17 @@
-# Créditos do personagem 3D
+# Créditos e estado do personagem
 
-O personagem humano principal usa o modelo **Superhero Male FullBody** do pacote Universal Base Characters, de Quaternius, e animações da **Universal Animation Library** do mesmo autor.
+## Rig ativo no jogo
 
-- Autor: Quaternius
-- Licença dos modelos: CC0 1.0 Universal
-- Licença das animações: CC0 1.0 Universal
-- Página do personagem: https://quaternius.com/packs/universalbasecharacters.html
-- Página das animações: https://quaternius.com/packs/universalanimationlibrary.html
-- Modelo GLB otimizado utilizado: https://github.com/Seyamalam/blood-league-kickoff/tree/main/public/assets/vendor/quaternius
-- Runtime: Three.js GLTFLoader e AnimationMixer
+O personagem padrão é um operador tático procedural construído para este projeto com geometrias e materiais Three.js. O código do rig, das poses e das transições é original; não há malha, animação, textura ou código de Ghost Recon, The Last of Us, Free Fire ou PUBG no build atual.
 
-Os arquivos GLB são carregados no navegador. O jogo mantém o controle de movimento e câmera; as animações importadas conduzem o esqueleto humano.
+A implementação usa uma hierarquia articulada de pelve, tronco, cabeça, braços, antebraços, mãos, coxas, joelhos e tornozelos. Os braços usam IK de dois segmentos para alcançar os pontos de empunhadura da arma.
+
+## Slot opcional para GLB
+
+O carregador opcional espera um arquivo em `assets/military-male-03.glb` com ossos `Bip01`. Ele permanece desativado até que o arquivo seja incluído no repositório. O GLB fornecido anteriormente tem 80 articulações e não contém clips de animação embutidos; portanto, mesmo com a malha, locomoção e combate continuam precisando de camadas procedurais ou de animações compatíveis.
+
+A licença do GLB fornecido deve ser confirmada antes de redistribuí-lo no repositório público.
+
+## Referências técnicas
+
+Quaternius Universal Base Characters e Universal Animation Library foram referências técnicas consideradas em etapas anteriores, mas não são o personagem nem os clips carregados pelo build atual. Ghost Recon e The Last of Us são referências de alto nível para estados de locomoção, postura de arma, mira de ombro e integração de IK; nenhum asset ou código proprietário desses jogos é utilizado.
