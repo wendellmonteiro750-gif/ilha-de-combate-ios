@@ -23,8 +23,8 @@ test('combat rig exposes locomotion, two-hand IK and reload states', () => {
 });
 
 test('HTML and service worker use the same versioned game modules', () => {
-  assert.match(index, /game\.js\?v=rig-combat-1/);
+  assert.match(index, /game\.js\?v=rig-combat-2/);
   assert.match(worker, /operation-nine-v13/);
-  assert.match(worker, /game\.js\?v=rig-combat-1/);
+  assert.match(worker, /game\.js\?v=rig-combat-2/);
   assert.match(worker, /player-rig-math\.mjs\?v=rig-math-1/);
 });
