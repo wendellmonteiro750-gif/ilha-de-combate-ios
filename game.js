@@ -1,5 +1,6 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
+import { stepDampedVelocity, solveTwoBoneIK } from './player-rig-math.mjs?v=rig-math-1';
 
 const $=id=>document.getElementById(id);
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x9bb9c3);scene.fog=new THREE.Fog(0x9bb9c3,100,310);
@@ -236,6 +237,8 @@ function loadSoldierModel(){
 }
 loadSoldierModel();
 let yaw=0,pitch=-.16,mx=0,my=0,run=false,aim=false,pose='stand',health=100,ammo=30,reserve=120,shooting=false,lastShot=0,reloading=false,gameStarted=false,score=0;
+const weaponConfigs={RIFLE:{capacity:30,rate:115,damage:34},PISTOLA:{capacity:15,rate:220,damage:22}};
+const ammoByWeapon={RIFLE:30,PISTOLA:15},reserveByWeapon={RIFLE:120,PISTOLA:60};
 const ray=new THREE.Raycaster(),tmp=new THREE.Vector3(),clock=new THREE.Clock();
 function spawnBots(){
  for(let i=0;i<18;i++){
@@ -268,7 +271,7 @@ spawnBots();
 function setMsg(s){$('message').textContent=s}
 function updateHud(){$('health').textContent='VIDA '+Math.max(0,Math.round(health));$('ammo').textContent=ammo+' / '+reserve;$('kills').textContent='ELIMINAÇÕES '+score;$('poseLabel').textContent='POSTURA: '+(pose==='prone'?'DEITADO':pose==='crouch'?'AGACHADO':'EM PÉ')}
 function collidesAt(x,z){return blockers.some(b=>x>b.minX-.32&&x<b.maxX+.32&&z>b.minZ-.32&&z<b.maxZ+.32)}
-let poseBlend=0,jumpVelocity=0,walkPhase=0,reloadAnim=0,recoilAnim=0;
+let poseBlend=0,jumpVelocity=0,walkPhase=0,crouchBlend=0,proneBlend=0,aimBlend=0;
 const playerVelocity=new THREE.Vector3(),moveTarget=new THREE.Vector3();
 let airborne=false,landSquash=0,lastMoveDirection=new THREE.Vector3();
 function move(dt){
@@ -277,45 +280,198 @@ function move(dt){
  if(input.lengthSq()>1)input.normalize();
  const grounded=hero.position.y<=.001&&jumpVelocity<=0;
  const postureFactor=pose==='crouch'?.52:pose==='prone'?.2:1;
- const sprintFactor=run&&pose==='stand'?1.72:1;
+ const sprintFactor=run&&pose==='stand'&&!aim?1.72:1;
  const maxSpeed=4.15*postureFactor*sprintFactor;
  moveTarget.copy(input).multiplyScalar(maxSpeed);
- // Aceleração e frenagem progressivas: dá peso à corrida sem atrasar a resposta lateral.
- const accel=grounded?(input.lengthSq()>.001?19:23):7.5;
- playerVelocity.x=THREE.MathUtils.damp(playerVelocity.x,moveTarget.x,accel,dt);
- playerVelocity.z=THREE.MathUtils.damp(playerVelocity.z,moveTarget.z,accel,dt);
- const velocityLength=Math.hypot(playerVelocity.x,playerVelocity.z);
- if(velocityLength>.12){
+ const velocity=stepDampedVelocity(playerVelocity.x,playerVelocity.z,moveTarget.x,moveTarget.z,grounded?(input.lengthSq()>.001?19:23):7.5,dt);
+ playerVelocity.set(velocity.x,0,velocity.z);
+ const speed=Math.hypot(playerVelocity.x,playerVelocity.z);
+ if(speed>.08){
   const nx=THREE.MathUtils.clamp(hero.position.x+playerVelocity.x*dt,-137,137);
   const nz=THREE.MathUtils.clamp(hero.position.z+playerVelocity.z*dt,-137,137);
   if(!collidesAt(nx,hero.position.z))hero.position.x=nx;else playerVelocity.x=0;
   if(!collidesAt(hero.position.x,nz))hero.position.z=nz;else playerVelocity.z=0;
   lastMoveDirection.set(playerVelocity.x,0,playerVelocity.z).normalize();
-  hero.rotation.y=THREE.MathUtils.damp(hero.rotation.y,Math.atan2(-lastMoveDirection.x,-lastMoveDirection.z),14,dt);
  }
- const moving=velocityLength>.16;
+ const moving=speed>.12;
+ const facingYaw=aim?yaw:moving?Math.atan2(-lastMoveDirection.x,-lastMoveDirection.z):yaw;
+ const angleDelta=Math.atan2(Math.sin(facingYaw-hero.rotation.y),Math.cos(facingYaw-hero.rotation.y));
+ hero.rotation.y+=angleDelta*(1-Math.exp(-dt*(aim?12:8)));
  const targetPose=pose==='prone'?1:pose==='crouch'?.48:0;
  poseBlend=THREE.MathUtils.damp(poseBlend,targetPose,9,dt);
- const gaitSpeed=THREE.MathUtils.clamp(velocityLength/4.5,0,1.8);
- walkPhase+=dt*(7.5+gaitSpeed*6.5)*(moving?1:0);
- const idleBreath=Math.sin(performance.now()*.0022)*.018,aimPose=aim?1:0;
- torso.position.y=THREE.MathUtils.lerp(1.05,.72,poseBlend)+idleBreath+landSquash;
- torso.rotation.x=-1.48*poseBlend-aimPose*.035-recoilAnim*.08;
- rifle.rotation.x=1.48*poseBlend-aimPose*.06-recoilAnim*.16+reloadAnim*.12;
- limbs.forEach(l=>{
-  const swing=moving?Math.sin(walkPhase)*(run?.82:.46)*Math.min(1,gaitSpeed):0;
-  if(l.leg)l.g.rotation.x=swing*(1-poseBlend*.72);
-  else l.g.rotation.x=THREE.MathUtils.lerp(aimPose?-.42:idleBreath,Math.PI*poseBlend,poseBlend)+swing*(1-poseBlend)+reloadAnim*(l.side<0?.38:.7);
- });
- // Salto com controle aéreo e manutenção do impulso: permite pular para trás/lado e corrigir a trajetória.
+ walkPhase+=dt*(moving?(run&&pose==='stand'&&!aim?10.5:5.8):1.05);
  if(hero.position.y>0||jumpVelocity>0){
   airborne=true;jumpVelocity-=19.5*dt;
   hero.position.y=Math.max(0,hero.position.y+jumpVelocity*dt);
-  if(hero.position.y===0){
-   jumpVelocity=0;airborne=false;landSquash=-.055;
-  }
+  if(hero.position.y===0){jumpVelocity=0;airborne=false;landSquash=-.055}
  }else airborne=false;
  landSquash=THREE.MathUtils.damp(landSquash,0,18,dt);
+}
+function smooth01(v){const t=THREE.MathUtils.clamp(v,0,1);return t*t*(3-2*t)}
+function solveProceduralArm(arm,targetLocal,proneAmount,aimAmount){
+ const shoulder=new THREE.Vector3(arm.side*.43,.70,0);
+ const pole=new THREE.Vector3(arm.side*.88,-.12,.48).lerp(new THREE.Vector3(arm.side*1.05,-.28,.18),proneAmount);
+ const result=solveTwoBoneIK(shoulder.toArray(),targetLocal.toArray(),pole.toArray(),.52,.46);
+ const elbow=new THREE.Vector3(...result.elbow);
+ const upperDir=elbow.clone().sub(shoulder).normalize();
+ const foreDir=targetLocal.clone().sub(elbow).normalize();
+ arm.upper.position.copy(shoulder);
+ arm.upper.quaternion.setFromUnitVectors(downAxis,upperDir);
+ arm.fore.position.copy(elbow);
+ arm.fore.quaternion.setFromUnitVectors(downAxis,foreDir);
+ arm.hand.position.set(0,-.46,0);
+ arm.hand.rotation.set(-.10*aimAmount,arm.side*.025,arm.side*-.04);
+}
+function relaxProceduralArm(arm,phase){
+ const shoulder=new THREE.Vector3(arm.side*.43,.70,0);
+ arm.upper.position.copy(shoulder);
+ arm.upper.quaternion.setFromEuler(new THREE.Euler(.12+Math.sin(phase)*.025,0,arm.side*.16));
+ const elbow=shoulder.clone().add(new THREE.Vector3(arm.side*.05,-.31,.04));
+ arm.fore.position.copy(elbow);
+ arm.fore.quaternion.setFromEuler(new THREE.Euler(-.48,0,arm.side*.05));
+ arm.hand.position.set(0,-.46,0);
+}
+function solveBoneArmIK(upper,lower,hand,targetWorld){
+ if(!upper||!lower||!hand)return;
+ const rotateToward=(joint,end)=>{
+  soldierModel.updateMatrixWorld(true);
+  const jointPos=joint.getWorldPosition(new THREE.Vector3());
+  const endPos=end.getWorldPosition(new THREE.Vector3());
+  const from=endPos.sub(jointPos),to=targetWorld.clone().sub(jointPos);
+  if(from.lengthSq()<1e-8||to.lengthSq()<1e-8)return;
+  const delta=new THREE.Quaternion().setFromUnitVectors(from.normalize(),to.normalize());
+  const desiredWorld=delta.multiply(joint.getWorldQuaternion(new THREE.Quaternion()));
+  const parentWorld=joint.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
+  joint.quaternion.copy(parentWorld.multiply(desiredWorld));
+ };
+ for(let i=0;i<7;i++){rotateToward(lower,hand);rotateToward(upper,hand)}
+ soldierModel.updateMatrixWorld(true);
+}
+function animateRealSoldierRig(dt,speed,sprinting){
+ const phase=walkPhase,stride=speed>.12?Math.sin(phase)*(sprinting?.34:.20):0;
+ const idle=Math.sin(performance.now()*.002)*.012;
+ const apply=(name,x=0,y=0,z=0)=>{const key='Bip01 '+name,b=soldierModel.getObjectByName(key),r=soldierRest[key];if(b&&r)b.rotation.set(r.x+x,r.y+y,r.z+z)};
+ apply('Pelvis',-1.08*proneBlend+idle*.25);
+ apply('Spine',-.10*crouchBlend-.18*proneBlend-.10*aimBlend);
+ apply('Spine1',-.08*crouchBlend-.12*proneBlend-.08*aimBlend);
+ apply('Spine2',-.04*proneBlend-.06*aimBlend-weaponKick*.10);
+ apply('Head',-.05*aimBlend-idle);
+ apply('R UpperArm',-.48-.16*aimBlend+stride*.15);
+ apply('R Forearm',-.34-.10*aimBlend-weaponKick*.08);
+ apply('L UpperArm',-.50-.18*aimBlend-stride*.15);
+ apply('L Forearm',-.38-.10*aimBlend);
+ apply('L Thigh',stride*(1-proneBlend));
+ apply('R Thigh',-stride*(1-proneBlend));
+ apply('L Calf',Math.max(0,-stride)*.55);
+ apply('R Calf',Math.max(0,stride)*.55);
+ soldierModel.updateMatrixWorld(true);
+ if(activeWeapon==='RIFLE'&&rifle.visible){
+  let target=rifle.localToWorld(new THREE.Vector3(0,-.105,-.43));
+  if(reloading){
+   const mag=rifle.localToWorld(new THREE.Vector3(-.06,-.32,-.20));
+   const pouchPoint=soldierModel.localToWorld(new THREE.Vector3(-.28,.10,.08));
+   if(reloadProgress<.24)target.lerp(mag,smooth01(reloadProgress/.24));
+   else if(reloadProgress<.55)target.lerpVectors(mag,pouchPoint,smooth01((reloadProgress-.24)/.31));
+   else if(reloadProgress<.82)target.lerpVectors(pouchPoint,mag,smooth01((reloadProgress-.55)/.27));
+   else target.lerp(mag,smooth01((reloadProgress-.82)/.18));
+  }
+  solveBoneArmIK(soldierBones.leftUpperArm,soldierBones.leftForearm,soldierBones.leftHand,target);
+ }
+ rifle.rotation.x=-weaponKick*.16+reloadBlend*.08;
+ pistol.rotation.x=-weaponKick*.20;
+}
+function animateProceduralRig(dt,speed,sprinting){
+ const moving=speed>.12,phase=walkPhase,strafe=THREE.MathUtils.clamp(mx,-1,1);
+ const gait=Math.sin(phase),opposite=Math.sin(phase+Math.PI);
+ const breathing=Math.sin(performance.now()*.0018)*.009;
+ const landing=landSquash;
+ rig.body.position.y=THREE.MathUtils.lerp(1.03,.72,crouchBlend);
+ rig.body.position.y=THREE.MathUtils.lerp(rig.body.position.y,.36,proneBlend)+breathing+landing;
+ const forwardLean=THREE.MathUtils.clamp(speed*.018,0,.10);
+ rig.body.rotation.x=THREE.MathUtils.lerp(rig.body.rotation.x,-.12*crouchBlend-1.10*proneBlend-forwardLean+landing*.7,1-Math.exp(-dt*9));
+ rig.body.rotation.z=THREE.MathUtils.lerp(rig.body.rotation.z,aim?-.035*strafe:THREE.MathUtils.clamp(-playerVelocity.x*.025,-.12,.12)-.08*strafe,1-Math.exp(-dt*8));
+ rig.pelvis.rotation.y=THREE.MathUtils.damp(rig.pelvis.rotation.y,aim?-.025*strafe:0,7,dt);
+ rig.head.rotation.x=THREE.MathUtils.damp(rig.head.rotation.x,(aim?-.10:0)+breathing*.55,7,dt);
+ rig.head.rotation.y=THREE.MathUtils.damp(rig.head.rotation.y,aim?0:strafe*.035,7,dt);
+ rig.head.rotation.z=THREE.MathUtils.damp(rig.head.rotation.z,THREE.MathUtils.clamp(-playerVelocity.x*.012,-.07,.07),7,dt);
+ rig.legs.forEach(({upper,knee,ankle,side})=>{
+  const phaseSide=phase+(side===1?0:Math.PI),cycle=((phaseSide/(Math.PI*2))%1+1)%1;
+  const stance=cycle<.62,stepT=stance?cycle/.62:(cycle-.62)/.38;
+  const strideLength=(sprinting?.42:.29)*Math.min(1.2,speed/3.2);
+  const footTravel=stance?THREE.MathUtils.lerp(-strideLength*.5,strideLength*.5,stepT):THREE.MathUtils.lerp(strideLength*.5,-strideLength*.5,stepT);
+  const footLift=stance?0:Math.sin(stepT*Math.PI)*(sprinting?.15:.10);
+  const swing=moving?Math.sin(phaseSide)*(.34+(sprinting?.18:0)):Math.sin(phaseSide*.5)*.015;
+  const crawl=Math.sin(phase*1.25+(side===1?0:Math.PI));
+  const upperTarget=THREE.MathUtils.lerp(swing*(1-proneBlend),-.10+crawl*.28,proneBlend)-crouchBlend*.08;
+  const kneeTarget=THREE.MathUtils.lerp(moving?Math.max(0,-Math.sin(phaseSide))*(sprinting?.85:.58):.025,.40+Math.max(0,crawl)*.18,proneBlend)+crouchBlend*.22;
+  upper.rotation.x=THREE.MathUtils.damp(upper.rotation.x,upperTarget,12,dt);
+  knee.rotation.x=THREE.MathUtils.damp(knee.rotation.x,kneeTarget,12,dt);
+  ankle.position.z=THREE.MathUtils.damp(ankle.position.z,-.025+footTravel,18,dt);
+  ankle.position.y=THREE.MathUtils.damp(ankle.position.y,-.39+footLift*(1-proneBlend),18,dt);
+  ankle.rotation.x=THREE.MathUtils.damp(ankle.rotation.x,(stance&&cycle>.48?-.12:0)-footLift*.25,14,dt);
+ });
+ const idleSway=Math.sin(phase*.72)*.012,aimSway=aim?Math.sin(phase*1.15)*.008:0;
+ weaponKick=THREE.MathUtils.damp(weaponKick,0,aim?13:8,dt);
+ reloadBlend=THREE.MathUtils.damp(reloadBlend,reloading?1:0,7,dt);
+ rifle.position.x=.28+(aim?-.035:0)+Math.sin(phase*.9)*.006;
+ rifle.position.y=.50+(aim?.055:0)+idleSway+aimSway-reloadBlend*.07;
+ rifle.position.z=-.28;
+ rifle.rotation.z=THREE.MathUtils.damp(rifle.rotation.z,aim?-.025*strafe:idleSway*.65,9,dt);
+ rifle.rotation.x=THREE.MathUtils.damp(rifle.rotation.x,aim?-.035:proneBlend*.08,10,dt)-weaponKick*.19+reloadBlend*.22;
+ rifle.rotation.y=THREE.MathUtils.damp(rifle.rotation.y,Math.sin(phase*.7)*.012+reloadBlend*.12,8,dt);
+ pistol.position.set(.28,.47+(aim?.035:0)+idleSway,-.23);
+ pistol.rotation.x=THREE.MathUtils.damp(pistol.rotation.x,aim?-.05:0,10,dt)-weaponKick*.2;
+ rifle.visible=activeWeapon==='RIFLE';pistol.visible=activeWeapon==='PISTOLA';
+ magazine.position.y=-.18-(reloadProgress<.45?smooth01(reloadProgress/.45)*.20:0);
+ magazine.visible=reloadProgress<.45||reloadProgress>.82;
+ spareMagazine.visible=reloadProgress>=.40&&reloadProgress<=.86;
+ spareMagazine.position.set(0,THREE.MathUtils.lerp(-.43,-.18,smooth01((reloadProgress-.40)/.46)),.10);
+ pistolMagazine.position.y=-.16-(activeWeapon==='PISTOLA'&&reloading?smooth01(reloadProgress)*.08:0);
+ rig.body.updateMatrixWorld(true);
+ const rightArm=rig.arms.find(a=>a.side===1),leftArm=rig.arms.find(a=>a.side===-1);
+ if(activeWeapon==='RIFLE'){
+  const rightWorld=rifle.localToWorld(new THREE.Vector3(0,-.20,-.18));
+  const leftWorld=rifle.localToWorld(new THREE.Vector3(0,-.02,-.40));
+  const rightLocal=rig.body.worldToLocal(rightWorld.clone());
+  let leftLocal=rig.body.worldToLocal(leftWorld.clone());
+  if(reloading){
+   const magWorld=rifle.localToWorld(new THREE.Vector3(-.06,-.32,-.20));
+   const pouchWorld=rig.body.localToWorld(new THREE.Vector3(-.28,.10,.10));
+   const magLocal=rig.body.worldToLocal(magWorld.clone()),pouchLocal=rig.body.worldToLocal(pouchWorld.clone());
+   if(reloadProgress<.24)leftLocal.lerpVectors(leftLocal,magLocal,smooth01(reloadProgress/.24));
+   else if(reloadProgress<.55)leftLocal.lerpVectors(magLocal,pouchLocal,smooth01((reloadProgress-.24)/.31));
+   else if(reloadProgress<.82)leftLocal.lerpVectors(pouchLocal,magLocal,smooth01((reloadProgress-.55)/.27));
+   else leftLocal.lerpVectors(magLocal,rig.body.worldToLocal(leftWorld.clone()),smooth01((reloadProgress-.82)/.18));
+  }
+  solveProceduralArm(rightArm,rightLocal,proneBlend,aimBlend);
+  solveProceduralArm(leftArm,leftLocal,proneBlend,aimBlend);
+ }else{
+  const rightWorld=pistol.localToWorld(new THREE.Vector3(0,-.16,.02));
+  solveProceduralArm(rightArm,rig.body.worldToLocal(rightWorld.clone()),proneBlend,aimBlend);
+  relaxProceduralArm(leftArm,phase);
+ }
+}
+function animatePlayerRig(dt){
+ const speed=Math.hypot(playerVelocity.x,playerVelocity.z),moving=speed>.12;
+ const sprinting=run&&pose==='stand'&&moving&&!aim;
+ crouchBlend=THREE.MathUtils.damp(crouchBlend,pose==='crouch'?1:0,8,dt);
+ proneBlend=THREE.MathUtils.damp(proneBlend,pose==='prone'?1:0,7.5,dt);
+ aimBlend=THREE.MathUtils.damp(aimBlend,aim?1:0,10,dt);
+ if(gameStarted&&reloading){
+  reloadElapsed+=dt;reloadProgress=THREE.MathUtils.clamp(reloadElapsed/1.55,0,1);
+  if(reloadProgress>=.78&&!reloadCommitted){
+   const count=Math.min(weaponConfigs[activeWeapon].capacity-ammo,reserve);
+   ammo+=count;reserve-=count;ammoByWeapon[activeWeapon]=ammo;reserveByWeapon[activeWeapon]=reserve;
+   reloadCommitted=true;updateHud();
+  }
+  if(reloadProgress>=1){reloading=false;reloadElapsed=0;reloadProgress=0;reloadBlend=0;setMsg('PRONTO PARA COMBATE')}
+ }
+ weaponKick=THREE.MathUtils.damp(weaponKick,0,aim?13:8,dt);
+ reloadBlend=THREE.MathUtils.damp(reloadBlend,reloading?1:0,7,dt);
+ muzzleTime=Math.max(0,muzzleTime-dt);
+ if(muzzleTime===0){flash.visible=false;pistolFlash.visible=false;muzzle.intensity=0;pistolMuzzle.intensity=0}
+ if(soldierModel)animateRealSoldierRig(dt,speed,sprinting);
+ else animateProceduralRig(dt,speed,sprinting);
 }
 const cameraRay=new THREE.Raycaster();
 const cameraLookTarget=new THREE.Vector3(),cameraDesired=new THREE.Vector3(),cameraForward=new THREE.Vector3(),cameraSide=new THREE.Vector3(),cameraOffset=new THREE.Vector3();
