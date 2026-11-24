@@ -13,7 +13,7 @@ export function solveTwoBoneIK(shoulder, target, pole, upperLength, lowerLength)
   if (!finite3(shoulder) || !finite3(target) || !finite3(pole)) {
     throw new TypeError('IK points must be finite [x, y, z] arrays');
   }
-  if (!(upperLength > 0) || !(lowerLength > 0)) {
+  if (!Number.isFinite(upperLength) || !Number.isFinite(lowerLength) || !(upperLength > 0) || !(lowerLength > 0)) {
     throw new RangeError('IK segment lengths must be positive');
   }
 
