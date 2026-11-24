@@ -87,111 +87,154 @@ function makeCities(){
 function spawnLoot(x,z){const kind=['RIFLE','MUNIÇÃO','KIT MÉDICO','COLETE','ESCOPETA'][Math.floor(Math.random()*5)];const color=kind==='KIT MÉDICO'?0x55d78a:kind==='COLETE'?0x67b5dc:0xe7bd63;const g=new THREE.Group();g.position.set(x,.45,z);world.add(g);const o=new THREE.Mesh(new THREE.BoxGeometry(.65,.25,.42),mat(color,.42,.25));o.castShadow=true;g.add(o);const ring=new THREE.Mesh(new THREE.TorusGeometry(.55,.035,6,20),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.75}));ring.rotation.x=Math.PI/2;ring.position.y=-.24;g.add(ring);loot.push({g,kind,active:true})}
 function makeWorld(){makeCities();for(let i=0;i<280;i++){const a=Math.random()*Math.PI*2,r=65+Math.random()*77;tree(Math.cos(a)*r,Math.sin(a)*r,.7+Math.random()*.9)}for(let i=0;i<55;i++){const x=(Math.random()-.5)*260,z=(Math.random()-.5)*260;if(Math.abs(x)<58&&Math.abs(z)<58)continue;const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.7+Math.random()*1.2,0),mat(0x777d72));rock.position.set(x,.4,z);rock.scale.y=.65;world.add(rock)}}
 makeWorld();
-// Player rig with articulated limbs and detailed rifle
+// Articulated tactical operator: layered anatomy, separate joints and a two-hand weapon rig.
 const hero=new THREE.Group();scene.add(hero);hero.position.set(0,0,10);
-const torso=new THREE.Group();torso.position.y=1.05;hero.add(torso);
-// Importação do personagem GLB original. O rig procedural permanece como fallback até o GLB carregar.
-let soldierModel=null,soldierMixer=null,soldierBones={},soldierRest={},soldierLoadState='loading';
+const rig={};
+const skin=mat(0x98694f),uniform=mat(0x35483b),pants=mat(0x303b35),armor=mat(0x4b5948),black=mat(0x1c2424,.42,.25),cloth=mat(0x66704d),pouch=mat(0x29372d),bootMat=mat(0x202724),helmetMat=mat(0x344437),metalDetail=mat(0x8b927e,.45,.45),glove=mat(0x202724);
+function ell(parent,x,y,z,sx,sy,sz,material){const o=new THREE.Mesh(new THREE.SphereGeometry(1,18,14),material);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o}
+function capsule(parent,r,length,material,x,y,z){const o=new THREE.Mesh(new THREE.CapsuleGeometry(r,Math.max(.01,length),5,9),material);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o}
+rig.body=new THREE.Group();rig.body.position.y=.96;hero.add(rig.body);
+rig.pelvis=new THREE.Group();rig.pelvis.position.y=-.08;rig.body.add(rig.pelvis);
+ell(rig.pelvis,0,0,0,.285,.18,.205,pants);
+ell(rig.body,0,.27,0,.255,.30,.19,uniform);
+ell(rig.body,0,.54,-.005,.355,.31,.205,uniform);
+ell(rig.body,0,.55,-.025,.37,.27,.22,armor);
+ell(rig.body,0,.28,-.005,.29,.18,.19,cloth);
+box(rig.body,.66,.09,.34,black,0,.08,-.015);
+for(const side of [-1,1]){
+ const strap=box(rig.body,.095,.48,.07,black,side*.23,.55,-.205);strap.rotation.z=-side*.12;
+ ell(rig.body,side*.405,.69,-.005,.15,.14,.15,armor);
+ ell(rig.body,side*.45,.68,-.015,.12,.12,.12,cloth);
+ box(rig.body,.16,.18,.10,cloth,side*.25,.38,-.22);
+ box(rig.body,.14,.13,.09,pouch,side*.25,.18,-.22);
+ box(rig.body,.12,.12,.10,black,side*.32,.56,-.20);
+}
+// Neck, face, helmet, eye line and ear protection.
+capsule(rig.body,.095,.16,skin,0,.79,0);
+rig.head=new THREE.Group();rig.head.position.set(0,.84,0);rig.body.add(rig.head);
+ell(rig.head,0,.14,-.005,.18,.22,.17,skin);
+ell(rig.head,0,.045,-.025,.145,.10,.15,skin);
+ell(rig.head,0,.32,.005,.205,.145,.20,helmetMat);
+ell(rig.head,0,.39,-.005,.19,.09,.19,helmetMat);
+box(rig.head,.38,.045,.27,black,0,.28,-.015);
+box(rig.head,.31,.045,.06,helmetMat,0,.20,-.16);
+for(const side of [-1,1]){
+ ell(rig.head,side*.18,.12,0,.045,.065,.05,skin);
+ ell(rig.head,side*.18,.13,-.005,.05,.07,.045,armor);
+ ell(rig.head,side*.068,.16,-.157,.028,.014,.012,black);
+ ell(rig.head,side*.068,.19,-.16,.045,.012,.012,skin);
+}
+// Modular plate carrier, radio, straps, pouches, backpack and belt.
+box(rig.body,.42,.40,.095,armor,0,.48,-.205);
+box(rig.body,.28,.22,.035,cloth,0,.51,-.262);
+box(rig.body,.075,.34,.025,black,0,.48,-.29);
+for(let i=0;i<3;i++){
+ box(rig.body,.115,.13,.045,pouch,-.21+i*.21,.48,-.278);
+ box(rig.body,.10,.018,.05,metalDetail,-.21+i*.21,.55,-.305);
+}
+box(rig.body,.30,.42,.18,pouch,0,.48,.22);
+box(rig.body,.27,.10,.19,cloth,0,.72,.22);
+for(const side of [-1,1])box(rig.body,.05,.43,.04,cloth,side*.15,.49,.12);
+box(rig.body,.48,.085,.28,black,0,.055,0);
+box(rig.body,.11,.08,.035,metalDetail,0,.055,-.15);
+box(rig.body,.13,.25,.13,pouch,.34,.015,.08);
+box(rig.body,.12,.22,.12,pouch,-.34,.015,.08);
+// Articulated legs: hip, thigh, knee, shin and ankle/boot pivots.
+rig.legs=[];
+for(const side of [-1,1]){
+ const upper=new THREE.Group();upper.position.set(side*.205,-.13,0);rig.body.add(upper);
+ capsule(upper,.135,.32,pants,0,-.22,0);
+ ell(upper,0,-.42,-.005,.145,.13,.14,pants);
+ ell(upper,0,-.47,-.09,.13,.11,.055,armor);
+ const knee=new THREE.Group();knee.position.set(0,-.47,0);upper.add(knee);
+ capsule(knee,.105,.29,pants,0,-.17,.015);
+ ell(knee,0,-.08,-.12,.115,.11,.06,armor);
+ box(knee,.20,.13,.06,cloth,0,-.11,-.15);
+ const ankle=new THREE.Group();ankle.position.set(0,-.39,-.025);knee.add(ankle);
+ capsule(ankle,.09,.12,pants,0,-.035,0);
+ box(ankle,.23,.14,.34,bootMat,0,-.105,-.10);
+ box(ankle,.235,.04,.32,black,0,-.18,-.10);
+ box(ankle,.11,.045,.10,cloth,0,-.025,-.25);
+ rig.legs.push({upper,knee,ankle,side});
+}
+// Two independently articulated arm chains. IK drives the palms to the rifle grips.
+rig.arms=[];
+for(const side of [-1,1]){
+ ell(rig.body,side*.43,.70,0,.15,.15,.15,armor);
+ const upper=new THREE.Group();rig.body.add(upper);
+ capsule(upper,.112,.29,uniform,0,-.22,0);
+ ell(upper,0,-.39,-.015,.115,.13,.11,armor);
+ const fore=new THREE.Group();rig.body.add(fore);
+ capsule(fore,.092,.27,uniform,0,-.21,0);
+ ell(fore,0,-.39,-.01,.095,.10,.09,cloth);
+ const hand=new THREE.Group();fore.add(hand);
+ ell(hand,0,-.045,-.025,.075,.09,.07,glove);
+ for(let finger=0;finger<4;finger++)capsule(hand,.016,.05,glove,-.045+finger*.03,-.11,-.07);
+ ell(hand,side*.07,-.07,-.035,.025,.055,.025,glove);
+ rig.arms.push({upper,fore,hand,side});
+}
+// Rifle receiver, optic, handguard, barrel, magazine and muzzle device.
+const rifle=new THREE.Group();rifle.position.set(.28,.50,-.28);rig.body.add(rifle);
+box(rifle,.145,.14,.82,black,0,0,-.20);
+box(rifle,.09,.075,.58,mats.metal,0,.015,-.88);
+box(rifle,.12,.12,.30,armor,0,0,.36);
+box(rifle,.105,.26,.15,black,0,-.18,-.22);
+box(rifle,.055,.065,.14,metalDetail,0,.11,-.55);
+box(rifle,.10,.09,.16,black,0,.14,-.18);
+box(rifle,.045,.16,.07,black,0,.20,-.50);
+const magazine=new THREE.Group();magazine.position.set(0,-.18,-.20);rifle.add(magazine);
+box(magazine,.105,.27,.13,black,0,-.02,0);
+for(let i=0;i<4;i++)box(magazine,.108,.012,.135,metalDetail,0,-.11+i*.06,0);
+const spareMagazine=new THREE.Group();spareMagazine.position.set(0,-.43,.10);spareMagazine.visible=false;rifle.add(spareMagazine);
+box(spareMagazine,.105,.27,.13,black,0,-.02,0);
+const muzzle=new THREE.PointLight(0xffb34f,0,7);muzzle.position.set(0,0,-1.18);rifle.add(muzzle);
+const flash=new THREE.Mesh(new THREE.ConeGeometry(.12,.38,8),new THREE.MeshBasicMaterial({color:0xffc45d}));flash.rotation.x=-Math.PI/2;flash.position.set(0,0,-1.40);flash.visible=false;rifle.add(flash);
+// Sidearm with a distinct slide, barrel and grip.
+const pistol=new THREE.Group();pistol.position.set(.27,.47,-.23);pistol.visible=false;rig.body.add(pistol);
+box(pistol,.15,.15,.40,black,0,0,-.12);
+box(pistol,.095,.07,.22,mats.metal,0,.015,-.42);
+box(pistol,.12,.25,.14,black,0,-.16,.025);
+box(pistol,.10,.035,.16,metalDetail,0,.095,-.18);
+const pistolMagazine=new THREE.Group();pistolMagazine.position.set(0,-.16,.03);pistol.add(pistolMagazine);
+box(pistolMagazine,.09,.22,.12,black,0,-.02,0);
+const pistolMuzzle=new THREE.PointLight(0xffb34f,0,4);pistolMuzzle.position.set(0,0,-.54);pistol.add(pistolMuzzle);
+const pistolFlash=new THREE.Mesh(new THREE.ConeGeometry(.085,.24,8),new THREE.MeshBasicMaterial({color:0xffc45d}));pistolFlash.rotation.x=-Math.PI/2;pistolFlash.position.set(0,0,-.62);pistolFlash.visible=false;pistol.add(pistolFlash);
+let activeWeapon='RIFLE',weaponKick=0,reloadBlend=0,muzzleTime=0,reloadElapsed=0,reloadProgress=0,reloadCommitted=false;
+const downAxis=new THREE.Vector3(0,-1,0),ikShoulder=new THREE.Vector3(),ikTarget=new THREE.Vector3(),ikPole=new THREE.Vector3();
+function switchWeapon(){
+ if(reloading)return;
+ ammoByWeapon[activeWeapon]=ammo;reserveByWeapon[activeWeapon]=reserve;
+ activeWeapon=activeWeapon==='RIFLE'?'PISTOLA':'RIFLE';
+ ammo=ammoByWeapon[activeWeapon];reserve=reserveByWeapon[activeWeapon];
+ rifle.visible=activeWeapon==='RIFLE';pistol.visible=activeWeapon==='PISTOLA';
+ updateHud();setMsg('ARMA: '+activeWeapon);sound(340,.06,'triangle',.02);
+}
+// Optional original GLB slot. The repository currently keeps the detailed local rig as fallback.
+let soldierModel=null,soldierBones={},soldierRest={},soldierLoadState='fallback';
 const gltfLoader=new GLTFLoader();
-function findBone(root,part){let found=null;root.traverse(o=>{if(!found&&o.isBone&&o.name.toLowerCase().includes(part.toLowerCase()))found=o});return found}
 function loadSoldierModel(){
  gltfLoader.load('./assets/military-male-03.glb',gltf=>{
-  soldierModel=gltf.scene;
-  soldierModel.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.side=THREE.FrontSide}}});
-  const bounds=new THREE.Box3().setFromObject(soldierModel),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());
-  const scale=1.82/Math.max(size.y,.001);soldierModel.scale.setScalar(scale);
-  soldierModel.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
-  hero.add(soldierModel);soldierModel.updateMatrixWorld(true);
-  ['Bip01 Pelvis','Bip01 Spine','Bip01 Spine1','Bip01 Spine2','Bip01 L UpperArm','Bip01 R UpperArm','Bip01 L Forearm','Bip01 R Forearm','Bip01 L Thigh','Bip01 R Thigh','Bip01 L Calf','Bip01 R Calf','Bip01 Head'].forEach(n=>{
-   const b=findBone(soldierModel,n.replace('Bip01 ',''));
-   if(b){soldierBones[n]=b;soldierRest[n]=b.rotation.clone()}
-  });
-  // Evita tocar todos os clips importados simultaneamente: root motion/escala pode causar zoom aparente. O rig usa animação procedural.
-  torso.visible=false;soldierLoadState='loaded';setMsg('PERSONAGEM 3D ORIGINAL CARREGADO');
- },undefined,error=>{soldierLoadState='fallback';setMsg('PERSONAGEM PROVISÓRIO — MODELO 3D ORIGINAL AUSENTE');console.warn('GLB não encontrado; mantendo personagem provisório.',error)});
-}
-function animateSoldierRig(dt){
- if(!soldierModel)return;
- if(soldierMixer)soldierMixer.update(dt);
- const moving=gameStarted&&Math.abs(mx)+Math.abs(my)>.08,phase=walkPhase,stride=moving?Math.sin(phase)*(run?.62:.34):0;
- const blend=poseBlend||0,idle=Math.sin(performance.now()*.0022),aimBlend=aim?1:0;
- reloadAnim=Math.max(0,reloadAnim-.72*dt);recoilAnim=Math.max(0,recoilAnim-5.5*dt);
- const reloadPose=Math.sin((1-reloadAnim)*Math.PI)*.8;
- const apply=(name,x=0,y=0,z=0)=>{const b=soldierBones[name],r=soldierRest[name];if(b&&r){b.rotation.set(r.x+x,r.y+y,r.z+z)}};
- apply('Bip01 Pelvis',pose==='prone'?-1.25*blend:idle*.012);
- apply('Bip01 Spine',-.12*blend+idle*.018-aimBlend*.035);
- apply('Bip01 Spine1',-.08*blend+idle*.012-aimBlend*.05);
- apply('Bip01 Spine2',-.06*blend-aimBlend*.06-recoilAnim*.12);
- apply('Bip01 Head',-idle*.012);
- apply('Bip01 L UpperArm',pose==='prone'?1.05*blend:aimBlend*.28+stride*.35+reloadPose*.32);
- apply('Bip01 R UpperArm',pose==='prone'?1.05*blend:aimBlend*.22-stride*.35+reloadPose*.72-recoilAnim*.18);
- apply('Bip01 L Forearm',pose==='prone'?-.65*blend:-aimBlend*.16-reloadPose*.35);
- apply('Bip01 R Forearm',pose==='prone'?-.65*blend:-aimBlend*.12-reloadPose*.55);
- apply('Bip01 L Thigh',stride*(1-blend));
- apply('Bip01 R Thigh',-stride*(1-blend));
- apply('Bip01 L Calf',Math.max(0,-stride)*.72);
- apply('Bip01 R Calf',Math.max(0,stride)*.72);
+  const model=gltf.scene;model.updateMatrixWorld(true);
+  const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3());
+  if(size.y<.01)throw new Error('GLB sem altura válida');
+  const scale=1.82/size.y;model.scale.setScalar(scale);
+  model.position.set(-bounds.getCenter(new THREE.Vector3()).x*scale,-bounds.min.y*scale,-bounds.getCenter(new THREE.Vector3()).z*scale);
+  model.rotation.y=Math.PI;
+  model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.side=THREE.FrontSide;o.material.roughness=Math.max(.5,o.material.roughness??.8)}}if(o.isBone)soldierRest[o.name]=o.rotation.clone()});
+  const bone=(name)=>model.getObjectByName('Bip01 '+name);
+  soldierBones={pelvis:bone('Pelvis'),spine:bone('Spine'),spine1:bone('Spine1'),spine2:bone('Spine2'),head:bone('Head'),rightUpperArm:bone('R UpperArm'),leftUpperArm:bone('L UpperArm'),rightForearm:bone('R Forearm'),leftForearm:bone('L Forearm'),rightHand:bone('R Hand'),leftHand:bone('L Hand'),rightThigh:bone('R Thigh'),leftThigh:bone('L Thigh'),rightCalf:bone('R Calf'),leftCalf:bone('L Calf')};
+  const required=['pelvis','spine','head','rightUpperArm','leftUpperArm','rightForearm','leftForearm','rightHand','leftHand','rightThigh','leftThigh','rightCalf','leftCalf'];
+  if(!required.every(k=>soldierBones[k]))throw new Error('Rig Bip01 incompleto');
+  hero.add(model);soldierModel=model;
+  rig.body.visible=false;
+  rifle.removeFromParent();pistol.removeFromParent();
+  soldierBones.rightHand.add(rifle,pistol);
+  rifle.position.set(.015,-.035,.045);rifle.rotation.set(0,Math.PI,0);rifle.scale.setScalar(.72);
+  pistol.position.set(.015,-.025,.045);pistol.rotation.set(0,Math.PI,0);pistol.scale.setScalar(.8);
+  soldierLoadState='loaded';setMsg('SOLDADO 3D ORIGINAL CARREGADO');
+ },undefined,error=>{soldierLoadState='fallback';console.info('GLB militar opcional ausente; rig tático local ativo.',error)});
 }
 loadSoldierModel();
-const skin=mat(0x98694f),uniform=mat(0x35483b),pants=mat(0x303b35),armor=mat(0x4b5948),black=mat(0x1c2424,.42,.25),cloth=mat(0x66704d),pouch=mat(0x29372d),bootMat=mat(0x202724),helmetMat=mat(0x344437),metalDetail=mat(0x8b927e,.45,.45);
-function ell(p,x,y,z,sx,sy,sz,m){const o=new THREE.Mesh(new THREE.SphereGeometry(1,16,12),m);o.position.set(x,y,z);o.scale.set(sx,sy,sz);o.castShadow=true;o.receiveShadow=true;p.add(o);return o}
-function capsulePart(p,a,b,r,m){const v1=new THREE.Vector3(...a),v2=new THREE.Vector3(...b),d=v2.clone().sub(v1),o=new THREE.Mesh(new THREE.CapsuleGeometry(r,Math.max(.01,d.length()-r*2),4,8),m);o.position.copy(v1.add(v2).multiplyScalar(.5));o.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());o.castShadow=true;p.add(o);return o}
-// Soldado tático provisório: uniforme camuflado, colete modular, capacete, mochila e equipamento.
-ell(torso,0,.42,0,.36,.42,.23,uniform);
-ell(torso,0,.43,-.035,.385,.34,.245,armor);
-ell(torso,0,.88,0,.105,.14,.12,skin);
-ell(torso,0,1.13,0,.205,.245,.19,skin);
-ell(torso,0,1.34,0,.255,.17,.23,helmetMat);
-ell(torso,0,1.43,-.015,.235,.12,.22,helmetMat);
-ell(torso,0,1.30,-.185,.205,.055,.035,black);
-box(torso,.34,.045,.075,metalDetail,0,1.31,-.218);
-ell(torso,-.09,1.15,-.176,.035,.025,.018,black);ell(torso,.09,1.15,-.176,.035,.025,.018,black);
-// Colete frontal, gola, placas e fitas
-box(torso,.43,.48,.105,armor,0,.47,-.205);
-box(torso,.28,.27,.035,cloth,0,.52,-.266);
-box(torso,.08,.42,.025,black,0,.47,-.291);
-for(const side of [-1,1]){
- box(torso,.14,.23,.105,cloth,side*.31,.37,-.015);
- box(torso,.13,.16,.12,pouch,side*.2,.06,-.22);
- box(torso,.13,.13,.11,pouch,side*.34,.23,-.12);
- box(torso,.12,.13,.11,pouch,side*.34,.43,-.12);
- box(torso,.045,.36,.035,black,side*.17,.48,-.278);
- ell(torso,side*.39,.69,-.01,.14,.15,.14,armor);
-}
-// Mochila compacta e alças
-box(torso,.32,.48,.19,pouch,0,.48,.235);
-box(torso,.28,.12,.2,cloth,0,.72,.235);
-for(const side of [-1,1])box(torso,.055,.48,.045,cloth,side*.16,.49,.13);
-// Cinto, fivela e coldre
-box(torso,.48,.09,.29,black,0,.08,0);box(torso,.12,.09,.035,metalDetail,0,.08,-.16);
-box(torso,.14,.27,.14,pouch,.34,.02,.08);
-const limbs=[];
-for(const side of [-1,1]){
- const leg=new THREE.Group();leg.position.set(side*.19,-.12,0);torso.add(leg);
- ell(leg,0,-.28,0,.145,.32,.15,pants);
- ell(leg,0,-.61,-.04,.115,.28,.12,pants);
- ell(leg,0,-.42,-.11,.13,.13,.065,armor);
- box(leg,.24,.15,.37,bootMat,0,-.84,-.105);
- box(leg,.22,.055,.34,black,0,-.91,-.1);
- box(leg,.25,.16,.055,cloth,0,-.43,-.14);
- box(leg,.13,.12,.035,pouch,0,-.22,-.13);
- const arm=new THREE.Group();arm.position.set(side*.39,.72,0);torso.add(arm);
- ell(arm,0,-.2,0,.13,.26,.13,uniform);
- ell(arm,0,-.48,-.05,.10,.23,.105,uniform);
- ell(arm,0,-.55,-.07,.10,.09,.095,black);
- ell(arm,0,-.29,-.01,.14,.12,.14,armor);
- box(arm,.12,.08,.12,cloth,0,-.18,-.105);
- limbs.push({g:leg,side,leg:true},{g:arm,side,leg:false});
-}
-const rifle=new THREE.Group();rifle.position.set(.27,.48,-.27);torso.add(rifle);
-box(rifle,.15,.14,.9,black,0,0,-.18);box(rifle,.09,.08,.55,mats.metal,0,.02,-.84);box(rifle,.12,.28,.17,black,0,-.19,-.2);box(rifle,.23,.1,.28,black,0,0,.39);box(rifle,.08,.18,.1,mats.metal,0,.13,-.32);
-const muzzle=new THREE.PointLight(0xffb34f,0,7);muzzle.position.set(0,0,-1.18);rifle.add(muzzle);
-const pistol=new THREE.Group();pistol.position.set(.27,.46,-.23);pistol.visible=false;torso.add(pistol);
-box(pistol,.16,.17,.42,black,0,0,-.12);box(pistol,.1,.07,.22,mats.metal,0,.02,-.43);box(pistol,.12,.27,.15,black,0,-.16,.02);
-let activeWeapon='RIFLE';
-function switchWeapon(){activeWeapon=activeWeapon==='RIFLE'?'PISTOLA':'RIFLE';rifle.visible=activeWeapon==='RIFLE';pistol.visible=activeWeapon==='PISTOLA';setMsg('ARMA: '+activeWeapon);sound(340,.06,'triangle',.02)}
-
-const flash=new THREE.Mesh(new THREE.ConeGeometry(.15,.55,8),new THREE.MeshBasicMaterial({color:0xffc45d}));flash.rotation.x=-Math.PI/2;flash.position.set(0,0,-1.4);flash.visible=false;rifle.add(flash);
 let yaw=0,pitch=-.16,mx=0,my=0,run=false,aim=false,pose='stand',health=100,ammo=30,reserve=120,shooting=false,lastShot=0,reloading=false,gameStarted=false,score=0;
 const ray=new THREE.Raycaster(),tmp=new THREE.Vector3(),clock=new THREE.Clock();
 function spawnBots(){
