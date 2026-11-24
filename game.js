@@ -377,8 +377,8 @@ function animateRealSoldierRig(dt,speed,sprinting){
   }
   solveBoneArmIK(soldierBones.leftUpperArm,soldierBones.leftForearm,soldierBones.leftHand,target);
  }
- rifle.rotation.x=-weaponKick*.16+reloadBlend*.08;
- pistol.rotation.x=-weaponKick*.20;
+ rifle.rotation.x=pitch*.62-weaponKick*.16+reloadBlend*.08;
+ pistol.rotation.x=pitch*.62-weaponKick*.20;
 }
 function animateProceduralRig(dt,speed,sprinting){
  const moving=speed>.12,phase=walkPhase,strafe=THREE.MathUtils.clamp(mx,-1,1);
@@ -412,12 +412,12 @@ function animateProceduralRig(dt,speed,sprinting){
  const idleSway=Math.sin(phase*.72)*.012,aimSway=aim?Math.sin(phase*1.15)*.008:0;
  rifle.position.x=.28+(aim?-.035:0)+Math.sin(phase*.9)*.006;
  rifle.position.y=.50+(aim?.055:0)+idleSway+aimSway-reloadBlend*.07;
- rifle.position.z=-.28;
+ rifle.position.z=-.28+weaponKick*.045;
  rifle.rotation.z=THREE.MathUtils.damp(rifle.rotation.z,aim?-.025*strafe:idleSway*.65,9,dt);
- rifle.rotation.x=THREE.MathUtils.damp(rifle.rotation.x,aim?-.035:proneBlend*.08,10,dt)-weaponKick*.19+reloadBlend*.22;
+ rifle.rotation.x=THREE.MathUtils.damp(rifle.rotation.x,(aim?-.035:proneBlend*.08)+pitch*.62,10,dt)-weaponKick*.19+reloadBlend*.22;
  rifle.rotation.y=THREE.MathUtils.damp(rifle.rotation.y,Math.sin(phase*.7)*.012+reloadBlend*.12,8,dt);
- pistol.position.set(.28,.47+(aim?.035:0)+idleSway,-.23);
- pistol.rotation.x=THREE.MathUtils.damp(pistol.rotation.x,aim?-.05:0,10,dt)-weaponKick*.2;
+ pistol.position.set(.28,.47+(aim?.035:0)+idleSway,-.23+weaponKick*.035);
+ pistol.rotation.x=THREE.MathUtils.damp(pistol.rotation.x,(aim?-.05:0)+pitch*.62,10,dt)-weaponKick*.2;
  rifle.visible=activeWeapon==='RIFLE';pistol.visible=activeWeapon==='PISTOLA';
  magazine.position.y=-.18-(reloadProgress<.45?smooth01(reloadProgress/.45)*.20:0);
  magazine.visible=reloadProgress<.45||reloadProgress>.82;
@@ -519,7 +519,7 @@ function shoot(){
  const config=weaponConfigs[activeWeapon],now=performance.now();
  if(now-lastShot<config.rate)return;
  lastShot=now;ammo=Math.max(0,ammo-1);ammoByWeapon[activeWeapon]=ammo;reserveByWeapon[activeWeapon]=reserve;
- weaponKick=1;muzzleTime=activeWeapon==='RIFLE'?.075:.055;
+ weaponKick=activeWeapon==='RIFLE'?1:.72;muzzleTime=activeWeapon==='RIFLE'?.075:.055;
  if(activeWeapon==='RIFLE'){flash.visible=true;muzzle.intensity=4}
  else{pistolFlash.visible=true;pistolMuzzle.intensity=2.8}
  sound(activeWeapon==='RIFLE'?115:175,.095,'sawtooth',.055);
