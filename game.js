@@ -197,6 +197,8 @@ box(pistol,.12,.25,.14,black,0,-.16,.025);
 box(pistol,.10,.035,.16,metalDetail,0,.095,-.18);
 const pistolMagazine=new THREE.Group();pistolMagazine.position.set(0,-.16,.03);pistol.add(pistolMagazine);
 box(pistolMagazine,.09,.22,.12,black,0,-.02,0);
+const pistolSpareMagazine=new THREE.Group();pistolSpareMagazine.position.set(0,-.34,.10);pistolSpareMagazine.visible=false;pistol.add(pistolSpareMagazine);
+box(pistolSpareMagazine,.09,.22,.12,black,0,-.02,0);
 const pistolMuzzle=new THREE.PointLight(0xffb34f,0,4);pistolMuzzle.position.set(0,0,-.54);pistol.add(pistolMuzzle);
 const pistolFlash=new THREE.Mesh(new THREE.ConeGeometry(.085,.24,8),new THREE.MeshBasicMaterial({color:0xffc45d}));pistolFlash.rotation.x=-Math.PI/2;pistolFlash.position.set(0,0,-.62);pistolFlash.visible=false;pistol.add(pistolFlash);
 let activeWeapon='RIFLE',weaponKick=0,reloadBlend=0,muzzleTime=0,reloadElapsed=0,reloadProgress=0,reloadCommitted=false;
@@ -376,6 +378,9 @@ function animateRealSoldierRig(dt,speed,sprinting){
    else target.lerpVectors(mag,rifle.localToWorld(new THREE.Vector3(0,-.105,-.43)),smooth01((reloadProgress-.82)/.18));
   }
   solveBoneArmIK(soldierBones.leftUpperArm,soldierBones.leftForearm,soldierBones.leftHand,target);
+ }else if(reloading&&activeWeapon==='PISTOLA'&&pistol.visible){
+  const target=pistol.localToWorld(new THREE.Vector3(0,-.25,.03));
+  solveBoneArmIK(soldierBones.leftUpperArm,soldierBones.leftForearm,soldierBones.leftHand,target);
  }
  rifle.rotation.x=pitch*.62-weaponKick*.16+reloadBlend*.08;
  pistol.rotation.x=pitch*.62-weaponKick*.20;
@@ -423,7 +428,10 @@ function animateProceduralRig(dt,speed,sprinting){
  magazine.visible=reloadProgress<.45||reloadProgress>.82;
  spareMagazine.visible=reloadProgress>=.40&&reloadProgress<=.82;
  spareMagazine.position.set(0,THREE.MathUtils.lerp(-.43,-.18,smooth01((reloadProgress-.40)/.46)),.10);
- pistolMagazine.position.y=-.16-(activeWeapon==='PISTOLA'&&reloading?smooth01(reloadProgress)*.08:0);
+ pistolMagazine.position.y=-.16-(activeWeapon==='PISTOLA'&&reloading&&reloadProgress<.45?smooth01(reloadProgress/.45)*.15:0);
+ pistolMagazine.visible=reloadProgress<.45||reloadProgress>.82;
+ pistolSpareMagazine.visible=activeWeapon==='PISTOLA'&&reloadProgress>=.40&&reloadProgress<=.82;
+ pistolSpareMagazine.position.set(0,THREE.MathUtils.lerp(-.34,-.16,smooth01((reloadProgress-.40)/.42)),.10);
  rig.body.updateMatrixWorld(true);
  const rightArm=rig.arms.find(a=>a.side===1),leftArm=rig.arms.find(a=>a.side===-1);
  if(activeWeapon==='RIFLE'){
@@ -445,7 +453,10 @@ function animateProceduralRig(dt,speed,sprinting){
  }else{
   const rightWorld=pistol.localToWorld(new THREE.Vector3(0,-.16,.02));
   solveProceduralArm(rightArm,rig.body.worldToLocal(rightWorld.clone()),proneBlend,aimBlend);
-  relaxProceduralArm(leftArm,phase);
+  if(reloading){
+   const leftWorld=pistol.localToWorld(new THREE.Vector3(0,-.25,.03));
+   solveProceduralArm(leftArm,rig.body.worldToLocal(leftWorld.clone()),proneBlend,aimBlend);
+  }else relaxProceduralArm(leftArm,phase);
  }
 }
 function animatePlayerRig(dt){
