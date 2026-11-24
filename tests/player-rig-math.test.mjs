@@ -33,4 +33,5 @@ test('two-bone IK clamps an unreachable grip to the arm reach', () => {
 
 test('two-bone IK rejects invalid segment lengths', () => {
   assert.throws(() => solveTwoBoneIK([0, 0, 0], [1, 0, 0], [0, 1, 0], 0, 0.4), RangeError);
+  assert.throws(() => solveTwoBoneIK([0, 0, 0], [1, 0, 0], [0, 1, 0], Infinity, 0.4), RangeError);
 });
